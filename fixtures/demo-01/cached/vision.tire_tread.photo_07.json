@@ -1,0 +1,24 @@
+{
+  "_fixture_note": "Hand-authored placeholder. Not a model response. The box matches region F drawn in photo_07.jpg.",
+  "findings": [
+    {
+      "id": "vf_tire_01",
+      "type": "tire_tread_estimate",
+      "system": "tires",
+      "title": "Front left tread appears low",
+      "detail": "Tread depth on the front left tire appears low relative to the tread block spacing visible in this image. Tread depth from a photograph is an estimate; a tread gauge costs a few dollars and settles it in seconds.",
+      "severity": "minor",
+      "confidence": 0.58,
+      "confidence_basis": "Tread depth from a single photograph at this angle is unreliable. Confidence is low on purpose and this finding should be treated as a prompt to measure, not a measurement.",
+      "evidence": [
+        {
+          "box": { "x": 0.3, "y": 0.3, "w": 0.36, "h": 0.36 },
+          "caption": "Tread block area on the front left tire"
+        }
+      ],
+      "estimated_cost_usd": { "low": 380, "high": 620 },
+      "seller_question": "How old are the tires, and were they all replaced at the same time?",
+      "mechanic_check": "Measure tread depth on all four tires with a gauge and check for uneven wear that would suggest an alignment problem."
+    }
+  ]
+}

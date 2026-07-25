@@ -1,0 +1,39 @@
+{
+  "_fixture_note": "Hand-authored placeholder for a VIN that does not exist. Not NHTSA data. The source field below says so, so the citation rendered in the report is honest about being synthetic. P1 replaces this with live vPIC and NHTSA recall calls.",
+  "source": "FIXTURE - synthetic, not NHTSA",
+  "retrieved_at": "2026-01-01T00:00:00Z",
+  "decoded": {
+    "year": 2013,
+    "make": "FIXTUREMAKE",
+    "model": "FIXTUREMODEL",
+    "trim": "LX",
+    "body_class": "Sedan/Saloon",
+    "engine": "2.4L L4",
+    "drive_type": "FWD",
+    "plant_country": "UNITED STATES (USA)"
+  },
+  "recalls": [
+    {
+      "campaign_number": "FIX000001",
+      "component": "AIR BAGS",
+      "summary": "Synthetic fixture recall naming a locked system, so that every run proves a recall touching restraints becomes a mechanic referral rather than a finding.",
+      "remedy": "Fixture record. No remedy applies.",
+      "report_received_date": "2016-05-04"
+    },
+    {
+      "campaign_number": "FIX000002",
+      "component": "ELECTRICAL SYSTEM",
+      "summary": "Synthetic fixture recall naming a system that is not locked, so that every run proves an ordinary recall survives as a cited finding.",
+      "remedy": "Fixture record. No remedy applies.",
+      "report_received_date": "2018-11-19"
+    }
+  ],
+  "complaint_summary": {
+    "total": 87,
+    "top_components": [
+      { "component": "ELECTRICAL SYSTEM", "count": 24 },
+      { "component": "POWER TRAIN", "count": 19 },
+      { "component": "ENGINE", "count": 11 }
+    ]
+  }
+}

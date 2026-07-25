@@ -1,0 +1,24 @@
+{
+  "_fixture_note": "Hand-authored placeholder. Not a model response. The box matches region C drawn in photo_04.jpg.",
+  "findings": [
+    {
+      "id": "vf_wear_01",
+      "type": "interior_wear",
+      "system": "interior",
+      "title": "Driver seat bolster wear",
+      "detail": "Wear is visible on the outer driver seat bolster, consistent with regular entry and exit over time. No tearing is visible.",
+      "severity": "minor",
+      "confidence": 0.78,
+      "confidence_basis": "Bolster wear is one of the more reliably visible interior signals in a well-lit cabin photo.",
+      "evidence": [
+        {
+          "box": { "x": 0.2, "y": 0.45, "w": 0.24, "h": 0.22 },
+          "caption": "Outer driver seat bolster"
+        }
+      ],
+      "estimated_cost_usd": null,
+      "seller_question": null,
+      "mechanic_check": null
+    }
+  ]
+}

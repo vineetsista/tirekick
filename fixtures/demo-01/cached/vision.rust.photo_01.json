@@ -1,0 +1,24 @@
+{
+  "_fixture_note": "Hand-authored placeholder. Not a model response. The box matches region A drawn in photo_01.jpg.",
+  "findings": [
+    {
+      "id": "vf_rust_01",
+      "type": "rust_corrosion",
+      "system": "exterior",
+      "title": "Corrosion visible along driver-side rocker panel",
+      "detail": "A band of corrosion is visible along the lower rocker panel, roughly one third of the panel length. The texture in this image is consistent with surface corrosion rather than perforation, but whether the metal is compromised underneath cannot be determined from a photograph.",
+      "severity": "major",
+      "confidence": 0.72,
+      "confidence_basis": "The region is well lit and unobstructed. Confidence is held below 0.8 because surface corrosion and early perforation look similar at this resolution.",
+      "evidence": [
+        {
+          "box": { "x": 0.08, "y": 0.62, "w": 0.34, "h": 0.14 },
+          "caption": "Corrosion band along the lower rocker panel"
+        }
+      ],
+      "estimated_cost_usd": { "low": 600, "high": 900 },
+      "seller_question": "How long has the rust on the rocker panel been there, and has any bodywork been done to it?",
+      "mechanic_check": "Ask a mechanic to probe the rocker panel and inspect the seam from underneath on a lift."
+    }
+  ]
+}

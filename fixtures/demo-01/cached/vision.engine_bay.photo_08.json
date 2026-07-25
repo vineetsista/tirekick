@@ -1,0 +1,62 @@
+{
+  "_fixture_note": "Hand-authored placeholder. Not a model response. This file deliberately contains two locked-system drafts so that every fixture run exercises the LAW 2 clamp in both directions: an adverse observation about brakes (kept, downgraded to a mechanic referral) and a reassuring one (dropped entirely). Neither reaches the report as a finding. See fixtures/PROVENANCE.md.",
+  "findings": [
+    {
+      "id": "vf_bay_01",
+      "type": "exterior_damage",
+      "system": "engine",
+      "title": "Residue visible on engine bay surface",
+      "detail": "A dark residue is visible on a surface in the engine bay. Whether this is an active leak, a past leak that was cleaned, or spilled fluid from a top-up cannot be determined from a photograph.",
+      "severity": "minor",
+      "confidence": 0.61,
+      "confidence_basis": "The residue is visible but its source is not traceable in a single still image.",
+      "evidence": [
+        {
+          "box": { "x": 0.16, "y": 0.28, "w": 0.22, "h": 0.16 },
+          "caption": "Residue on engine bay surface"
+        }
+      ],
+      "estimated_cost_usd": null,
+      "seller_question": "Is the engine losing any fluid? When were the fluids last topped up or changed?",
+      "mechanic_check": "Ask a mechanic to identify the fluid and find its source."
+    },
+    {
+      "id": "vf_bay_02",
+      "type": "exterior_damage",
+      "system": "brakes",
+      "title": "Wet area visible near the front hub",
+      "detail": "A wet area is visible on and around the front hub assembly.",
+      "severity": "major",
+      "confidence": 0.55,
+      "confidence_basis": "The wet region is clearly visible; what the fluid is cannot be determined from an image.",
+      "evidence": [
+        {
+          "box": { "x": 0.6, "y": 0.58, "w": 0.24, "h": 0.2 },
+          "caption": "Wet area on and around the front hub"
+        }
+      ],
+      "estimated_cost_usd": null,
+      "seller_question": null,
+      "mechanic_check": null
+    },
+    {
+      "id": "vf_bay_03",
+      "type": "exterior_damage",
+      "system": "brakes",
+      "title": "Brake components appear to be in good condition",
+      "detail": "The visible brake components appear to be in good working order with no signs of wear.",
+      "severity": "info",
+      "confidence": 0.96,
+      "confidence_basis": "Deliberately fabricated all-clear with an implausibly high confidence, so that every run proves the clamp discards it.",
+      "evidence": [
+        {
+          "box": { "x": 0.6, "y": 0.58, "w": 0.24, "h": 0.2 },
+          "caption": "Front hub area"
+        }
+      ],
+      "estimated_cost_usd": null,
+      "seller_question": null,
+      "mechanic_check": null
+    }
+  ]
+}

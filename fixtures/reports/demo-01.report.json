@@ -1,0 +1,693 @@
+{
+  "schemaVersion": "1.0.0",
+  "reportId": "rpt_demo-01",
+  "inspectionId": "demo-01",
+  "generatedAt": "2026-01-01T00:00:00Z",
+  "mode": "fixture",
+  "banner": "Automated analysis of media you provided. This is not an inspection, a certification, or a warranty. Confidence is not certainty. Have an independent mechanic examine any vehicle before you buy it.",
+  "vehicle": {
+    "vin": "ZZFXTURE000000001",
+    "vinMasked": "ZZFXTURE000******",
+    "decoded": {
+      "year": 2013,
+      "make": "FIXTUREMAKE",
+      "model": "FIXTUREMODEL",
+      "trim": "LX",
+      "bodyClass": "Sedan/Saloon",
+      "engine": "2.4L L4",
+      "driveType": "FWD",
+      "plantCountry": "UNITED STATES (USA)"
+    },
+    "recalls": [
+      {
+        "campaignNumber": "FIX000001",
+        "component": "AIR BAGS",
+        "summary": "Synthetic fixture recall naming a locked system, so that every run proves a recall touching restraints becomes a mechanic referral rather than a finding.",
+        "remedy": "Fixture record. No remedy applies.",
+        "reportReceivedDate": "2016-05-04"
+      },
+      {
+        "campaignNumber": "FIX000002",
+        "component": "ELECTRICAL SYSTEM",
+        "summary": "Synthetic fixture recall naming a system that is not locked, so that every run proves an ordinary recall survives as a cited finding.",
+        "remedy": "Fixture record. No remedy applies.",
+        "reportReceivedDate": "2018-11-19"
+      }
+    ],
+    "complaintSummary": {
+      "total": 87,
+      "topComponents": [
+        {
+          "component": "ELECTRICAL SYSTEM",
+          "count": 24
+        },
+        {
+          "component": "POWER TRAIN",
+          "count": 19
+        },
+        {
+          "component": "ENGINE",
+          "count": 11
+        }
+      ]
+    },
+    "source": "FIXTURE - synthetic, not NHTSA",
+    "retrievedAt": "2026-01-01T00:00:00Z"
+  },
+  "assets": [
+    {
+      "id": "photo_01",
+      "kind": "photo",
+      "path": "photo_01.jpg",
+      "sha256": "1e42f1ed3ce5856831533a35318b436a27e5a9e417a94860b5b71efb93db7c0a",
+      "bytes": 250225,
+      "viewClass": "exterior_side_left",
+      "viewConfidence": 0.94,
+      "durationSec": null,
+      "synthetic": true
+    },
+    {
+      "id": "photo_02",
+      "kind": "photo",
+      "path": "photo_02.jpg",
+      "sha256": "3671382ff3e70e130ff3c53d9c25feb565b5d0b34a75b3b29ab65a1f1599e922",
+      "bytes": 189989,
+      "viewClass": "exterior_front",
+      "viewConfidence": 0.91,
+      "durationSec": null,
+      "synthetic": true
+    },
+    {
+      "id": "photo_03",
+      "kind": "photo",
+      "path": "photo_03.jpg",
+      "sha256": "36fbef8da88cbbdf88589ef65c3d097b147f29aef1b74cf7cd5fc9d79abce1e6",
+      "bytes": 237781,
+      "viewClass": "exterior_rear",
+      "viewConfidence": 0.89,
+      "durationSec": null,
+      "synthetic": true
+    },
+    {
+      "id": "photo_04",
+      "kind": "photo",
+      "path": "photo_04.jpg",
+      "sha256": "a38b6960fd23514513863b4e98644388473b69bf1bb8fa956c2accacb3a245b2",
+      "bytes": 250533,
+      "viewClass": "interior_front",
+      "viewConfidence": 0.88,
+      "durationSec": null,
+      "synthetic": true
+    },
+    {
+      "id": "photo_05",
+      "kind": "photo",
+      "path": "photo_05.jpg",
+      "sha256": "e46f122b563566817dd3a47e4f6b9b5532feac609e1cfbd897d0912afbc6157b",
+      "bytes": 211511,
+      "viewClass": "dash",
+      "viewConfidence": 0.86,
+      "durationSec": null,
+      "synthetic": true
+    },
+    {
+      "id": "photo_06",
+      "kind": "photo",
+      "path": "photo_06.jpg",
+      "sha256": "43c69eccc1151d380871c1dd3d086eb2679c75f2f53a91f26b4e904142e7fa67",
+      "bytes": 233121,
+      "viewClass": "odometer",
+      "viewConfidence": 0.92,
+      "durationSec": null,
+      "synthetic": true
+    },
+    {
+      "id": "photo_07",
+      "kind": "photo",
+      "path": "photo_07.jpg",
+      "sha256": "81a6fe39df11fe9c7fc9a07ee0440cd476b2321afde8dd3b26e9e468228f397a",
+      "bytes": 324469,
+      "viewClass": "tire",
+      "viewConfidence": 0.9,
+      "durationSec": null,
+      "synthetic": true
+    },
+    {
+      "id": "photo_08",
+      "kind": "photo",
+      "path": "photo_08.jpg",
+      "sha256": "d1a8dc2df80e124be0cd834c9f119d1739f0a80a8ca0b641409eb47001422f0c",
+      "bytes": 280249,
+      "viewClass": "engine_bay",
+      "viewConfidence": 0.87,
+      "durationSec": null,
+      "synthetic": true
+    },
+    {
+      "id": "audio_01",
+      "kind": "audio",
+      "path": "audio_01.wav",
+      "sha256": "020dd83720e912288c619715bf9a4ddda0dca603eb3f70a1ad3ee115f3cfd43f",
+      "bytes": 970278,
+      "viewClass": null,
+      "viewConfidence": null,
+      "durationSec": 22.0,
+      "synthetic": true
+    }
+  ],
+  "coverage": {
+    "requestedViews": [
+      "exterior_front",
+      "exterior_rear",
+      "exterior_side_left",
+      "exterior_side_right",
+      "exterior_three_quarter",
+      "interior_front",
+      "interior_rear",
+      "engine_bay",
+      "odometer",
+      "dash",
+      "tire",
+      "vin_plate"
+    ],
+    "receivedViews": [
+      "exterior_front",
+      "exterior_rear",
+      "exterior_side_left",
+      "interior_front",
+      "engine_bay",
+      "odometer",
+      "dash",
+      "tire"
+    ],
+    "missingViews": [
+      "exterior_side_right",
+      "exterior_three_quarter",
+      "interior_rear",
+      "vin_plate"
+    ],
+    "photoCount": 8,
+    "hasVideo": false,
+    "hasAudio": true,
+    "score": 0.67,
+    "statement": "8 photos covering 8 of 12 standard views. Not covered: exterior side right, exterior three quarter, interior rear, vin plate. Nothing in this report describes what those views would have shown."
+  },
+  "verdict": {
+    "redFlagScore": 62,
+    "headline": "3 finding(s) that are likely to cost money.",
+    "couldNotAssess": [
+      "Brakes - not remotely verifiable, independent mechanic required.",
+      "Airbags and restraints - not remotely verifiable, independent mechanic required.",
+      "Frame and structural integrity - not remotely verifiable, independent mechanic required.",
+      "Steering - not remotely verifiable, independent mechanic required.",
+      "4 standard view(s) were not provided: exterior side right, exterior three quarter, interior rear, vin plate.",
+      "An engine audio clip was provided and stored with this inspection. TIREKICK does not yet analyze engine audio - that engine is in development and will not make claims until its accuracy has been measured and published. Listen to the clip yourself, and ask a mechanic to listen at a cold start."
+    ],
+    "summary": "8 photos covering 8 of 12 standard views. Not covered: exterior side right, exterior three quarter, interior rear, vin plate. Nothing in this report describes what those views would have shown. Red-flag score 62/100, which reflects the severity and confidence of what was visible - not the condition of the vehicle overall."
+  },
+  "findings": [
+    {
+      "id": "vf_rust_01",
+      "type": "rust_corrosion",
+      "system": "exterior",
+      "title": "Corrosion visible along driver-side rocker panel",
+      "detail": "A band of corrosion is visible along the lower rocker panel, roughly one third of the panel length. The texture in this image is consistent with surface corrosion rather than perforation, but whether the metal is compromised underneath cannot be determined from a photograph.",
+      "severity": "major",
+      "confidence": 0.72,
+      "confidenceBasis": "The region is well lit and unobstructed. Confidence is held below 0.8 because surface corrosion and early perforation look similar at this resolution.",
+      "evidence": [
+        {
+          "kind": "image_region",
+          "assetId": "photo_01",
+          "box": {
+            "x": 0.08,
+            "y": 0.62,
+            "w": 0.34,
+            "h": 0.14
+          },
+          "caption": "Corrosion band along the lower rocker panel"
+        }
+      ],
+      "estimatedCostUsd": {
+        "low": 600.0,
+        "high": 900.0
+      },
+      "sellerQuestion": "How long has the rust on the rocker panel been there, and has any bodywork been done to it?",
+      "mechanicCheck": "Ask a mechanic to probe the rocker panel and inspect the seam from underneath on a lift.",
+      "engine": "vision"
+    },
+    {
+      "id": "vf_dent_01",
+      "type": "exterior_damage",
+      "system": "exterior",
+      "title": "Deformation on rear quarter panel",
+      "detail": "A shallow deformation is visible on the rear quarter panel above the wheel arch. No paint fracture is visible at this resolution.",
+      "severity": "minor",
+      "confidence": 0.64,
+      "confidenceBasis": "The shading pattern is consistent with a dent, but a reflection or a shadow can produce a similar pattern. Confidence held low.",
+      "evidence": [
+        {
+          "kind": "image_region",
+          "assetId": "photo_03",
+          "box": {
+            "x": 0.55,
+            "y": 0.4,
+            "w": 0.2,
+            "h": 0.18
+          },
+          "caption": "Deformation above the rear wheel arch"
+        }
+      ],
+      "estimatedCostUsd": null,
+      "sellerQuestion": "Do you know how the dent on the rear quarter happened?",
+      "mechanicCheck": null,
+      "engine": "vision"
+    },
+    {
+      "id": "vf_wear_01",
+      "type": "interior_wear",
+      "system": "interior",
+      "title": "Driver seat bolster wear",
+      "detail": "Wear is visible on the outer driver seat bolster, consistent with regular entry and exit over time. No tearing is visible.",
+      "severity": "minor",
+      "confidence": 0.78,
+      "confidenceBasis": "Bolster wear is one of the more reliably visible interior signals in a well-lit cabin photo.",
+      "evidence": [
+        {
+          "kind": "image_region",
+          "assetId": "photo_04",
+          "box": {
+            "x": 0.2,
+            "y": 0.45,
+            "w": 0.24,
+            "h": 0.22
+          },
+          "caption": "Outer driver seat bolster"
+        }
+      ],
+      "estimatedCostUsd": null,
+      "sellerQuestion": null,
+      "mechanicCheck": null,
+      "engine": "vision"
+    },
+    {
+      "id": "vf_lamp_01",
+      "type": "dash_warning_light",
+      "system": "electrical",
+      "title": "Check-engine lamp illuminated in the instrument cluster",
+      "detail": "A check-engine lamp is illuminated in the cluster in this photograph. What triggered it cannot be determined without reading the fault codes with a scan tool.",
+      "severity": "major",
+      "confidence": 0.83,
+      "confidenceBasis": "The lamp shape and position are clearly legible. The reading is about the photograph, not about the vehicle's condition.",
+      "evidence": [
+        {
+          "kind": "image_region",
+          "assetId": "photo_05",
+          "box": {
+            "x": 0.62,
+            "y": 0.3,
+            "w": 0.1,
+            "h": 0.12
+          },
+          "caption": "Illuminated lamp in the instrument cluster"
+        }
+      ],
+      "estimatedCostUsd": null,
+      "sellerQuestion": "The check-engine light is on in your photo. What code is it throwing, and how long has it been on?",
+      "mechanicCheck": "Have the fault codes read with a scan tool before agreeing on a price. A $20 code read can be the difference between a sensor and a catalytic converter.",
+      "engine": "vision"
+    },
+    {
+      "id": "vf_odo_01",
+      "type": "odometer_reading",
+      "system": "documentation",
+      "title": "Odometer reads 128,540 miles",
+      "detail": "The odometer display reads 128,540 miles in this photograph. This matches the mileage stated by the seller. A photograph of an odometer is evidence of what the display showed when the photo was taken, and nothing more.",
+      "severity": "info",
+      "confidence": 0.91,
+      "confidenceBasis": "All digits are legible and unobstructed. Confidence reflects the legibility of the display, not the truthfulness of the reading.",
+      "evidence": [
+        {
+          "kind": "image_region",
+          "assetId": "photo_06",
+          "box": {
+            "x": 0.34,
+            "y": 0.44,
+            "w": 0.3,
+            "h": 0.12
+          },
+          "caption": "Odometer display reading 128,540"
+        }
+      ],
+      "estimatedCostUsd": null,
+      "sellerQuestion": "Can you show me the title and any service records so I can check the mileage history?",
+      "mechanicCheck": null,
+      "engine": "vision"
+    },
+    {
+      "id": "vf_tire_01",
+      "type": "tire_tread_estimate",
+      "system": "tires",
+      "title": "Front left tread appears low",
+      "detail": "Tread depth on the front left tire appears low relative to the tread block spacing visible in this image. Tread depth from a photograph is an estimate; a tread gauge costs a few dollars and settles it in seconds.",
+      "severity": "minor",
+      "confidence": 0.58,
+      "confidenceBasis": "Tread depth from a single photograph at this angle is unreliable. Confidence is low on purpose and this finding should be treated as a prompt to measure, not a measurement.",
+      "evidence": [
+        {
+          "kind": "image_region",
+          "assetId": "photo_07",
+          "box": {
+            "x": 0.3,
+            "y": 0.3,
+            "w": 0.36,
+            "h": 0.36
+          },
+          "caption": "Tread block area on the front left tire"
+        }
+      ],
+      "estimatedCostUsd": {
+        "low": 380.0,
+        "high": 620.0
+      },
+      "sellerQuestion": "How old are the tires, and were they all replaced at the same time?",
+      "mechanicCheck": "Measure tread depth on all four tires with a gauge and check for uneven wear that would suggest an alignment problem.",
+      "engine": "vision"
+    },
+    {
+      "id": "vf_bay_01",
+      "type": "exterior_damage",
+      "system": "engine",
+      "title": "Residue visible on engine bay surface",
+      "detail": "A dark residue is visible on a surface in the engine bay. Whether this is an active leak, a past leak that was cleaned, or spilled fluid from a top-up cannot be determined from a photograph.",
+      "severity": "minor",
+      "confidence": 0.61,
+      "confidenceBasis": "The residue is visible but its source is not traceable in a single still image.",
+      "evidence": [
+        {
+          "kind": "image_region",
+          "assetId": "photo_08",
+          "box": {
+            "x": 0.16,
+            "y": 0.28,
+            "w": 0.22,
+            "h": 0.16
+          },
+          "caption": "Residue on engine bay surface"
+        }
+      ],
+      "estimatedCostUsd": null,
+      "sellerQuestion": "Is the engine losing any fluid? When were the fluids last topped up or changed?",
+      "mechanicCheck": "Ask a mechanic to identify the fluid and find its source.",
+      "engine": "vision"
+    },
+    {
+      "id": "recall_FIX000002",
+      "type": "open_recall",
+      "system": "electrical",
+      "title": "Open recall FIX000002: ELECTRICAL SYSTEM",
+      "detail": "Synthetic fixture recall naming a system that is not locked, so that every run proves an ordinary recall survives as a cited finding.",
+      "severity": "major",
+      "confidence": 1.0,
+      "confidenceBasis": "Reported directly by NHTSA for this VIN. Not a model judgment.",
+      "evidence": [
+        {
+          "kind": "data_record",
+          "source": "FIXTURE - synthetic, not NHTSA",
+          "recordId": "FIX000002",
+          "retrievedAt": "2026-01-01T00:00:00Z",
+          "caption": "NHTSA recall FIX000002 - ELECTRICAL SYSTEM"
+        }
+      ],
+      "estimatedCostUsd": null,
+      "sellerQuestion": "Has recall FIX000002 been performed? A dealer will do it free - ask for the paperwork.",
+      "mechanicCheck": null,
+      "engine": "data"
+    }
+  ],
+  "systems": [
+    {
+      "system": "exterior",
+      "status": "attention",
+      "statement": "Corrosion visible along driver-side rocker panel (and 1 more)",
+      "findingIds": [
+        "vf_rust_01",
+        "vf_dent_01"
+      ],
+      "confidence": 0.72
+    },
+    {
+      "system": "interior",
+      "status": "attention",
+      "statement": "Driver seat bolster wear",
+      "findingIds": [
+        "vf_wear_01"
+      ],
+      "confidence": 0.78
+    },
+    {
+      "system": "engine",
+      "status": "attention",
+      "statement": "Residue visible on engine bay surface",
+      "findingIds": [
+        "vf_bay_01"
+      ],
+      "confidence": 0.61
+    },
+    {
+      "system": "transmission",
+      "status": "cannot_determine",
+      "statement": "Cannot be determined from photographs, video, or audio. Assessing transmission requires a test drive or a lift.",
+      "findingIds": [],
+      "confidence": null
+    },
+    {
+      "system": "brakes",
+      "status": "locked_mechanic_required",
+      "statement": "Not remotely verifiable - independent mechanic required.",
+      "findingIds": [],
+      "confidence": null
+    },
+    {
+      "system": "suspension",
+      "status": "cannot_determine",
+      "statement": "Cannot be determined from photographs, video, or audio. Assessing suspension requires a test drive or a lift.",
+      "findingIds": [],
+      "confidence": null
+    },
+    {
+      "system": "steering",
+      "status": "locked_mechanic_required",
+      "statement": "Not remotely verifiable - independent mechanic required.",
+      "findingIds": [],
+      "confidence": null
+    },
+    {
+      "system": "tires",
+      "status": "attention",
+      "statement": "Front left tread appears low",
+      "findingIds": [
+        "vf_tire_01"
+      ],
+      "confidence": 0.58
+    },
+    {
+      "system": "electrical",
+      "status": "attention",
+      "statement": "Check-engine lamp illuminated in the instrument cluster (and 1 more)",
+      "findingIds": [
+        "vf_lamp_01",
+        "recall_FIX000002"
+      ],
+      "confidence": 1.0
+    },
+    {
+      "system": "restraints",
+      "status": "locked_mechanic_required",
+      "statement": "Not remotely verifiable - independent mechanic required.",
+      "findingIds": [],
+      "confidence": null
+    },
+    {
+      "system": "structure",
+      "status": "locked_mechanic_required",
+      "statement": "Not remotely verifiable - independent mechanic required.",
+      "findingIds": [],
+      "confidence": null
+    },
+    {
+      "system": "fluids",
+      "status": "cannot_determine",
+      "statement": "Cannot be determined from photographs, video, or audio. Assessing fluids requires a test drive or a lift.",
+      "findingIds": [],
+      "confidence": null
+    },
+    {
+      "system": "glass",
+      "status": "cannot_determine",
+      "statement": "Cannot be determined - TIREKICK has no analysis pass that assesses glass from photographs. The media may show it; we did not examine it.",
+      "findingIds": [],
+      "confidence": null
+    },
+    {
+      "system": "documentation",
+      "status": "attention",
+      "statement": "Odometer reads 128,540 miles",
+      "findingIds": [
+        "vf_odo_01"
+      ],
+      "confidence": 0.91
+    }
+  ],
+  "mechanicReferrals": [
+    {
+      "id": "ref_vf_bay_02",
+      "system": "brakes",
+      "observation": "A wet area is visible on and around the front hub assembly.",
+      "ask": "Ask an independent mechanic to inspect this on a lift before you buy. TIREKICK cannot assess it from photos, video, or audio.",
+      "evidence": [
+        {
+          "kind": "image_region",
+          "assetId": "photo_08",
+          "box": {
+            "x": 0.6,
+            "y": 0.58,
+            "w": 0.24,
+            "h": 0.2
+          },
+          "caption": "Wet area on and around the front hub"
+        }
+      ]
+    },
+    {
+      "id": "ref_recall_FIX000001",
+      "system": "restraints",
+      "observation": "Synthetic fixture recall naming a locked system, so that every run proves a recall touching restraints becomes a mechanic referral rather than a finding.",
+      "ask": "Ask an independent mechanic to inspect this on a lift before you buy. TIREKICK cannot assess it from photos, video, or audio.",
+      "evidence": [
+        {
+          "kind": "data_record",
+          "source": "FIXTURE - synthetic, not NHTSA",
+          "recordId": "FIX000001",
+          "retrievedAt": "2026-01-01T00:00:00Z",
+          "caption": "NHTSA recall FIX000001 - AIR BAGS"
+        }
+      ]
+    }
+  ],
+  "price": {
+    "askingPriceUsd": 8900.0,
+    "comps": [
+      {
+        "id": "comp_1",
+        "sourceNote": "Pasted by the buyer - local listing, same model year, LX trim",
+        "askingPriceUsd": 9400.0,
+        "mileage": 112300,
+        "year": 2013,
+        "trim": "LX",
+        "notes": "Fixture comp. Not a real listing."
+      },
+      {
+        "id": "comp_2",
+        "sourceNote": "Pasted by the buyer - local listing, same model year",
+        "askingPriceUsd": 8100.0,
+        "mileage": 134800,
+        "year": 2013,
+        "trim": "LX",
+        "notes": "Fixture comp. Not a real listing."
+      },
+      {
+        "id": "comp_3",
+        "sourceNote": "Pasted by the buyer - listing 40 miles away, lower mileage",
+        "askingPriceUsd": 10200.0,
+        "mileage": 98500,
+        "year": 2013,
+        "trim": "EX",
+        "notes": "Fixture comp. Not a real listing."
+      },
+      {
+        "id": "comp_4",
+        "sourceNote": "Pasted by the buyer - high-mileage example, same trim",
+        "askingPriceUsd": 7300.0,
+        "mileage": 151000,
+        "year": 2013,
+        "trim": "LX",
+        "notes": "Fixture comp. Not a real listing."
+      }
+    ],
+    "normalizationNotes": "Mileage adjustment of $-0.056 per mile, fitted from the 4 comparable listings provided rather than from any assumed depreciation rate. Range built from 4 listing(s) you provided. It reflects those listings and nothing else - not a market index, not an appraisal. Asking prices, not sale prices. What a car is listed at and what it sells for are different numbers, and the second one is not public. Subject mileage of 128,540 is as stated by the seller and has not been verified.",
+    "fairRangeUsd": {
+      "low": 6927.95,
+      "high": 7568.4
+    },
+    "deductions": [
+      {
+        "findingId": "vf_rust_01",
+        "label": "Corrosion visible along driver-side rocker panel",
+        "lowUsd": 600.0,
+        "highUsd": 900.0,
+        "basis": "Repair cost band attached to this finding. Confidence in the finding itself is 0.72."
+      },
+      {
+        "findingId": "vf_tire_01",
+        "label": "Front left tread appears low",
+        "lowUsd": 380.0,
+        "highUsd": 620.0,
+        "basis": "Repair cost band attached to this finding. Confidence in the finding itself is 0.58."
+      }
+    ],
+    "verdict": "above_range",
+    "verdictStatement": "The asking price of $8,900 is above the $6,928-$7,568 range these comparable listings support after the deductions above. The gap is $1,332."
+  },
+  "sellerQuestions": [
+    "How long has the rust on the rocker panel been there, and has any bodywork been done to it?",
+    "Do you know how the dent on the rear quarter happened?",
+    "The check-engine light is on in your photo. What code is it throwing, and how long has it been on?",
+    "Can you show me the title and any service records so I can check the mileage history?",
+    "How old are the tires, and were they all replaced at the same time?",
+    "Is the engine losing any fluid? When were the fluids last topped up or changed?",
+    "Has recall FIX000002 been performed? A dealer will do it free - ask for the paperwork.",
+    "Do you have service records? Can I see them before I come out?",
+    "Has this car been in any accident, reported or not?",
+    "Are you the titleholder, and is the title in hand and clear?",
+    "Can I take it to my mechanic for a pre-purchase inspection?",
+    "Can you show me the dealer paperwork for the open recalls on this VIN?"
+  ],
+  "negotiationScript": [
+    {
+      "beat": "Open by naming what you did",
+      "say": "I ran the photos and the VIN through an AI analysis before coming out. It flagged a few things I want to look at with you."
+    },
+    {
+      "beat": "Raise: Corrosion visible along driver-side rocker panel",
+      "say": "The analysis flagged corrosion visible along driver-side rocker panel. I'd want that looked at - a shop quoted that kind of work at roughly $600 to $900. Can we talk about the price with that in mind?"
+    },
+    {
+      "beat": "Raise: Front left tread appears low",
+      "say": "The analysis flagged front left tread appears low. I'd want that looked at - a shop quoted that kind of work at roughly $380 to $620. Can we talk about the price with that in mind?"
+    },
+    {
+      "beat": "Anchor on the comps",
+      "say": "I looked at comparable listings and they support roughly $6,928 to $7,568 for this car in this condition. Here are the listings I looked at. Can you meet me in that range?"
+    },
+    {
+      "beat": "Protect yourself on what the analysis could not see",
+      "say": "The analysis was clear that it can't assess brakes, airbags, frame, or steering from photos. I'd like to take it to my mechanic before we finalize. If that's not possible, I understand, but then I'd need the price to reflect the risk I'm taking on."
+    },
+    {
+      "beat": "Be willing to leave",
+      "say": "I appreciate your time. Let me think it over and I'll call you tomorrow."
+    }
+  ],
+  "cost": {
+    "mode": "fixture",
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "imagesAnalyzed": 18,
+    "audioSecondsProcessed": 22.0,
+    "storageBytes": 2948156,
+    "usdTotal": 0.0,
+    "note": "Fixture mode: responses served from cache, no API calls billed. $0.00 is the true cost of this run and not a placeholder."
+  },
+  "containsSyntheticMedia": true
+}

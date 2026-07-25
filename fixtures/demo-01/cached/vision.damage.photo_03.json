@@ -1,0 +1,24 @@
+{
+  "_fixture_note": "Hand-authored placeholder. Not a model response. The box matches region B drawn in photo_03.jpg.",
+  "findings": [
+    {
+      "id": "vf_dent_01",
+      "type": "exterior_damage",
+      "title": "Deformation on rear quarter panel",
+      "system": "exterior",
+      "detail": "A shallow deformation is visible on the rear quarter panel above the wheel arch. No paint fracture is visible at this resolution.",
+      "severity": "minor",
+      "confidence": 0.64,
+      "confidence_basis": "The shading pattern is consistent with a dent, but a reflection or a shadow can produce a similar pattern. Confidence held low.",
+      "evidence": [
+        {
+          "box": { "x": 0.55, "y": 0.4, "w": 0.2, "h": 0.18 },
+          "caption": "Deformation above the rear wheel arch"
+        }
+      ],
+      "estimated_cost_usd": null,
+      "seller_question": "Do you know how the dent on the rear quarter happened?",
+      "mechanic_check": null
+    }
+  ]
+}

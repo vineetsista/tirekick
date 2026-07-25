@@ -1,0 +1,24 @@
+{
+  "_fixture_note": "Hand-authored placeholder. Not a model response. The box matches region E drawn in photo_06.jpg.",
+  "findings": [
+    {
+      "id": "vf_odo_01",
+      "type": "odometer_reading",
+      "system": "documentation",
+      "title": "Odometer reads 128,540 miles",
+      "detail": "The odometer display reads 128,540 miles in this photograph. This matches the mileage stated by the seller. A photograph of an odometer is evidence of what the display showed when the photo was taken, and nothing more.",
+      "severity": "info",
+      "confidence": 0.91,
+      "confidence_basis": "All digits are legible and unobstructed. Confidence reflects the legibility of the display, not the truthfulness of the reading.",
+      "evidence": [
+        {
+          "box": { "x": 0.34, "y": 0.44, "w": 0.3, "h": 0.12 },
+          "caption": "Odometer display reading 128,540"
+        }
+      ],
+      "estimated_cost_usd": null,
+      "seller_question": "Can you show me the title and any service records so I can check the mileage history?",
+      "mechanic_check": null
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "_fixture_note": "Hand-authored placeholder. Not a model response. The box matches region D drawn in photo_05.jpg.",
+  "findings": [
+    {
+      "id": "vf_lamp_01",
+      "type": "dash_warning_light",
+      "system": "electrical",
+      "title": "Check-engine lamp illuminated in the instrument cluster",
+      "detail": "A check-engine lamp is illuminated in the cluster in this photograph. What triggered it cannot be determined without reading the fault codes with a scan tool.",
+      "severity": "major",
+      "confidence": 0.83,
+      "confidence_basis": "The lamp shape and position are clearly legible. The reading is about the photograph, not about the vehicle's condition.",
+      "evidence": [
+        {
+          "box": { "x": 0.62, "y": 0.3, "w": 0.1, "h": 0.12 },
+          "caption": "Illuminated lamp in the instrument cluster"
+        }
+      ],
+      "estimated_cost_usd": null,
+      "seller_question": "The check-engine light is on in your photo. What code is it throwing, and how long has it been on?",
+      "mechanic_check": "Have the fault codes read with a scan tool before agreeing on a price. A $20 code read can be the difference between a sensor and a catalytic converter."
+    }
+  ]
+}

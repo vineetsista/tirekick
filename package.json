@@ -1,0 +1,28 @@
+{
+  "name": "tirekick",
+  "private": true,
+  "version": "0.0.0",
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "contract:check": "pnpm --filter @tirekick/shared run contract:check",
+    "py:setup": "bash scripts/py-setup.sh",
+    "py:test": "packages/engines/.venv/bin/pytest packages/engines -q",
+    "py:lint": "packages/engines/.venv/bin/ruff check packages/engines && packages/engines/.venv/bin/ruff format --check packages/engines",
+    "py:types": "packages/engines/.venv/bin/mypy packages/engines/src",
+    "inspect:fixture": "packages/engines/.venv/bin/python -m tirekick_engines.cli inspect --fixture demo-01 --out fixtures/reports/demo-01.report.json",
+    "gates": "bash scripts/gates.sh"
+  },
+  "devDependencies": {
+    "turbo": "2.3.3",
+    "typescript": "5.7.2",
+    "prettier": "3.4.2"
+  }
+}

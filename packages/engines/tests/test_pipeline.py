@@ -1,0 +1,143 @@
+"""The end-to-end fixture run, and the golden report it must keep producing."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import pytest
+
+from tirekick_engines.models import LOCKED_SYSTEMS
+from tirekick_engines.pipeline import run_inspection
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+FIXTURE_DIR = REPO_ROOT / "fixtures" / "demo-01"
+GOLDEN = REPO_ROOT / "fixtures" / "reports" / "demo-01.report.json"
+
+#: Pinned so golden output is byte-stable across runs.
+FIXED_TIME = "2026-01-01T00:00:00Z"
+
+
+@pytest.fixture(scope="module")
+def run():  # type: ignore[no-untyped-def]
+    return run_inspection(inspection_dir=FIXTURE_DIR, mode="fixture", generated_at=FIXED_TIME)
+
+
+def test_fixture_run_needs_no_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    """LAW 7. CI has no secrets and must still go green."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    result = run_inspection(inspection_dir=FIXTURE_DIR, mode="fixture", generated_at=FIXED_TIME)
+    assert result.report.findings
+
+
+def test_golden_report_is_unchanged(run) -> None:  # type: ignore[no-untyped-def]
+    """Committed media + committed responses -> byte-identical report.
+
+    When this fails, either the pipeline changed or a fixture did. Both are worth
+    stopping for; regenerate deliberately, and read the diff.
+    """
+    assert GOLDEN.is_file(), "run: pnpm run inspect:fixture"
+    expected = GOLDEN.read_text(encoding="utf-8")
+    assert run.report.to_json() == expected
+
+
+def test_report_declares_its_synthetic_media(run) -> None:  # type: ignore[no-untyped-def]
+    assert run.report.contains_synthetic_media is True
+    assert all(a.synthetic for a in run.report.assets)
+
+
+def test_no_finding_touches_a_locked_system(run) -> None:  # type: ignore[no-untyped-def]
+    """The law, asserted on the real artifact rather than on a constructed one."""
+    assert not [f for f in run.report.findings if f.system in LOCKED_SYSTEMS]
+
+
+def test_the_fabricated_all_clear_never_reaches_the_report(run) -> None:  # type: ignore[no-untyped-def]
+    """fixtures ship a deliberate 'brakes are good, 0.96' draft. It must die here."""
+    blob = run.report.to_json().lower()
+    assert "good condition" not in blob
+    assert "vf_bay_03" not in blob
+    assert any("dropped 'vf_bay_03'" in line for line in run.clamp_log)
+
+
+def test_the_adverse_brake_observation_survives_as_a_referral(run) -> None:  # type: ignore[no-untyped-def]
+    referral_ids = {r.id for r in run.report.mechanic_referrals}
+    assert "ref_vf_bay_02" in referral_ids
+    assert "ref_recall_FIX000001" in referral_ids
+
+
+def test_every_finding_cites_evidence_that_resolves(run) -> None:  # type: ignore[no-untyped-def]
+    asset_ids = {a.id for a in run.report.assets}
+    assert run.report.findings
+    for finding in run.report.findings:
+        assert finding.evidence, f"{finding.id} has no evidence"
+        for ev in finding.evidence:
+            asset_id = getattr(ev, "asset_id", None)
+            if asset_id is not None:
+                assert asset_id in asset_ids
+
+
+def test_all_four_locked_rows_are_present_and_identical(run) -> None:  # type: ignore[no-untyped-def]
+    locked = [r for r in run.report.systems if r.system in LOCKED_SYSTEMS]
+    assert len(locked) == 4
+    assert {r.status for r in locked} == {"locked_mechanic_required"}
+
+
+def test_no_system_is_called_clean_without_being_examined(run) -> None:  # type: ignore[no-untyped-def]
+    """LIABILITY section 9 - the false-reassurance-by-omission guard.
+
+    A system nothing looked at must read cannot_determine. Glass is the standing
+    example: photographs may show it, but no pass assesses it.
+    """
+    glass = next(r for r in run.report.systems if r.system == "glass")
+    assert glass.status == "cannot_determine"
+
+
+def test_coverage_leads_with_what_is_missing(run) -> None:  # type: ignore[no-untyped-def]
+    coverage = run.report.coverage
+    assert coverage.missing_views
+    assert "Not covered" in coverage.statement
+    assert coverage.score < 1.0
+    # The verdict block names the gap, not just the coverage block.
+    assert any("standard view" in line for line in run.report.verdict.could_not_assess)
+
+
+def test_verdict_leads_with_the_locked_systems(run) -> None:  # type: ignore[no-untyped-def]
+    first_four = run.report.verdict.could_not_assess[:4]
+    assert all("independent mechanic required" in line for line in first_four)
+
+
+def test_cost_is_reported_and_is_honestly_zero(run) -> None:  # type: ignore[no-untyped-def]
+    cost = run.report.cost
+    assert cost.mode == "fixture"
+    assert cost.usd_total == 0.0
+    assert "no API calls billed" in cost.note
+    # The work is still counted even though it was not billed.
+    assert cost.images_analyzed > 0
+    assert cost.storage_bytes > 0
+
+
+def test_price_verdict_shows_its_comps(run) -> None:  # type: ignore[no-untyped-def]
+    price = run.report.price
+    assert price is not None
+    assert len(price.comps) >= 3
+    assert price.deductions
+    for deduction in price.deductions:
+        assert deduction.finding_id in {f.id for f in run.report.findings}
+
+
+def test_audio_makes_no_claims_in_p0(run) -> None:  # type: ignore[no-untyped-def]
+    """P0 audio is deliberately silent. Silence is the correct output, not a stub."""
+    assert not [f for f in run.report.findings if f.engine == "audio"]
+    assert run.report.coverage.has_audio is True
+    assert any(
+        "does not yet analyze engine audio" in line
+        for line in run.report.verdict.could_not_assess
+    )
+
+
+def test_report_json_round_trips(run) -> None:  # type: ignore[no-untyped-def]
+    """What we write is what the web app parses."""
+    from tirekick_engines.models import Report
+
+    reparsed = Report.model_validate(json.loads(run.report.to_json()))
+    assert reparsed == run.report

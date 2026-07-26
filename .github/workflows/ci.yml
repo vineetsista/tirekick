@@ -1,0 +1,93 @@
+name: CI
+
+# LAW 7. Every gate runs on every push. No ANTHROPIC_API_KEY is configured for
+# this workflow and none is needed: TIREKICK_MODE defaults to fixture, so the
+# engines serve cached responses and make no API calls (D-009). If a change ever
+# makes CI need a key, CI fails - which is the intended alarm, not a nuisance.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TIREKICK_MODE: fixture
+
+jobs:
+  gates:
+    name: gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Python 3.12 is pinned to match local (D-001).
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install node dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install python engines
+        run: bash scripts/py-setup.sh
+
+      # ffmpeg is used by the audio engine and by fixture media generation.
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+
+      - name: Run all gates
+        run: bash scripts/gates.sh
+
+      # The report the web app renders is the artifact worth keeping when a run
+      # goes red - it is the fastest way to see what the engines actually emitted.
+      - name: Upload fixture report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fixture-report
+          path: fixtures/reports/demo-01.report.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  no-key-required:
+    name: no api key required
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      # Guards LAW 7 directly: the fixture inspection must complete with the
+      # environment scrubbed of every credential.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install python engines
+        run: bash scripts/py-setup.sh
+
+      - name: Fixture inspection with no credentials present
+        env:
+          ANTHROPIC_API_KEY: ""
+          TIREKICK_MODE: ""
+        run: |
+          unset ANTHROPIC_API_KEY
+          unset TIREKICK_MODE
+          packages/engines/.venv/bin/python -m tirekick_engines.cli inspect \
+            --fixture demo-01 --out /tmp/no-key.report.json
+          test -s /tmp/no-key.report.json

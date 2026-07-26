@@ -5,8 +5,8 @@ import {
   isLockedSystem,
   priceCheckSchema,
   type Report,
-} from "./schema.js";
-import { LOCKED_SYSTEMS, LOCKED_SYSTEM_STATEMENT, SCHEMA_VERSION } from "./constants.js";
+} from "./schema";
+import { LOCKED_SYSTEMS, LOCKED_SYSTEM_STATEMENT, SCHEMA_VERSION } from "./constants";
 
 /** Minimal law-abiding report used as the base for adversarial mutations. */
 function baseReport(): Report {

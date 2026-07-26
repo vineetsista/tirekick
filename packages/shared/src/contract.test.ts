@@ -2,8 +2,8 @@ import { readFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { parseReport, reportSchema } from "./schema.js";
-import { LOCKED_SYSTEM_STATEMENT, SCHEMA_VERSION } from "./constants.js";
+import { parseReport, reportSchema } from "./schema";
+import { LOCKED_SYSTEM_STATEMENT, SCHEMA_VERSION } from "./constants";
 
 /**
  * THE DRIFT GATE (DECISIONS.md D-002).

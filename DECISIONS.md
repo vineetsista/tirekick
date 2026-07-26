@@ -127,3 +127,108 @@ and the accuracy page are the differentiator, and building them in the open is
 evidence we meant them - but that argument is the founder's to make, not a default
 to take on his behalf. Cost: the "built in the open" signal is deferred. Reversal is
 one command, and it is written into the FOUNDER REPS in `phase_reports/PHASE_0.md`.
+
+### D-014 - A failed check digit rejects a North American VIN and only warns on others
+**P1.** ISO 3779 defines a check digit in position 9, but it is mandatory only for
+vehicles built for the North American market; manufacturers elsewhere commonly
+ignore it. Treating every mismatch as a hard error would reject valid VINs on
+imported cars, and treating none of them as an error would let the commonest typo
+through on the vehicles where the arithmetic actually holds. Chose to gate on the
+first character of the WMI: 1-5 means the digit is required and a mismatch is a
+refusal to look anything up, anything else means the digit is optional and a
+mismatch is reported as "could not verify" while the lookup proceeds. Cost: a
+mistyped VIN on an imported car still reaches vPIC, where it will simply fail to
+decode - which the report then surfaces as a decode error rather than as a typo.
+
+### D-015 - Complaint responses are reduced to counts before they touch the disk
+**P1.** One complaint query for one model year returns up to several megabytes of
+narratives written by members of the public, each carrying a partial VIN, a date,
+a location, and often an account of someone's crash. TIREKICK needs the counts and
+nothing else. Committing the raw bodies would put thousands of strangers' accident
+descriptions into a git repository, permanently, to compute a histogram. Chose to
+reduce in `sources.py::_reduce_complaints` before caching - counts by component,
+crash/fire/injury/death totals, nothing more - and to carry the SHA-256 of the
+original response body in the envelope so the reduction stays traceable to the
+exact bytes it came from. Cost: the cache is not a faithful replay of the API, so
+a future field we decide we want requires a refetch rather than a re-parse. Worth
+it. The 2003 Accord alone drops from about 2 MB to 1.1 KB.
+
+### D-016 - Recalls are model-scoped, and the report says so three times
+**P1.** NHTSA publishes recall campaigns keyed to make/model/year and publishes no
+public per-VIN remedy status - there is no endpoint that answers "was this done on
+this car". A report that lists four campaigns under a masked VIN will be read as
+"this car has four open recalls", which we do not know. Chose to carry the scope
+in three places rather than one: `VehicleRecord.recall_scope` above the list, a
+sentence inside every finding's own detail text, and a seller question phrased as
+a question rather than an accusation. Three repetitions is deliberate - the caveat
+has to survive being skimmed, and it has to survive a single finding being read on
+its own. Locked by `test_no_recall_is_presented_as_outstanding_on_this_vehicle`,
+which asserts the wording on all five golden VINs. Cost: the recall section reads
+more hedged than a competitor's will.
+
+### D-017 - Title-brand matches are classified, and a denial produces nothing
+**P1.** A history report that says "Salvage: None" contains the word "salvage".
+The naive scan reports a salvage indicator on a clean car, which is precisely the
+error ACCURACY.md names as the one that costs a buyer a good deal. Chose to
+classify every match as asserted, denied, or ambiguous: denied produces no finding
+at all, ambiguous ships at reduced severity saying in as many words that we could
+not read the line, and asserted ships at full severity with the line quoted
+verbatim so the buyer checks our reading in one glance. The first implementation
+of this got it wrong in the most ordinary case - "None reported" carries both a
+negation and an assertion verb and was classified ambiguous, which put a salvage
+indicator on the demo fixture whose own paperwork denied one. Fixed by matching
+negated assertions as a unit, before either signal is counted separately. Nine
+denial phrasings are locked in `test_history.py`. Cost: a document that asserts a
+brand in wording we have not anticipated ships as ambiguous rather than as major.
+That is the right direction to be wrong in.
+
+### D-018 - The eval gate gains a minimum sample size
+**P1.** LAW 4 as written in P0 compared a measured precision against a threshold,
+and nothing stopped a tiny sample from clearing a high bar. This was not
+hypothetical: P1 decodes five VINs correctly, and 5/5 "clears" a 0.99 gate while
+being statistically almost empty - the 95% confidence interval on five successes
+runs down to roughly 0.55. Added `FindingTypeSpec.min_n`, defaulting to 50, and
+`enabled_for_paid` now requires the sample size before it looks at the precision.
+The gate table printed on every run gained a column saying which condition is
+failing, so "not measured", "n too small" and "below gate" are visibly different
+states rather than three ways of printing NO. Cost: nothing ships sooner than the
+evidence supports, which is the entire intent.
+
+### D-019 - Golden VINs carry real model codes and an invented serial
+**P1.** The gate calls for golden tests on five real VINs, and a real VIN
+identifies one physical vehicle belonging to a real person. Publishing five of
+them in a public repository, then querying federal databases about them, is a
+privacy cost with no testing benefit: the decode exercises the WMI and VDS - the
+manufacturer, plant, line, body and engine codes - and never the serial. Chose to
+take real WMI and VDS values, set the last six characters to 000000, and recompute
+the position-9 check digit so the result is internally valid. All five decode
+cleanly against live vPIC with real trim, body class and engine data, and none of
+them is anybody's car. Cost: the serial-derived fields vPIC sometimes returns are
+untested, and they are fields we do not use.
+
+### D-020 - The complaint model index resolves NHTSA's second vocabulary
+**P1.** The recalls and complaints endpoints do not share a model vocabulary, and
+neither response says so. Recalls accept "F-150"; complaints return HTTP 400 for
+it and index the same truck as "F-150 SUPERCAB", "F-150 REGULAR CAB" and "F-150
+SUPER CREW". Two of the five golden vehicles hit this, and the failure mode is the
+dangerous kind: an error becomes an empty result, and an empty result renders as
+zero complaints, which reads as good news. Chose to query NHTSA's own model index
+and resolve most specific first - model plus vPIC's series where there is one, so
+a Silverado 1500 is not blended with a 3500; then the exact model name; then every
+indexed name beginning with it, aggregated, with the names listed in the scope
+sentence and an explicit statement that the VIN does not say which variant this
+is. Cost: one extra cached lookup per vehicle, and an aggregated count for trucks
+whose cab style the VIN does not encode.
+
+### D-021 - Model-level findings are excluded from the red-flag score
+**P1.** Wiring real recall data in took the demo fixture from 62/100 to 100/100 on
+the strength of five campaigns against a 2013 Accord. That number said the car was
+maximally bad; the evidence said a model year has recall campaigns on file, most
+of them years old, all of them free to remedy at any dealer, and none of them
+known to be outstanding on this vehicle. Chose to score only findings evidenced on
+this vehicle - photographs, audio, the buyer's own paperwork - and to exclude
+`open_recall` and `complaint_pattern`, which describe the model. They are still
+reported in full at their own severity, and the headline now names them in a
+separate clause with their own count. The score returned to 50/100. Cost: a buyer
+who reads only the number sees nothing of the recall history, which is why the
+headline sentence carries it and the vehicle record section repeats it.

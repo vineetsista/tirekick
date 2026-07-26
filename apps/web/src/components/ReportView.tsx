@@ -3,6 +3,7 @@ import {
   SHARE_FOOTER,
   type Finding,
   type Report,
+  type VehicleRecord,
 } from "@tirekick/shared";
 import { ConfidenceBar } from "./ConfidenceBar";
 import { Overlay, annotationsFor } from "./Overlay";
@@ -263,6 +264,147 @@ function FindingCard({ finding }: { finding: Finding }) {
   );
 }
 
+/**
+ * The federal record, and - just as prominently - the edges of it.
+ *
+ * Recalls are the section of this report most likely to be misread. NHTSA
+ * publishes campaigns per model and never per VIN, so a list under a masked VIN
+ * reads as "open on this car" unless something says otherwise loudly. The scope
+ * note is rendered above the counts, in the locked colour, for that reason.
+ */
+function VehicleRecordSection({ vehicle }: { vehicle: VehicleRecord }) {
+  const d = vehicle.decoded;
+  const fields: [string, string | number | null][] = [
+    ["VIN", vehicle.vinMasked],
+    ["Year", d.year],
+    ["Make", d.make],
+    ["Model", d.series ? `${d.model ?? ""} ${d.series}`.trim() : d.model],
+    ["Trim", d.trim],
+    ["Engine", d.engine],
+    ["Drive", d.driveType],
+    ["Body", d.bodyClass],
+  ];
+
+  return (
+    <Section label="Vehicle record">
+      <div className="panel">
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+            gap: 16,
+          }}
+        >
+          {fields.map(([label, value]) => (
+            <div key={label}>
+              <div className="mono-label">{label}</div>
+              <div>{value === null || value === "" ? "-" : value}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="prose muted" style={{ fontSize: 12, marginTop: 16 }}>
+          {vehicle.vinStatement}
+        </div>
+
+        {vehicle.decodeError && (
+          <div
+            className="prose"
+            style={{
+              marginTop: 12,
+              fontSize: 13,
+              color: "var(--tk-sev-major)",
+              border: "1px solid var(--tk-sev-major)",
+              padding: "10px 14px",
+            }}
+          >
+            {vehicle.decodeError}
+          </div>
+        )}
+
+        {/* The caveat leads the recall count, never trails it. */}
+        <div
+          style={{
+            marginTop: 20,
+            paddingTop: 16,
+            borderTop: "1px solid var(--tk-line)",
+          }}
+        >
+          <div className="mono-label" style={{ color: "var(--tk-locked)" }}>
+            Recalls - what this list is
+          </div>
+          <div
+            className="prose"
+            style={{ fontSize: 13, marginTop: 8, color: "var(--tk-locked)" }}
+          >
+            {vehicle.recallScope}
+          </div>
+        </div>
+
+        {vehicle.complaintSummary && (
+          <div style={{ marginTop: 20 }}>
+            <div className="mono-label">Owner complaints for this model</div>
+            <div style={{ display: "flex", gap: 24, flexWrap: "wrap", marginTop: 10 }}>
+              <div>
+                <div style={{ fontSize: 26 }}>
+                  {vehicle.complaintSummary.total.toLocaleString()}
+                </div>
+                <div className="muted" style={{ fontSize: 11 }}>
+                  complaints filed
+                </div>
+              </div>
+              <div style={{ flex: "1 1 320px" }}>
+                <table style={{ marginTop: 0 }}>
+                  <tbody>
+                    {vehicle.complaintSummary.topComponents.map((c) => (
+                      <tr key={c.component}>
+                        <td style={{ fontSize: 12 }}>{c.component}</td>
+                        <td
+                          className="muted"
+                          style={{ fontSize: 12, textAlign: "right", width: 70 }}
+                        >
+                          {c.count.toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div className="prose muted" style={{ fontSize: 12, marginTop: 12 }}>
+              {vehicle.complaintSummary.scope}
+            </div>
+          </div>
+        )}
+
+        {/* LAW 1 - every lookup behind this section, with when and from where. */}
+        {vehicle.sources.length > 0 && (
+          <div
+            style={{
+              marginTop: 20,
+              paddingTop: 16,
+              borderTop: "1px solid var(--tk-line)",
+            }}
+          >
+            <div className="mono-label">Sources</div>
+            <ul style={{ margin: "10px 0 0", paddingLeft: 18, fontSize: 12 }}>
+              {vehicle.sources.map((s) => (
+                <li key={s.url + s.retrievedAt} className="muted" style={{ marginBottom: 8 }}>
+                  <span style={{ color: "var(--tk-text)" }}>{s.source}</span>{" "}
+                  <span style={{ color: "var(--tk-unknown)" }}>
+                    (retrieved {s.retrievedAt})
+                  </span>
+                  <div style={{ marginTop: 2 }}>{s.statement}</div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </Section>
+  );
+}
+
 export function ReportView({ report }: { report: Report }) {
   const photos = report.assets.filter((a) => a.kind === "photo");
 
@@ -303,7 +445,10 @@ export function ReportView({ report }: { report: Report }) {
           }}
         >
           This report was generated from synthetic fixture media. The images are
-          drawings, not photographs, and nothing here describes a real vehicle.
+          drawings, not photographs, and no statement here about condition
+          describes a real vehicle. The federal records below are real: the VIN
+          carries genuine manufacturer codes with an invented serial, so it
+          decodes to a real model and identifies nobody&rsquo;s car.
         </div>
       )}
 
@@ -448,51 +593,7 @@ export function ReportView({ report }: { report: Report }) {
         </Section>
       )}
 
-      {report.vehicle && (
-        <Section label="Vehicle record">
-          <div className="panel">
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-                gap: 16,
-              }}
-            >
-              {[
-                ["VIN", report.vehicle.vinMasked],
-                ["Year", report.vehicle.decoded.year],
-                ["Make", report.vehicle.decoded.make],
-                ["Model", report.vehicle.decoded.model],
-                ["Trim", report.vehicle.decoded.trim],
-                ["Engine", report.vehicle.decoded.engine],
-                ["Drive", report.vehicle.decoded.driveType],
-                ["Body", report.vehicle.decoded.bodyClass],
-              ].map(([label, value]) => (
-                <div key={String(label)}>
-                  <div className="mono-label">{label}</div>
-                  <div>{value ?? "-"}</div>
-                </div>
-              ))}
-            </div>
-            <div
-              className="muted"
-              style={{ marginTop: 18, paddingTop: 14, borderTop: "1px solid var(--tk-line)", fontSize: 12 }}
-            >
-              Source: {report.vehicle.source} / retrieved {report.vehicle.retrievedAt}
-              {report.vehicle.complaintSummary && (
-                <>
-                  {" "}/ {report.vehicle.complaintSummary.total} public complaints filed for
-                  this model year, most commonly:{" "}
-                  {report.vehicle.complaintSummary.topComponents
-                    .map((c) => `${c.component.toLowerCase()} (${c.count})`)
-                    .join(", ")}
-                  . Complaints are about the model, not about this car.
-                </>
-              )}
-            </div>
-          </div>
-        </Section>
-      )}
+      {report.vehicle && <VehicleRecordSection vehicle={report.vehicle} />}
 
       {report.price && (
         <Section label="Price check">

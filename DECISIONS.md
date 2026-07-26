@@ -116,3 +116,14 @@ present and unhidden but visually terminal. It is internal-facing in P0 and beco
 a real decision input when live inference has a measurable price. Cost: a buyer who
 reads to the bottom sees an implementation detail. That is the cheaper mistake than
 hiding a number the laws say we publish.
+
+### D-013 - The GitHub repo is created private, not public
+**P0.** The brief authorized creating `github.com/vineetsista/tirekick` via `gh` when
+`gh` is authenticated, but did not specify visibility, and visibility is the one
+part of that action that is hard to walk back: a public repo is indexed, forkable,
+and archived by third parties within minutes, while a private repo can be made
+public in one click. Chose private. There is a real argument for public - the laws
+and the accuracy page are the differentiator, and building them in the open is
+evidence we meant them - but that argument is the founder's to make, not a default
+to take on his behalf. Cost: the "built in the open" signal is deferred. Reversal is
+one command, and it is written into the FOUNDER REPS in `phase_reports/PHASE_0.md`.

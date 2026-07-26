@@ -1,6 +1,7 @@
 # PHASE 0 - SCAFFOLD + LAWS
 
-Tag: `v0.1` | Branch: `main` | 11 commits | 107 tracked files
+Tag: `v0.1` | Branch: `main` | 12 commits | 107 tracked files
+Remote: `github.com/vineetsista/tirekick` (private - D-013)
 
 ---
 
@@ -53,6 +54,10 @@ D-001 through D-010 were logged previously. New this session:
 - **D-012 - Cost renders at the bottom of the dossier, present but terminal.** LAW 5
   requires the number be visible; putting it near the verdict invites the buyer to
   price the analysis instead of reading it.
+- **D-013 - The GitHub repo was created private.** The brief authorized creating it
+  via `gh` when `gh` is authenticated, and it is. It did not specify visibility, and
+  visibility is the part that is hard to walk back. Private is the reversible
+  direction; making it public is one command and is REP 1.
 
 ---
 
@@ -123,9 +128,11 @@ TIREKICK cannot legitimately sell a single finding type. P2 is what changes that
 
 ## 4. GAPS - WHAT IS NOT TRUE YET
 
-1. **"Skeleton deployed" is NOT met.** No GitHub remote, no Vercel project. Both
-   need your accounts; see FOUNDER REPS. This is the one P0 gate item outstanding
-   and I did not do it unilaterally because both are outward-facing.
+1. **"Skeleton deployed" is HALF met.** The GitHub remote exists:
+   `github.com/vineetsista/tirekick`, private (D-013), `main` and `v0.1` pushed, CI
+   running on the push. **There is still no Vercel project** - that needs your
+   account and is REP 1. Nothing is publicly reachable yet, so no stranger has seen
+   a dossier.
 2. **No live model call has ever run in this repo.** Fixture mode is the default,
    no `ANTHROPIC_API_KEY` is present, and the `live` path is therefore exercised by
    exactly zero tests. The first live run will find bugs. Budget for that in P2.
@@ -222,20 +229,36 @@ The gate table prints on every run so this stays uncomfortable rather than forgo
 
 ## 6. FOUNDER REPS (25 min)
 
-### REP 1 - Create the GitHub repo (5 min)
+### REP 1 - Deploy the skeleton, and decide visibility (10 min)
 
-`gh` is installed on Windows but not in WSL, and I am not creating a public repo on
-your account without you saying so. Decide public or private, then run in WSL:
+The repo is live at `github.com/vineetsista/tirekick`, **private**, with `main` and
+`v0.1` pushed and CI green on the push. Two things are yours:
 
-```bash
-sudo apt install gh -y && gh auth login
-cd ~/projects/tirekick
-gh repo create vineetsista/tirekick --private --source=. --remote=origin --push
+**a. Vercel.** This needs your account, so it is not something I can do:
+
+```
+vercel.com/new -> import vineetsista/tirekick
+  Root directory:  apps/web
+  Build command:   pnpm --filter web run build
+  Framework:       Next.js
 ```
 
-Swap `--private` for `--public` if you want the build in the open from commit one.
-There is a real argument for public: the accuracy page and the laws are the product's
-differentiator, and a public repo is evidence you meant them.
+No environment variables are required. The dossier viewer reads a committed fixture
+report, so a fresh deploy renders the full demo with no key, no database, and no
+secrets. That is the P0 gate item "skeleton deployed", and it is the first time
+anyone but you can look at this.
+
+**b. Public or private.** I chose private because it is the reversible direction
+(D-013). The argument for public is real: the laws and the accuracy page are the
+differentiator, and a public repo from commit one is evidence you meant them rather
+than marketing them. If you want that, it is one command:
+
+```bash
+gh repo edit vineetsista/tirekick --visibility public --accept-visibility-change-consequences
+```
+
+Decide before P2. After real vehicle photos land in the repo, flipping to public
+also publishes someone's license plate, and the answer stops being one command.
 
 ### REP 2 - Sign off on the banner (10 min)
 

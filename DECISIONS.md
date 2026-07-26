@@ -93,3 +93,26 @@ responses that are hand-authored placeholders, all declared in
 prove the pipeline shape and the schema. They are not evidence of anything about any
 vehicle and no accuracy claim will ever cite them. Real media arrives in P2 via the
 founder capture reps.
+
+### D-011 - Fixture mode freezes its own clock
+**P0.** `generated_at` was stamped from the wall clock unless `--generated-at` was
+passed, which made the golden report differ on every run: the committed fixture
+churned, `git diff` was never clean, and the dossier snapshot test would have been
+regenerated so often that nobody would read its diff. A reproducibility guarantee
+that depends on remembering a flag is not a guarantee. Chose to default
+`generated_at` to a fixed constant whenever `mode == "fixture"`, in
+`dossier.py::_default_generated_at`, with live runs still stamping real time and an
+explicit `--generated-at` still overriding both. Cost: a fixture report shows a
+timestamp that is obviously not when it was generated - which is correct, because a
+cached run has no meaningful generation time. Locked by
+`test_fixture_mode_freezes_its_own_clock` and by the `fixture:clean` gate, which
+fails the build if a run leaves the committed report dirty.
+
+### D-012 - Cost is shown in the P0 report, at the bottom, unstyled
+**P0.** LAW 5 requires per-report cost to be visible, but a "$0.0000" line rendered
+near the verdict invites the buyer to price the analysis rather than read it. Chose
+to render the cost block as the last section of the dossier under "Run metadata",
+present and unhidden but visually terminal. It is internal-facing in P0 and becomes
+a real decision input when live inference has a measurable price. Cost: a buyer who
+reads to the bottom sees an implementation detail. That is the cheaper mistake than
+hiding a number the laws say we publish.

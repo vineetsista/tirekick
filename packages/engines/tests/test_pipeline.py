@@ -41,6 +41,26 @@ def test_golden_report_is_unchanged(run) -> None:  # type: ignore[no-untyped-def
     assert run.report.to_json() == expected
 
 
+def test_fixture_mode_freezes_its_own_clock(run) -> None:  # type: ignore[no-untyped-def]
+    """D-011. A fixture run with no --generated-at is still byte-reproducible.
+
+    Without this, every run rewrites generated_at, the golden report churns, and
+    the snapshot tests that guard the dossier become noise nobody reads.
+    """
+    a = run_inspection(inspection_dir=FIXTURE_DIR, mode="fixture")
+    b = run_inspection(inspection_dir=FIXTURE_DIR, mode="fixture")
+    assert a.report.generated_at == FIXED_TIME
+    assert a.report.to_json() == b.report.to_json()
+    assert a.report.to_json() == run.report.to_json()
+
+
+def test_an_explicit_timestamp_still_wins(run) -> None:  # type: ignore[no-untyped-def]
+    override = run_inspection(
+        inspection_dir=FIXTURE_DIR, mode="fixture", generated_at="2030-06-01T12:00:00Z"
+    )
+    assert override.report.generated_at == "2030-06-01T12:00:00Z"
+
+
 def test_report_declares_its_synthetic_media(run) -> None:  # type: ignore[no-untyped-def]
     assert run.report.contains_synthetic_media is True
     assert all(a.synthetic for a in run.report.assets)

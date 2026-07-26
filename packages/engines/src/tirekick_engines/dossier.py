@@ -61,6 +61,23 @@ SYSTEM_VIEW_REQUIREMENTS: dict[str, tuple[ViewClass, ...]] = {
 #: same thing in every report. BRAND.md forbids rendering it without its caveats.
 _SEVERITY_WEIGHT = {"info": 0, "minor": 6, "major": 18, "critical": 34}
 
+#: The frozen clock for fixture runs (D-011). Any fixed value would do; this one
+#: is obviously not a real generation time, which is the point.
+FIXTURE_GENERATED_AT = "2026-01-01T00:00:00Z"
+
+
+def _default_generated_at(mode: str) -> str:
+    """Fixture runs are byte-reproducible; live runs are stamped with the real time.
+
+    A cached run that stamps a live wall clock is not reproducible in the way
+    D-009 claims: the golden report churns on every run, and the snapshot test
+    guarding it degrades into noise that gets regenerated without being read.
+    An explicit --generated-at still overrides this in either mode.
+    """
+    if mode == "fixture":
+        return FIXTURE_GENERATED_AT
+    return datetime.now(UTC).isoformat()
+
 
 def _red_flag_score(findings: list[Finding], coverage: Coverage) -> int:
     """Confidence-weighted severity, capped at 100.
@@ -374,7 +391,7 @@ def build_report(
     report = Report(
         report_id=report_id,
         inspection_id=inspection_id,
-        generated_at=generated_at or datetime.now(UTC).isoformat(),
+        generated_at=generated_at or _default_generated_at(mode),
         mode=mode,  # type: ignore[arg-type]
         banner=REPORT_BANNER,
         vehicle=vehicle,

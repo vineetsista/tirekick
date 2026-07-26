@@ -3,7 +3,7 @@
   "findings": [
     {
       "id": "vf_bay_01",
-      "type": "exterior_damage",
+      "type": "fluid_leak_indicator",
       "system": "engine",
       "title": "Residue visible on engine bay surface",
       "detail": "A dark residue is visible on a surface in the engine bay. Whether this is an active leak, a past leak that was cleaned, or spilled fluid from a top-up cannot be determined from a photograph.",
@@ -22,7 +22,7 @@
     },
     {
       "id": "vf_bay_02",
-      "type": "exterior_damage",
+      "type": "fluid_leak_indicator",
       "system": "brakes",
       "title": "Wet area visible near the front hub",
       "detail": "A wet area is visible on and around the front hub assembly.",

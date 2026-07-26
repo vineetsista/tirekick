@@ -83,6 +83,15 @@ FINDING_TYPES: dict[str, FindingTypeSpec] = {
             "Mostly cosmetic, but it feeds the odometer consistency check.",
         ),
         FindingTypeSpec(
+            "fluid_leak_indicator",
+            "Fluid leak indicators",
+            0.75,
+            None,
+            0,
+            "Residue is visible; its source and whether it is active are not. "
+            "Ships as an observation to trace, never as a diagnosis.",
+        ),
+        FindingTypeSpec(
             "dash_warning_light",
             "Dash warning lights",
             0.90,

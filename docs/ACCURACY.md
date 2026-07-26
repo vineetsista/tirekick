@@ -33,6 +33,7 @@ appears in a paid report (LAW 4). Types below threshold stay disabled.
 | repaint_indicator | 0.75 | not measured | 0 | disabled - awaiting P2 |
 | tire_tread_estimate | 0.80 | not measured | 0 | disabled - awaiting P2 |
 | interior_wear | 0.80 | not measured | 0 | disabled - awaiting P2 |
+| fluid_leak_indicator | 0.75 | not measured | 0 | disabled - awaiting P2 |
 | dash_warning_light | 0.90 | not measured | 0 | disabled - awaiting P2 |
 | odometer_reading | 0.95 | not measured | 0 | disabled - awaiting P2 |
 | odometer_wear_mismatch | 0.80 | not measured | 0 | disabled - awaiting P2 |

@@ -78,6 +78,7 @@ FindingType = Literal[
     "repaint_indicator",
     "tire_tread_estimate",
     "interior_wear",
+    "fluid_leak_indicator",
     "dash_warning_light",
     "odometer_reading",
     "odometer_wear_mismatch",

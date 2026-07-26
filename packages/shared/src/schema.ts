@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { LOCKED_SYSTEMS, SCHEMA_VERSION } from "./constants.js";
+import { LOCKED_SYSTEMS, SCHEMA_VERSION } from "./constants";
 
 /* ------------------------------------------------------------------ */
 /* primitives                                                          */
@@ -135,6 +135,7 @@ export const findingTypeSchema = z.enum([
   "repaint_indicator",
   "tire_tread_estimate",
   "interior_wear",
+  "fluid_leak_indicator",
   "dash_warning_light",
   "odometer_reading",
   "odometer_wear_mismatch",

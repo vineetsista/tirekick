@@ -6,7 +6,7 @@ import {
   systemKeySchema,
   runModeSchema,
 } from "@tirekick/shared";
-import { assetKind, findingType, runMode, severity, systemKey } from "./schema.js";
+import { assetKind, findingType, runMode, severity, systemKey } from "./schema";
 
 /**
  * Postgres enums cannot be derived from zod at runtime, so they are typed out

@@ -1,0 +1,41 @@
+{
+  "_body_sha256": "91d39348838301253286b44c5ac1f1190da8c13c5c607fef36041a5a5c9f7ff0",
+  "_note": "Reduced before caching.",
+  "_retrieved_at": "2026-07-26T23:30:15Z",
+  "_source": "NHTSA Owner Complaints",
+  "_url": "https://api.nhtsa.gov/complaints/complaintsByVehicle?make=CHEVROLET&model=SILVERADO+1500&modelYear=2015",
+  "payload": {
+    "_reduction_note": "Counts only. Complaint narratives are not retained: they are written by members of the public and carry partial VINs and accident accounts belonging to other people.",
+    "deaths_reported": 1,
+    "injuries_reported": 35,
+    "top_components": [
+      {
+        "component": "SERVICE BRAKES",
+        "count": 380
+      },
+      {
+        "component": "ELECTRICAL SYSTEM",
+        "count": 173
+      },
+      {
+        "component": "STEERING",
+        "count": 171
+      },
+      {
+        "component": "POWER TRAIN",
+        "count": 144
+      },
+      {
+        "component": "ENGINE",
+        "count": 144
+      },
+      {
+        "component": "UNKNOWN OR OTHER",
+        "count": 137
+      }
+    ],
+    "total": 1174,
+    "with_crash": 61,
+    "with_fire": 16
+  }
+}

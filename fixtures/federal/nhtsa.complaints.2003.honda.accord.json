@@ -1,0 +1,41 @@
+{
+  "_body_sha256": "58c97eaac0d7a57677a188f64464a6a671d7899bdd62c37f7c8d76c8c911dc78",
+  "_note": "Reduced before caching.",
+  "_retrieved_at": "2026-07-26T23:29:47Z",
+  "_source": "NHTSA Owner Complaints",
+  "_url": "https://api.nhtsa.gov/complaints/complaintsByVehicle?make=HONDA&model=ACCORD&modelYear=2003",
+  "payload": {
+    "_reduction_note": "Counts only. Complaint narratives are not retained: they are written by members of the public and carry partial VINs and accident accounts belonging to other people.",
+    "deaths_reported": 1,
+    "injuries_reported": 157,
+    "top_components": [
+      {
+        "component": "POWER TRAIN",
+        "count": 926
+      },
+      {
+        "component": "AIR BAGS",
+        "count": 324
+      },
+      {
+        "component": "SERVICE BRAKES",
+        "count": 175
+      },
+      {
+        "component": "HYDRAULIC",
+        "count": 146
+      },
+      {
+        "component": "ELECTRICAL SYSTEM",
+        "count": 143
+      },
+      {
+        "component": "ENGINE AND ENGINE COOLING",
+        "count": 95
+      }
+    ],
+    "total": 2013,
+    "with_crash": 158,
+    "with_fire": 19
+  }
+}

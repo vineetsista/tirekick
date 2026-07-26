@@ -1,0 +1,93 @@
+{
+  "_body_sha256": "9541d6b58298362291ba2695bf8546e25d7e5039d9520a1262bdc74003aef85d",
+  "_note": "",
+  "_retrieved_at": "2026-07-26T23:30:16Z",
+  "_source": "NHTSA Complaint Model Index",
+  "_url": "https://api.nhtsa.gov/products/vehicle/models?modelYear=2018&make=HYUNDAI&issueType=c",
+  "payload": {
+    "count": 16,
+    "message": "Results returned successfully",
+    "results": [
+      {
+        "make": "HYUNDAI",
+        "model": "ELANTRA GT",
+        "modelYear": "2018"
+      },
+      {
+        "make": "HYUNDAI",
+        "model": "SONATA HYBRID",
+        "modelYear": "2018"
+      },
+      {
+        "make": "HYUNDAI",
+        "model": "TUCSON",
+        "modelYear": "2018"
+      },
+      {
+        "make": "HYUNDAI",
+        "model": "TUCSON",
+        "modelYear": "2018"
+      },
+      {
+        "make": "HYUNDAI",
+        "model": "SONATA",
+        "modelYear": "2018"
+      },
+      {
+        "make": "HYUNDAI",
+        "model": "SANTA FE",
+        "modelYear": "2018"
+      },
+      {
+        "make": "HYUNDAI",
+        "model": "SANTA FE",
+        "modelYear": "2018"
+      },
+      {
+        "make": "HYUNDAI",
+        "model": "SANTA FE SPORT",
+        "modelYear": "2018"
+      },
+      {
+        "make": "HYUNDAI",
+        "model": "SANTA FE SPORT",
+        "modelYear": "2018"
+      },
+      {
+        "make": "HYUNDAI",
+        "model": "ACCENT",
+        "modelYear": "2018"
+      },
+      {
+        "make": "HYUNDAI",
+        "model": "IONIQ HYBRID",
+        "modelYear": "2018"
+      },
+      {
+        "make": "HYUNDAI",
+        "model": "KONA",
+        "modelYear": "2018"
+      },
+      {
+        "make": "HYUNDAI",
+        "model": "KONA",
+        "modelYear": "2018"
+      },
+      {
+        "make": "HYUNDAI",
+        "model": "ELANTRA",
+        "modelYear": "2018"
+      },
+      {
+        "make": "HYUNDAI",
+        "model": "GENESIS",
+        "modelYear": "2018"
+      },
+      {
+        "make": "HYUNDAI",
+        "model": "IONIQ PLUG-IN HYBRID",
+        "modelYear": "2018"
+      }
+    ]
+  }
+}

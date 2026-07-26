@@ -33,6 +33,7 @@ class CostMeter:
     images_analyzed: int = 0
     audio_seconds_processed: float = 0.0
     storage_bytes: int = 0
+    federal_lookups: int = 0
     _calls: list[str] = field(default_factory=list)
 
     def record_model_call(
@@ -47,6 +48,17 @@ class CostMeter:
         self.output_tokens += output_tokens
         self.images_analyzed += images
         self._calls.append(f"{label}: in={input_tokens} out={output_tokens} images={images}")
+
+    def record_federal_lookup(self, label: str) -> None:
+        """vPIC and NHTSA are free to query. Counted anyway.
+
+        A lookup that costs no money still costs a rate limit, a dependency, and
+        the seconds a buyer spends waiting. Reporting only the line items that
+        carry a dollar sign would make the cost block a billing summary rather
+        than an honest account of what producing a report takes (LAW 5).
+        """
+        self.federal_lookups += 1
+        self._calls.append(f"{label}: federal lookup, no charge")
 
     def record_audio(self, seconds: float) -> None:
         self.audio_seconds_processed += seconds
@@ -86,6 +98,7 @@ class CostMeter:
             images_analyzed=self.images_analyzed,
             audio_seconds_processed=round(self.audio_seconds_processed, 3),
             storage_bytes=self.storage_bytes,
+            federal_lookups=self.federal_lookups,
             usd_total=self.usd_total,
             note=self.note(),
         )
@@ -100,6 +113,7 @@ class CostMeter:
             f"    images analyzed     {self.images_analyzed}",
             f"    audio seconds       {self.audio_seconds_processed:.1f}",
             f"    storage             {self.storage_bytes / 1_000_000:.1f} MB",
+            f"    federal lookups     {self.federal_lookups}  (vPIC/NHTSA, no charge)",
             f"    TOTAL               ${self.usd_total:.4f}",
             f"    {self.note()}",
         ]

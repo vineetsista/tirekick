@@ -1,0 +1,308 @@
+{
+  "_body_sha256": "433972748513bb3dfb5ee3d0c0af198332b0c79641df174f44c49fe847ae7b7c",
+  "_note": "",
+  "_retrieved_at": "2026-07-26T23:30:15Z",
+  "_source": "NHTSA Complaint Model Index",
+  "_url": "https://api.nhtsa.gov/products/vehicle/models?modelYear=2015&make=CHEVROLET&issueType=c",
+  "payload": {
+    "count": 59,
+    "message": "Results returned successfully",
+    "results": [
+      {
+        "make": "CHEVROLET",
+        "model": "SILVERADO 2500",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "SILVERADO 2500",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "TRAX",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "CORVETTE",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "CORVETTE",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "CRUZE",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "SS",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "SPARK EV",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "SILVERADO 2500",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "SILVERADO 2500",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "SILVERADO 2500",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "SILVERADO 2500",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "VOLT",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "MALIBU",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "IMPALA",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "IMPALA ECO EASSIST",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "CAMARO",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "CAMARO",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "EXPRESS CARGO G33405",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "EXPRESS CARGO G33705",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "SILVERADO 1500",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "SILVERADO 1500",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "SILVERADO 1500",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "SILVERADO 1500",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "SILVERADO 3500",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "SILVERADO 3500",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "SILVERADO 3500",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "SILVERADO 3500",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "SILVERADO 3500",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "SILVERADO 3500",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "TRAX",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "TRAVERSE",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "TRAVERSE",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "SONIC",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "SONIC",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "SUBURBAN 1500",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "SUBURBAN 1500",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "COLORADO",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "COLORADO",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "COLORADO",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "EXPRESS CARGO G23405",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "EXPRESS CARGO G23705",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "CITY EXPRESS",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "COLORADO",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "TAHOE",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "TAHOE",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "SPARK",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "IMPALA LIMITED",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "EQUINOX",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "EQUINOX",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "EXPRESS PASSENGER 3500 12 PASS",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "EXPRESS PASSENGER 3500 15 PASS",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "SILVERADO 1500",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "SILVERADO 1500",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "CAPTIVA",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "CAPTIVA",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "ORLANDO",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "N300",
+        "modelYear": "2015"
+      },
+      {
+        "make": "CHEVROLET",
+        "model": "EXPRESS PASSENGER 2500",
+        "modelYear": "2015"
+      }
+    ]
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "_body_sha256": "3f191c0c520811ed1e3c61746a3c12d5a3157a501a971e1bfa2fa64d3365f49d",
+  "_note": "Reduced before caching.",
+  "_retrieved_at": "2026-07-26T23:31:36Z",
+  "_source": "NHTSA Owner Complaints",
+  "_url": "https://api.nhtsa.gov/complaints/complaintsByVehicle?make=HONDA&model=ACCORD&modelYear=2013",
+  "payload": {
+    "_reduction_note": "Counts only. Complaint narratives are not retained: they are written by members of the public and carry partial VINs and accident accounts belonging to other people.",
+    "deaths_reported": 1,
+    "injuries_reported": 59,
+    "top_components": [
+      {
+        "component": "STEERING",
+        "count": 497
+      },
+      {
+        "component": "ELECTRICAL SYSTEM",
+        "count": 413
+      },
+      {
+        "component": "ENGINE",
+        "count": 179
+      },
+      {
+        "component": "UNKNOWN OR OTHER",
+        "count": 118
+      },
+      {
+        "component": "SERVICE BRAKES",
+        "count": 115
+      },
+      {
+        "component": "POWER TRAIN",
+        "count": 109
+      }
+    ],
+    "total": 1418,
+    "with_crash": 67,
+    "with_fire": 9
+  }
+}

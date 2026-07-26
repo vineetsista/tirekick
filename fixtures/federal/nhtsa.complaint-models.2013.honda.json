@@ -1,0 +1,173 @@
+{
+  "_body_sha256": "a6cdd382a01ff14509f38cb8031d3f87b9fa91300ad63ea0a5f16bccde498268",
+  "_note": "",
+  "_retrieved_at": "2026-07-26T23:31:30Z",
+  "_source": "NHTSA Complaint Model Index",
+  "_url": "https://api.nhtsa.gov/products/vehicle/models?modelYear=2013&make=HONDA&issueType=c",
+  "payload": {
+    "count": 32,
+    "message": "Results returned successfully",
+    "results": [
+      {
+        "make": "HONDA",
+        "model": "CROSSTOUR",
+        "modelYear": "2013"
+      },
+      {
+        "make": "HONDA",
+        "model": "CROSSTOUR",
+        "modelYear": "2013"
+      },
+      {
+        "make": "HONDA",
+        "model": "CR-V",
+        "modelYear": "2013"
+      },
+      {
+        "make": "HONDA",
+        "model": "CR-V",
+        "modelYear": "2013"
+      },
+      {
+        "make": "HONDA",
+        "model": "ODYSSEY",
+        "modelYear": "2013"
+      },
+      {
+        "make": "HONDA",
+        "model": "RIDGELINE",
+        "modelYear": "2013"
+      },
+      {
+        "make": "HONDA",
+        "model": "FIT",
+        "modelYear": "2013"
+      },
+      {
+        "make": "HONDA",
+        "model": "INSIGHT",
+        "modelYear": "2013"
+      },
+      {
+        "make": "HONDA",
+        "model": "CR-Z",
+        "modelYear": "2013"
+      },
+      {
+        "make": "HONDA",
+        "model": "PILOT",
+        "modelYear": "2013"
+      },
+      {
+        "make": "HONDA",
+        "model": "ACCORD",
+        "modelYear": "2013"
+      },
+      {
+        "make": "HONDA",
+        "model": "ACCORD",
+        "modelYear": "2013"
+      },
+      {
+        "make": "HONDA",
+        "model": "CIVIC",
+        "modelYear": "2013"
+      },
+      {
+        "make": "HONDA",
+        "model": "CIVIC",
+        "modelYear": "2013"
+      },
+      {
+        "make": "HONDA",
+        "model": "CIVIC CNG",
+        "modelYear": "2013"
+      },
+      {
+        "make": "HONDA",
+        "model": "PILOT",
+        "modelYear": "2013"
+      },
+      {
+        "make": "HONDA",
+        "model": "CIVIC HYBRID",
+        "modelYear": "2013"
+      },
+      {
+        "make": "HONDA",
+        "model": "FIT EV",
+        "modelYear": "2013"
+      },
+      {
+        "make": "HONDA",
+        "model": "GL1800",
+        "modelYear": "2013"
+      },
+      {
+        "make": "HONDA",
+        "model": "CBR250R",
+        "modelYear": "2013"
+      },
+      {
+        "make": "HONDA",
+        "model": "CB500F",
+        "modelYear": "2013"
+      },
+      {
+        "make": "HONDA",
+        "model": "CB500X",
+        "modelYear": "2013"
+      },
+      {
+        "make": "HONDA",
+        "model": "CBR500RA",
+        "modelYear": "2013"
+      },
+      {
+        "make": "HONDA",
+        "model": "CBR1000RR",
+        "modelYear": "2013"
+      },
+      {
+        "make": "HONDA",
+        "model": "PCX150",
+        "modelYear": "2013"
+      },
+      {
+        "make": "HONDA",
+        "model": "GL1800B",
+        "modelYear": "2013"
+      },
+      {
+        "make": "HONDA",
+        "model": "VT750",
+        "modelYear": "2013"
+      },
+      {
+        "make": "HONDA",
+        "model": "NC700X",
+        "modelYear": "2013"
+      },
+      {
+        "make": "HONDA",
+        "model": "CIVIC SI",
+        "modelYear": "2013"
+      },
+      {
+        "make": "HONDA",
+        "model": "NC700XD",
+        "modelYear": "2013"
+      },
+      {
+        "make": "HONDA",
+        "model": "GL1800A",
+        "modelYear": "2013"
+      },
+      {
+        "make": "HONDA",
+        "model": "ACCORD CROSSTOUR",
+        "modelYear": "2013"
+      }
+    ]
+  }
+}

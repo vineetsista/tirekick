@@ -1,0 +1,63 @@
+{
+  "_body_sha256": "fbfd53721faa11eb5c3c5114d307ffcd65fb3f8aa75d81cd9ce95848cc7880fe",
+  "_note": "",
+  "_retrieved_at": "2026-07-26T23:30:13Z",
+  "_source": "NHTSA Complaint Model Index",
+  "_url": "https://api.nhtsa.gov/products/vehicle/models?modelYear=2016&make=SUBARU&issueType=c",
+  "payload": {
+    "count": 10,
+    "message": "Results returned successfully",
+    "results": [
+      {
+        "make": "SUBARU",
+        "model": "LEGACY",
+        "modelYear": "2016"
+      },
+      {
+        "make": "SUBARU",
+        "model": "IMPREZA",
+        "modelYear": "2016"
+      },
+      {
+        "make": "SUBARU",
+        "model": "IMPREZA",
+        "modelYear": "2016"
+      },
+      {
+        "make": "SUBARU",
+        "model": "CROSSTREK",
+        "modelYear": "2016"
+      },
+      {
+        "make": "SUBARU",
+        "model": "CROSSTREK HYBRID",
+        "modelYear": "2016"
+      },
+      {
+        "make": "SUBARU",
+        "model": "FORESTER",
+        "modelYear": "2016"
+      },
+      {
+        "make": "SUBARU",
+        "model": "BRZ",
+        "modelYear": "2016"
+      },
+      {
+        "make": "SUBARU",
+        "model": "WRX",
+        "modelYear": "2016"
+      },
+      {
+        "make": "SUBARU",
+        "model": "XV CROSSTREK",
+        "modelYear": "2016"
+      },
+      {
+        "make": "SUBARU",
+        "model": "OUTBACK",
+        "modelYear": "2016"
+      }
+    ]
+  }
+}

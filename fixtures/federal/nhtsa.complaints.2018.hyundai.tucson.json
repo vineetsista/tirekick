@@ -1,0 +1,41 @@
+{
+  "_body_sha256": "c69a79e8fbde0b0f255a3f584effb09b3af8f5aca5239b0ba4ed4957a98a0f05",
+  "_note": "Reduced before caching.",
+  "_retrieved_at": "2026-07-26T23:30:17Z",
+  "_source": "NHTSA Owner Complaints",
+  "_url": "https://api.nhtsa.gov/complaints/complaintsByVehicle?make=HYUNDAI&model=TUCSON&modelYear=2018",
+  "payload": {
+    "_reduction_note": "Counts only. Complaint narratives are not retained: they are written by members of the public and carry partial VINs and accident accounts belonging to other people.",
+    "deaths_reported": 0,
+    "injuries_reported": 10,
+    "top_components": [
+      {
+        "component": "ENGINE",
+        "count": 232
+      },
+      {
+        "component": "POWER TRAIN",
+        "count": 100
+      },
+      {
+        "component": "UNKNOWN OR OTHER",
+        "count": 41
+      },
+      {
+        "component": "SERVICE BRAKES",
+        "count": 41
+      },
+      {
+        "component": "ELECTRICAL SYSTEM",
+        "count": 27
+      },
+      {
+        "component": "FUEL/PROPULSION SYSTEM",
+        "count": 22
+      }
+    ],
+    "total": 383,
+    "with_crash": 13,
+    "with_fire": 9
+  }
+}

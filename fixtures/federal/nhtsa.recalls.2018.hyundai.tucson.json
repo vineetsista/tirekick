@@ -1,0 +1,30 @@
+{
+  "_body_sha256": "c455c6d8c4202f9b16862550c368584b09253bc5507b7ccd638057dfbbf33a7e",
+  "_note": "",
+  "_retrieved_at": "2026-07-26T23:30:16Z",
+  "_source": "NHTSA Safety Recalls",
+  "_url": "https://api.nhtsa.gov/recalls/recallsByVehicle?make=HYUNDAI&model=Tucson&modelYear=2018",
+  "payload": {
+    "Count": 1,
+    "Message": "Results returned successfully",
+    "results": [
+      {
+        "Component": "SERVICE BRAKES, HYDRAULIC:ANTILOCK/TRACTION CONTROL/ELECTRONIC LIMITED SLIP:CONTROL UNIT/MODULE",
+        "Consequence": "An engine compartment fire can increase the risk of injury or crash.",
+        "Make": "HYUNDAI",
+        "Manufacturer": "Hyundai Motor America",
+        "Model": "TUCSON",
+        "ModelYear": "2018",
+        "NHTSAActionNumber": "PE19003",
+        "NHTSACampaignNumber": "20V543000",
+        "Notes": "Owners may also contact the National Highway Traffic Safety Administration Vehicle Safety Hotline at 1-888-327-4236 (TTY 1-800-424-9153), or go to www.safercar.gov.",
+        "Remedy": "Hyundai will notify owners, and dealers will replace the HECU fuse.  For 2019-2021 model years, the Electronic Stability Control (ESC) software will also be updated.  Recall repairs will be performed free of charge.  Owners are advised to park outside and away from structures as a precaution until the recall repair is complete.  The recall began November 2, 2020.  Owners may contact Hyundai customer service at 1-855-371-9460.  Hyundai's number for this recall is 195.",
+        "ReportReceivedDate": "04/09/2020",
+        "Summary": "Hyundai Motor America (Hyundai) recalled certain 2019-2021 Tucson vehicles on September 4, 2020.  On December 30, 2020, Hyundai expanded the recall population, and added certain 2016-2018 Tucson vehicles.  The Anti-lock Brake Hydraulic Electronic Control Unit (HECU) could corrode internally and cause an electrical short, possibly resulting in an engine compartment fire.",
+        "overTheAirUpdate": false,
+        "parkIt": false,
+        "parkOutSide": true
+      }
+    ]
+  }
+}

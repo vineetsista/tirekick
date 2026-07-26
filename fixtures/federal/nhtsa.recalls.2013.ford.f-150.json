@@ -1,0 +1,63 @@
+{
+  "_body_sha256": "358fe16a1c2f4a442959e00d5721f98d27b5825ee72d5c530f6f0ccfd4a89085",
+  "_note": "",
+  "_retrieved_at": "2026-07-26T23:29:47Z",
+  "_source": "NHTSA Safety Recalls",
+  "_url": "https://api.nhtsa.gov/recalls/recallsByVehicle?make=FORD&model=F-150&modelYear=2013",
+  "payload": {
+    "Count": 3,
+    "Message": "Results returned successfully",
+    "results": [
+      {
+        "Component": "POWER TRAIN:AUTOMATIC TRANSMISSION:CONTROL MODULE (TCM/PCM/TECM)",
+        "Consequence": "Unexpectedly downshifting into first gear may result in a loss of vehicle control, increasing the risk of a crash.",
+        "Make": "FORD",
+        "Manufacturer": "Ford Motor Company",
+        "Model": "F-150",
+        "ModelYear": "2013",
+        "NHTSAActionNumber": "RQ17010",
+        "NHTSACampaignNumber": "19V075000",
+        "Notes": "Owners may also contact the National Highway Traffic Safety Administration Vehicle Safety Hotline at 1-888-327-4236 (TTY 1-800-424-9153), or go to www.safercar.gov.",
+        "Remedy": "Ford will notify owners, and dealers will reprogram the powertrain control module, free of charge.  The recall began March 4, 2019.  Owners may contact Ford customer service at 1-866-436-7332.  Ford's number for this recall is 19S07.",
+        "ReportReceivedDate": "11/02/2019",
+        "Summary": "Ford Motor Company (Ford) is recalling certain 2011-2013 F-150 vehicles equipped with a 6-speed automatic transmission.  The transmission may unexpectedly downshift into first gear, regardless of vehicle speed.",
+        "overTheAirUpdate": false,
+        "parkIt": false,
+        "parkOutSide": false
+      },
+      {
+        "Component": "POWER TRAIN:AUTOMATIC TRANSMISSION",
+        "Consequence": "Unexpectedly downshifting into first gear may result in a loss of vehicle control, increasing the risk of a crash.",
+        "Make": "FORD",
+        "Manufacturer": "Ford Motor Company",
+        "Model": "F-150",
+        "ModelYear": "2013",
+        "NHTSACampaignNumber": "19V433000",
+        "Notes": "Owners may also contact the National Highway Traffic Safety Administration Vehicle Safety Hotline at 1-888-327-4236 (TTY 1-800-424-9153), or go to www.safercar.gov.",
+        "Remedy": "Ford will notify owners, and dealers will reprogram the powertrain control module, free of charge.  The recall began June 24, 2019.  Owners may contact Ford customer service at 1-866-436-7332.  Ford's number for this recall is 19S19.",
+        "ReportReceivedDate": "10/06/2019",
+        "Summary": "Ford Motor Company (Ford) is recalling certain 2013 F-150 vehicles equipped with 5.0L or 6.2L gasoline engines, that previously had the powertrain control module (PCM) software reprogrammed under recall 19V-075.  The software used to reprogram the PCM did not have the necessary updates to prevent the transmission from unexpectedly downshifting into first gear, regardless of vehicle speed.",
+        "overTheAirUpdate": false,
+        "parkIt": false,
+        "parkOutSide": false
+      },
+      {
+        "Component": "SERVICE BRAKES, HYDRAULIC:FLUID",
+        "Consequence": "Loss of brake fluid from the primary reservoir results in a complete loss of front brake function, increasing the risk of a crash.",
+        "Make": "FORD",
+        "Manufacturer": "Ford Motor Company",
+        "Model": "F-150",
+        "ModelYear": "2013",
+        "NHTSAActionNumber": "PE16003",
+        "NHTSACampaignNumber": "16V345000",
+        "Notes": "Owners may also contact the National Highway Traffic Safety Administration Vehicle Safety Hotline at 1-888-327-4236 (TTY 1-800-424-9153), or go to www.safercar.gov.",
+        "Remedy": "Ford will notify owners, and dealers will replace the brake master cylinder and, if necessary, the brake booster, free of charge.  The recall began on October 28, 2016.  Owners may contact Ford customer service at 1-866-436-7332.  Ford's number for this recall is 16S24.",
+        "ReportReceivedDate": "24/05/2016",
+        "Summary": "Ford Motor Company (Ford) is recalling certain model year 2013-2014 F-150 vehicles manufactured August 1, 2013, to August 31, 2014 equipped with 3.5L engines.  The master cylinder rear cup seal may roll, resulting in brake fluid leakage from the primary reservoir into the brake booster.",
+        "overTheAirUpdate": false,
+        "parkIt": false,
+        "parkOutSide": false
+      }
+    ]
+  }
+}

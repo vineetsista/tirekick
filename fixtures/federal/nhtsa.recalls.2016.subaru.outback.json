@@ -1,0 +1,77 @@
+{
+  "_body_sha256": "5d0329d67798b12a826c91d2d9d61aa24a5dc46db0564673abe2bffeb2b5deba",
+  "_note": "",
+  "_retrieved_at": "2026-07-26T23:30:13Z",
+  "_source": "NHTSA Safety Recalls",
+  "_url": "https://api.nhtsa.gov/recalls/recallsByVehicle?make=SUBARU&model=Outback&modelYear=2016",
+  "payload": {
+    "Count": 4,
+    "Message": "Results returned successfully",
+    "results": [
+      {
+        "Component": "AIR BAGS: AIR BAG/RESTRAINT CONTROL MODULE",
+        "Consequence": "In the event of a crash necessitating passenger frontal air bag deployment, the air bag may not deploy properly, increasing the risk of injury.",
+        "Make": "SUBARU",
+        "Manufacturer": "Subaru of America, Inc.",
+        "Model": "OUTBACK",
+        "ModelYear": "2016",
+        "NHTSACampaignNumber": "19V910000",
+        "Notes": "Owners may also contact the National Highway Traffic Safety Administration Vehicle Safety Hotline at 1-888-327-4236 (TTY 1-800-424-9153), or go to www.safercar.gov.",
+        "Remedy": "Subaru will notify owners, and dealers will replace the passenger air bag module, free of charge.  The recall began February 3, 2020.  Owners may contact Subaru customer service at 1-844-373-6614.  Subaru's number for this recall is WUX-09.",
+        "ReportReceivedDate": "19/12/2019",
+        "Summary": "Subaru of America, Inc. (Subaru) is recalling certain 2016-2017 Outback vehicles.  A replacement air bag control module may have been installed that is not compatible with the passenger air bag module, possibly affecting air bag deployment.",
+        "overTheAirUpdate": false,
+        "parkIt": false,
+        "parkOutSide": false
+      },
+      {
+        "Component": "STEERING:COLUMN",
+        "Consequence": "The loss of steering ability would increase the risk of a crash.",
+        "Make": "SUBARU",
+        "Manufacturer": "Subaru of America, Inc.",
+        "Model": "OUTBACK",
+        "ModelYear": "2016",
+        "NHTSACampaignNumber": "16V292000",
+        "Notes": "Owners may also contact the National Highway Traffic Safety Administration Vehicle Safety Hotline at 1-888-327-4236 (TTY 1-800-424-9153), or go to www.safercar.gov.",
+        "Remedy": "Subaru will notify owners, and dealers will inspect the lot number on the steering column, replacing the steering column, as necessary, free of charge.  The recall began May 13, 2016.  Owners may contact Subaru customer service at 1-800-782-2783 or by visiting http://www.wtd65.service-campaign.com.  Subaru's number for this recall is WTD-65.  Note: Until the vehicles have been inspected, owners are advised not to drive their vehicles.",
+        "ReportReceivedDate": "11/05/2016",
+        "Summary": "Subaru of America, Inc. (Subaru) is recalling certain model year 2016-2017 Legacy and Outback vehicles manufactured February 29, 2016, to May 6, 2016.  The steering column on the affected vehicles may have been improperly machined, and as a result, turning the steering wheel may have no effect on the direction of the wheels.",
+        "overTheAirUpdate": false,
+        "parkIt": true,
+        "parkOutSide": false
+      },
+      {
+        "Component": "POWER TRAIN:DRIVELINE:DRIVESHAFT",
+        "Consequence": "If the transmission oil leaks onto the exhaust pipe, there is a possible risk of fire.",
+        "Make": "SUBARU",
+        "Manufacturer": "Subaru of America, Inc.",
+        "Model": "OUTBACK",
+        "ModelYear": "2016",
+        "NHTSACampaignNumber": "15V502000",
+        "Notes": "Owners may also contact the National Highway Traffic Safety Administration Vehicle Safety Hotline at 1-888-327-4236 (TTY 1-800-424-9153), or go to www.safercar.gov.",
+        "Remedy": "Subaru will notify owners, and dealers will replace the propeller shaft, free of charge. The recall began on August 28, 2015. Owners may contact 1-800-782-2783. Subaru's number for this recall is WQU-56.",
+        "ReportReceivedDate": "10/08/2015",
+        "Summary": "Subaru of America, Inc. (Subaru) is recalling certain 2015 and 2016 model year Subaru Legacy 4-Door and Outback vehicles manufactured July 3, 2015, to July 27, 2015.  Transmission oil may leak from a deformed seal cap on the propeller shaft yoke.",
+        "overTheAirUpdate": false,
+        "parkIt": false,
+        "parkOutSide": false
+      },
+      {
+        "Component": "POWER TRAIN:DRIVELINE:DRIVESHAFT",
+        "Consequence": "If the drive shaft detaches from the rear differential, it may strike the fuel tank and result in a fuel leak, increasing the risk of a fire.",
+        "Make": "SUBARU",
+        "Manufacturer": "Subaru of America, Inc.",
+        "Model": "OUTBACK",
+        "ModelYear": "2016",
+        "NHTSACampaignNumber": "15V794000",
+        "Notes": "Owners may also contact the National Highway Traffic Safety Administration Vehicle Safety Hotline at 1-888-327-4236 (TTY 1-800-424-9153), or go to www.safercar.gov.",
+        "Remedy": "Subaru has notified owners, and dealers will inspect the fastening nuts, and tighten or replace them, as necessary, free of charge. The recall began on December 10, 2015.  Owners may contact Subaru customer service at 1-856-488-8500.  Subaru's number for this recall is WQV-57.",
+        "ReportReceivedDate": "24/11/2015",
+        "Summary": "Subaru of America, Inc. (Subaru) is recalling certain model year 2016 Legacy vehicles manufactured October 24, 2015, to November 16, 2015, and Outback vehicles manufactured October 24, 2015, to November 17, 2015.  Due to the improper tightening of the securing nuts, the drive shaft may separate from the rear differential.",
+        "overTheAirUpdate": false,
+        "parkIt": false,
+        "parkOutSide": false
+      }
+    ]
+  }
+}

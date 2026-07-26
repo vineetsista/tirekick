@@ -1,0 +1,93 @@
+{
+  "_body_sha256": "8cfd5906ac28dd97bb05199a7703827d7be22cea6b9d233ddb5f3dd46dc89d7f",
+  "_note": "",
+  "_retrieved_at": "2026-07-26T23:31:29Z",
+  "_source": "NHTSA Safety Recalls",
+  "_url": "https://api.nhtsa.gov/recalls/recallsByVehicle?make=HONDA&model=Accord&modelYear=2013",
+  "payload": {
+    "Count": 5,
+    "Message": "Results returned successfully",
+    "results": [
+      {
+        "Component": "ELECTRICAL SYSTEM:12V/24V/48V BATTERY",
+        "Consequence": "An electrical short increases the risk of a fire.",
+        "Make": "HONDA",
+        "Manufacturer": "Honda (American Honda Motor Co.)",
+        "Model": "ACCORD",
+        "ModelYear": "2013",
+        "NHTSACampaignNumber": "17V418000",
+        "Notes": "Owners may also contact the National Highway Traffic Safety Administration Vehicle Safety Hotline at 1-888-327-4236 (TTY 1-800-424-9153), or go to www.safercar.gov.",
+        "Remedy": "Honda will notify owners, and dealers will replace the sensor, free of charge.  Dealers will perform an interim remedy of applying adhesive to the case to prevent water intrusion.  The recall began November 8, 2017.  Owners may contact American Honda Customer Support Center at 1-888-234-2138.  Honda's number for this recall is KG0.",
+        "ReportReceivedDate": "29/06/2017",
+        "Summary": "Honda (American Honda Motor Co.) is recalling certain 2013-2016 Honda Accord vehicles.  The case for the battery sensor, part of the battery management system, may allow water to get in, potentially causing an electrical short.",
+        "overTheAirUpdate": false,
+        "parkIt": false,
+        "parkOutSide": false
+      },
+      {
+        "Component": "FUEL SYSTEM, GASOLINE",
+        "Consequence": "An insufficent seal may led to a fuel leak which increases the risk of a fire.",
+        "Make": "HONDA",
+        "Manufacturer": "Honda (American Honda Motor Co.)",
+        "Model": "ACCORD",
+        "ModelYear": "2013",
+        "NHTSACampaignNumber": "13V297000",
+        "Notes": "Owners may also contact the National Highway Traffic Safety Administration's Vehicle Safety Hotline at 1-888-327-4236 (TTY: 1-800-424-9153), or go to www.safercar.gov.",
+        "Remedy": "Honda will notify owners, and dealers will replace the fuel tank, nut and O-ring gasket free of charge. The recall began during August 2013.  Honda's recall number is JA9.  Owners may contact Honda at 1-310-783-2000.",
+        "ReportReceivedDate": "08/07/2013",
+        "Summary": "American Honda Motor Co., Inc. (Honda) is recalling certain model year 2013 Accord vehicles that are Low-Emission Vehicle (LEV) II rated that were manufactured January 15, 2013, through April 5, 2013.  The fuel tank neck may be out of specification causing the fuel pump to not properly seal to the fuel tank.",
+        "overTheAirUpdate": false,
+        "parkIt": false,
+        "parkOutSide": false
+      },
+      {
+        "Component": "POWER TRAIN:DRIVELINE:DRIVESHAFT",
+        "Consequence": "A broken drive shaft may cause a sudden loss of drive power.  The vehicle could also roll away if the parking brake has not been applied before the vehicle has been exited.  Either condition can increase the risk of a crash or injury.",
+        "Make": "HONDA",
+        "Manufacturer": "Honda (American Honda Motor Co.)",
+        "Model": "ACCORD",
+        "ModelYear": "2013",
+        "NHTSACampaignNumber": "20V769000",
+        "Notes": "Owners may also contact the National Highway Traffic Safety Administration Vehicle Safety Hotline at 1-888-327-4236 (TTY 1-800-424-9153), or go to www.safercar.gov.",
+        "Remedy": "Honda will notify owners, and dealers will inspect the drive shafts, replacing both the left and right drive shafts, if necessary, free of charge.  The recall began February 4, 2021.  Owners may contact Honda customer service at 1-888-234-2138.",
+        "ReportReceivedDate": "10/12/2020",
+        "Summary": "Honda (American Honda Motor Co.) is recalling certain 2013-2015 Accord vehicles equipped with a 4-cylinder engine and a continuously-variable transmission that were originally sold, or ever registered, in Connecticut, Delaware, District of Columbia, Illinois, Indiana, Iowa, Kentucky, Maine, Maryland, Massachusetts, Michigan, Minnesota, Missouri, New Hampshire, New Jersey, New York, Ohio, Pennsylvania, Rhode Island, Vermont, Virginia, West Virginia, and Wisconsin.  The drive shafts were assembled with a lubricant that may have degraded the drive shafts' protective coating, making it more susceptible to damage from road salt or other contaminants, and potentially cause it to break.",
+        "overTheAirUpdate": false,
+        "parkIt": false,
+        "parkOutSide": false
+      },
+      {
+        "Component": "FUEL SYSTEM, GASOLINE:DELIVERY:FUEL PUMP",
+        "Consequence": "Fuel pump failure can cause an engine stall while driving, increasing the risk of a crash.",
+        "Make": "HONDA",
+        "Manufacturer": "Honda (American Honda Motor Co.)",
+        "Model": "ACCORD",
+        "ModelYear": "2013",
+        "NHTSACampaignNumber": "23V858000",
+        "Notes": "Owners may also contact the National Highway Traffic Safety Administration Vehicle Safety Hotline at 1-888-327-4236 (TTY 1-800-424-9153), or go to www.nhtsa.gov.",
+        "Remedy": "Dealers will replace the fuel pump module, free of charge.  Owner letters were mailed September 6, 2024.  Owners may contact Honda customer service at 1-888-234-2138.  Honda's numbers for this recall are KGC and KGD.  This recall is an expansion of NHTSA recall numbers 21V-215 and 20V-314.",
+        "ReportReceivedDate": "18/12/2023",
+        "Summary": "Honda (American Honda Motor Co.) is recalling certain 2013-2023 Honda Accord, Civic Coupe, Civic Sedan, Civic Hatchback, Civic Type R, CR-V, HR-V, Ridgeline, Odyssey, Acura ILX, MDX, MDX Hybrid, RDX, RLX, TLX, 2019-2022 Honda Insight, Passport, 2020 Honda CR-V Hybrid, 2018-2019 Honda Clarity PHEV, Fit, and 2015-2020 Honda Accord Hybrid, Pilot, Acura NSX vehicles.  The fuel pump inside the fuel tank may fail.",
+        "overTheAirUpdate": false,
+        "parkIt": false,
+        "parkOutSide": false
+      },
+      {
+        "Component": "POWER TRAIN:DRIVELINE:DRIVESHAFT",
+        "Consequence": "A broken driveshaft can result in a loss of drive power, or a vehicle rollaway when the vehicle is in park without the parking brake applied. Both scenarios can increase the risk of a crash or injury.",
+        "Make": "HONDA",
+        "Manufacturer": "Honda (American Honda Motor Co.)",
+        "Model": "ACCORD",
+        "ModelYear": "2013",
+        "NHTSACampaignNumber": "25V422000",
+        "Notes": null,
+        "Remedy": "Dealers will inspect and replace the driveshaft assemblies as necessary, free of charge. Owner notification letters were mailed August 11, 2025. Owners may contact Honda's customer service at 1-888-234-2138. Honda's number for this recall is OM2. This recall expands previous recall number 20V769.",
+        "ReportReceivedDate": "07/07/2025",
+        "Summary": "Honda (American Honda Motor Co.) is recalling certain 2013 Honda Accord vehicles equipped with a 4-cylinder engine and a continuously-variable transmission. The affected vehicles were originally sold, or ever registered, in Connecticut, Delaware, District of Columbia, Illinois, Indiana, Iowa, Kentucky, Maine, Maryland, Massachusetts, Michigan, Minnesota, Missouri, New Hampshire, New Jersey, New York, Ohio, Pennsylvania, Rhode Island, Vermont, Virginia, West Virginia, and Wisconsin. The driveshaft may corrode and break, due to damage from road salt or other contaminants.",
+        "overTheAirUpdate": false,
+        "parkIt": false,
+        "parkOutSide": false
+      }
+    ]
+  }
+}

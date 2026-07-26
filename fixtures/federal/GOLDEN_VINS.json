@@ -1,0 +1,30 @@
+{
+  "_note": "The P1 golden set. Each VIN carries a real WMI and VDS - the manufacturer, plant, line, body and engine codes - so decoding one genuinely exercises federal vPIC data. The last six characters, the serial that identifies one physical vehicle, are 000000, and the position-9 check digit is recomputed to match. So these decode to a real model and identify no real person's car. See DECISIONS.md D-019.",
+  "vins": [
+    {
+      "vin": "1HGCM82673A000000",
+      "expect": "2003 HONDA Accord",
+      "why": "Takata airbag campaigns, which route to a locked system and must come out of the pipeline as mechanic referrals rather than findings. Also the largest complaint volume in the set."
+    },
+    {
+      "vin": "1FTFW1ET6DFC00000",
+      "expect": "2013 FORD F-150",
+      "why": "Pickup body class, and a model name carrying a hyphen - the case most likely to break the recall lookup's make/model string handling."
+    },
+    {
+      "vin": "4S4BSANC9G3000000",
+      "expect": "2016 SUBARU Outback",
+      "why": "All-wheel-drive SUV with a long trim string. Checks that a multi-value trim survives the decode intact."
+    },
+    {
+      "vin": "3GCUKRECXFG000000",
+      "expect": "2015 CHEVROLET Silverado",
+      "why": "Check digit is X, the one value that is a letter rather than a digit. Also a V8 truck, for engine-description formatting."
+    },
+    {
+      "vin": "KM8J3CA43JU000000",
+      "expect": "2018 HYUNDAI Tucson",
+      "why": "Korean WMI, so the position-9 check digit is not mandatory - exercises the branch where a mismatch would be a warning rather than a rejection."
+    }
+  ]
+}

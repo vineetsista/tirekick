@@ -1,0 +1,41 @@
+{
+  "_body_sha256": "10cbb99148f82b9abe519d3af111985e21f8957e3b4144ec3c7dc29349992aaa",
+  "_note": "Reduced before caching.",
+  "_retrieved_at": "2026-07-26T23:30:02Z",
+  "_source": "NHTSA Owner Complaints",
+  "_url": "https://api.nhtsa.gov/complaints/complaintsByVehicle?make=FORD&model=F-150+SUPER+CREW&modelYear=2013",
+  "payload": {
+    "_reduction_note": "Counts only. Complaint narratives are not retained: they are written by members of the public and carry partial VINs and accident accounts belonging to other people.",
+    "deaths_reported": 1,
+    "injuries_reported": 60,
+    "top_components": [
+      {
+        "component": "POWER TRAIN",
+        "count": 1212
+      },
+      {
+        "component": "ENGINE",
+        "count": 531
+      },
+      {
+        "component": "SERVICE BRAKES",
+        "count": 354
+      },
+      {
+        "component": "ELECTRICAL SYSTEM",
+        "count": 306
+      },
+      {
+        "component": "VEHICLE SPEED CONTROL",
+        "count": 275
+      },
+      {
+        "component": "STEERING",
+        "count": 211
+      }
+    ],
+    "total": 2796,
+    "with_crash": 74,
+    "with_fire": 31
+  }
+}

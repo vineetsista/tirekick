@@ -1,0 +1,328 @@
+{
+  "_body_sha256": "01539b3f74bc90d96bdc457887d1ff2402d845addd2dd77803dc7f77ea562297",
+  "_note": "",
+  "_retrieved_at": "2026-07-26T23:29:48Z",
+  "_source": "NHTSA Complaint Model Index",
+  "_url": "https://api.nhtsa.gov/products/vehicle/models?modelYear=2013&make=FORD&issueType=c",
+  "payload": {
+    "count": 63,
+    "message": "Results returned successfully",
+    "results": [
+      {
+        "make": "FORD",
+        "model": "EDGE",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "EDGE",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "EXPLORER",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "EXPLORER",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "FLEX",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "FLEX",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "MUSTANG",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "MUSTANG",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "TAURUS",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "TAURUS",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "F-150 REGULAR CAB",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "F-150 REGULAR CAB",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "F-150 SUPER CREW",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "F-150 SUPER CREW",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "F-150 SUPERCAB",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "F-150 SUPERCAB",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "FIESTA",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "FIESTA",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "TRANSIT CONNECT",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "EXPEDITION",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "E-150",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "E-350 P12",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "E-350 P15",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "F-250 REGULAR CAB",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "F-250 REGULAR CAB",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "F-250 SUPER CREW",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "F-250 SUPER CREW",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "F-250 SUPERCAB",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "F-250 SUPERCAB",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "FOCUS",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "FOCUS",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "EXPEDITION",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "EXPEDITION",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "EXPEDITION",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "F-350",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "F-350",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "F-350 SUPER CREW",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "ESCAPE",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "ESCAPE",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "FUSION",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "FOCUS BEV",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "FUSION",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "FUSION ENERGI",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "F-350",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "F-350",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "F-350 SUPER CREW",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "FUSION HYBRID",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "CMAX ENERGI",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "CMAX HEV",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "E-150 WAGON",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "E-350",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "F-53",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "F-550 SD",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "POLICE INTERCEPTOR UTILIT",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "F-450 SD",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "F-550",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "POLICE INTERCEPTOR SEDAN",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "E-450",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "E-250",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "F-450",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "STRIPPED CHASSIS",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "F-750",
+        "modelYear": "2013"
+      },
+      {
+        "make": "FORD",
+        "model": "C-MAX",
+        "modelYear": "2013"
+      }
+    ]
+  }
+}

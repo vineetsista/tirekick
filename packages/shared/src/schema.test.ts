@@ -98,6 +98,7 @@ function baseReport(): Report {
       imagesAnalyzed: 0,
       audioSecondsProcessed: 0,
       storageBytes: 0,
+      federalLookups: 0,
       usdTotal: 0,
       note: "fixture mode",
     },

@@ -27,12 +27,33 @@ class FindingTypeSpec:
     n: int
     #: Why the gate is set where it is.
     gate_rationale: str
+    #: Smallest sample that may be used to clear the gate.
+    #:
+    #: Without this, LAW 4 is trivially gameable and would have been gamed in P1:
+    #: five VINs that decode correctly is 5/5, which "clears" a 0.99 gate while
+    #: telling us essentially nothing - the 95% confidence interval on 5/5 runs
+    #: down to about 0.55. Requiring a sample size before a measurement counts is
+    #: what stops a clean demo from being mistaken for evidence. See D-018.
+    min_n: int = 50
 
     @property
     def enabled_for_paid(self) -> bool:
         if self.measured_precision is None:
             return False
+        if self.n < self.min_n:
+            return False
         return self.measured_precision >= self.precision_gate
+
+    @property
+    def status(self) -> str:
+        """Why this type is where it is, in three words or so."""
+        if self.measured_precision is None:
+            return "not measured"
+        if self.n < self.min_n:
+            return f"n too small (<{self.min_n})"
+        if self.measured_precision < self.precision_gate:
+            return "below gate"
+        return "enabled"
 
 
 # Gates set at P0, before any results existed (EVAL.md anti-gaming rules).
@@ -152,6 +173,17 @@ FINDING_TYPES: dict[str, FindingTypeSpec] = {
             "No precision gate applies; the honesty burden is on the wording.",
         ),
         FindingTypeSpec(
+            "title_brand_indicator",
+            "Title brand indicator",
+            0.90,
+            None,
+            0,
+            "Reads the buyer's own paperwork, so the arithmetic is exact and the "
+            "risk is entirely in negation - 'Salvage: None' contains the word. A "
+            "false salvage call talks a buyer out of a clean car, so the gate is "
+            "set where a false positive is nearly unacceptable.",
+        ),
+        FindingTypeSpec(
             "price_comparison",
             "Price comparison",
             0.0,
@@ -179,15 +211,14 @@ def enabled_types() -> set[str]:
 
 def gate_status_table() -> str:
     """Rendered on every run so the gate is visible, not buried in a doc."""
-    rows = ["  TYPE                      GATE   MEASURED     n  PAID"]
+    rows = ["  TYPE                      GATE  MEASURED     n  PAID  WHY"]
     for spec in FINDING_TYPES.values():
         measured = (
-            "not measured"
-            if spec.measured_precision is None
-            else f"{spec.measured_precision:.2f}"
+            "     -" if spec.measured_precision is None else f"{spec.measured_precision:>6.2f}"
         )
-        flag = "yes" if spec.enabled_for_paid else "NO"
+        flag = "yes" if spec.enabled_for_paid else " NO"
         rows.append(
-            f"  {spec.type:<24} {spec.precision_gate:>5.2f}  {measured:>12} {spec.n:>4}  {flag}"
+            f"  {spec.type:<24} {spec.precision_gate:>5.2f}    {measured} "
+            f"{spec.n:>5}   {flag}  {spec.status}"
         )
     return "\n".join(rows)

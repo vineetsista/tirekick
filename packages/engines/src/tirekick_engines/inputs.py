@@ -38,6 +38,12 @@ class InspectionInput(BaseModel):
     asking_price_usd: float | None = None
     #: Mileage as stated by the seller. Stated, not verified - the report says so.
     seller_stated_mileage: int | None = None
+    #: What the advert claims the vehicle is. Checked against the VIN decode; a
+    #: disagreement is one of the few things we can catch before anyone drives
+    #: anywhere. Claimed, not verified, and never presented as a fact about the car.
+    listing_year: int | None = None
+    listing_make: str | None = None
+    listing_model: str | None = None
     assets: list[AssetInput] = Field(default_factory=list)
     comps: list[Comp] = Field(default_factory=list)
     #: Free-text context the buyer typed. Never presented back as an observation.

@@ -86,6 +86,7 @@ FindingType = Literal[
     "vin_decode",
     "open_recall",
     "complaint_pattern",
+    "title_brand_indicator",
     "price_comparison",
     "documentation_gap",
 ]
@@ -301,18 +302,31 @@ class Recall(Base):
     campaign_number: str = Field(min_length=1)
     component: str = Field(min_length=1)
     summary: str = Field(min_length=1)
+    #: What NHTSA says can happen if it is not fixed. Quoted, never paraphrased.
+    consequence: str = ""
     remedy: str = ""
     report_received_date: str = ""
+    #: NHTSA's own do-not-drive and do-not-park-indoors flags. When either is set
+    #: the campaign is an emergency, and the report treats it as one.
+    park_it: bool = False
+    park_outside: bool = False
 
 
 class DecodedVehicle(Base):
     year: int | None = None
     make: str | None = None
     model: str | None = None
+    #: vPIC's series, where it has one. It is what separates a Silverado 1500
+    #: from a 3500, which NHTSA indexes as different vehicles.
+    series: str | None = None
     trim: str | None = None
     body_class: str | None = None
+    vehicle_type: str | None = None
     engine: str | None = None
+    fuel_type: str | None = None
     drive_type: str | None = None
+    transmission: str | None = None
+    doors: int | None = None
     plant_country: str | None = None
 
 
@@ -324,16 +338,39 @@ class ComponentCount(Base):
 class ComplaintSummary(Base):
     total: int = Field(ge=0)
     top_components: list[ComponentCount] = Field(default_factory=list)
+    with_crash: int = Field(default=0, ge=0)
+    with_fire: int = Field(default=0, ge=0)
+    injuries_reported: int = Field(default=0, ge=0)
+    deaths_reported: int = Field(default=0, ge=0)
+    #: What population these counts describe. Never this car.
+    scope: str = Field(min_length=1)
+
+
+class SourceCitation(Base):
+    """One federal lookup, with what it covered and when it was made."""
+
+    source: str = Field(min_length=1)
+    url: str = Field(min_length=1)
+    retrieved_at: str = Field(min_length=1)
+    body_sha256: str = Field(min_length=64, max_length=64)
+    statement: str = Field(min_length=1)
 
 
 class VehicleRecord(Base):
     vin: str = Field(min_length=1)
     vin_masked: str = Field(min_length=1)
+    #: Result of the offline check in vin.py, before any lookup ran.
+    vin_valid: bool
+    vin_statement: str = Field(min_length=1)
     decoded: DecodedVehicle
+    #: vPIC's own error text when it could not decode. Surfaced, not swallowed.
+    decode_error: str | None = None
     recalls: list[Recall] = Field(default_factory=list)
+    #: LAW 1. NHTSA publishes recalls per model, not per VIN, and this sentence
+    #: is what stops the list from reading as "open on this car".
+    recall_scope: str = Field(min_length=1)
     complaint_summary: ComplaintSummary | None = None
-    source: str = Field(min_length=1)
-    retrieved_at: str = Field(min_length=1)
+    sources: list[SourceCitation] = Field(default_factory=list)
 
 
 # --------------------------------------------------------------------------- #
@@ -398,6 +435,8 @@ class Cost(Base):
     images_analyzed: int = Field(ge=0)
     audio_seconds_processed: float = Field(ge=0.0)
     storage_bytes: int = Field(ge=0)
+    #: vPIC and NHTSA queries. Free, and counted anyway - see CostMeter.
+    federal_lookups: int = Field(default=0, ge=0)
     usd_total: float = Field(ge=0.0)
     note: str = Field(min_length=1)
 

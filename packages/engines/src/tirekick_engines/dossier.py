@@ -79,31 +79,67 @@ def _default_generated_at(mode: str) -> str:
     return datetime.now(UTC).isoformat()
 
 
+#: Findings that describe the model rather than this particular vehicle.
+#:
+#: They are kept out of the red-flag score. A recall campaign is filed against
+#: every car of a model year, is free to remedy at any dealer, and may well have
+#: been done on this one years ago - NHTSA does not publish per-VIN status, so we
+#: cannot know. Scoring them like observed damage produced a 2013 Accord at
+#: 100/100 on the strength of five campaigns and a check-engine lamp, which reads
+#: as "this car is a wreck" and is not what the evidence says. They are still
+#: reported in full, at their own severity, in their own section. See D-021.
+MODEL_LEVEL_TYPES: frozenset[str] = frozenset({"open_recall", "complaint_pattern"})
+
+
+def _vehicle_level(findings: list[Finding]) -> list[Finding]:
+    return [f for f in findings if f.type not in MODEL_LEVEL_TYPES]
+
+
 def _red_flag_score(findings: list[Finding], coverage: Coverage) -> int:
-    """Confidence-weighted severity, capped at 100.
+    """Confidence-weighted severity over findings about this vehicle, capped at 100.
 
     Deliberately not a grade and deliberately not an average: averaging would let
     a pile of minor findings dilute a critical one. Low coverage does not lower
     the score - a thin report is not a good report - and the coverage block is
     rendered next to it so the two are read together.
+
+    Model-level federal records are excluded; see MODEL_LEVEL_TYPES.
     """
     del coverage  # read alongside the score in the report, not folded into it
-    total = sum(_SEVERITY_WEIGHT[f.severity] * f.confidence for f in findings)
+    total = sum(_SEVERITY_WEIGHT[f.severity] * f.confidence for f in _vehicle_level(findings))
     return min(100, int(round(total)))
 
 
 def _headline(score: int, findings: list[Finding]) -> str:
-    critical = [f for f in findings if f.severity == "critical"]
-    major = [f for f in findings if f.severity == "major"]
+    """One sentence about this car, plus a separate count for its model.
+
+    The two are never added together. Conflating "we can see rust on this car"
+    with "this model year has recall campaigns on file" is how a report starts
+    overstating itself.
+    """
+    observed = _vehicle_level(findings)
+    recalls = [f for f in findings if f.type == "open_recall"]
+    tail = (
+        f" Separately, {len(recalls)} recall campaign(s) are on record for this "
+        f"model year - free to fix, and worth one phone call to a dealer."
+        if recalls
+        else ""
+    )
+
+    critical = [f for f in observed if f.severity == "critical"]
+    major = [f for f in observed if f.severity == "major"]
     if critical:
-        return f"{len(critical)} critical finding(s) visible in the media provided."
+        return f"{len(critical)} critical finding(s) visible in the media provided.{tail}"
     if major:
-        return f"{len(major)} finding(s) that are likely to cost money."
-    if findings:
-        return f"{len(findings)} minor finding(s) visible; nothing major in what we could see."
+        return f"{len(major)} finding(s) that are likely to cost money.{tail}"
+    if observed:
+        return (
+            f"{len(observed)} minor finding(s) visible; nothing major in what we "
+            f"could see.{tail}"
+        )
     if score == 0:
-        return "Nothing adverse was visible in the media provided."
-    return "Analysis complete."
+        return f"Nothing adverse was visible in the media provided.{tail}"
+    return f"Analysis complete.{tail}"
 
 
 def _build_systems(
@@ -236,6 +272,42 @@ def _cannot_determine_statement(
     return "Cannot be determined from the media provided."
 
 
+def _history_limits(assets: list[Asset], record: VehicleRecord | None) -> list[str]:
+    """What the history side of the report could not reach.
+
+    The absence of a document is not evidence of anything, so it never becomes a
+    finding (LAW 1). It belongs here, in the block that leads the verdict, where a
+    thin history reads as thin rather than as clean.
+    """
+    lines = [
+        "Title status - TIREKICK queries no title registry. Any title brand named "
+        "in this report was read out of paperwork you uploaded. Confirm the title "
+        "with your state motor vehicle agency before you buy."
+    ]
+
+    documents = [a for a in assets if a.kind == "document"]
+    if not documents:
+        lines.append(
+            "Vehicle history - no history report or service records were provided, "
+            "so there was nothing to read. This is not a clean history; it is no "
+            "history."
+        )
+    unreadable = [a for a in documents if not a.path.lower().endswith((".txt", ".md", ".text"))]
+    if unreadable:
+        lines.append(
+            f"{len(unreadable)} uploaded document(s) could not be read as text and "
+            f"were not scanned. Reading scanned or photographed documents is not "
+            f"enabled yet."
+        )
+    if record is not None and not record.vin_valid:
+        lines.append(
+            "VIN decode - the VIN provided did not pass its check digit, so no "
+            "federal record was retrieved. Everything a VIN would have told us is "
+            "missing from this report."
+        )
+    return lines
+
+
 def _seller_questions(findings: list[Finding], record: VehicleRecord | None) -> list[str]:
     questions = [f.seller_question for f in findings if f.seller_question]
     # Questions that are worth asking about any used car, and that our inputs can
@@ -250,7 +322,8 @@ def _seller_questions(findings: list[Finding], record: VehicleRecord | None) -> 
     )
     if record is not None and record.recalls:
         questions.append(
-            "Can you show me the dealer paperwork for the open recalls on this VIN?"
+            "Has any recall work been done on this car? A dealer will check by VIN "
+            "and do outstanding recall work free - can you show me the paperwork?"
         )
     # Preserve order, drop duplicates.
     seen: set[str] = set()
@@ -377,6 +450,7 @@ def build_report(
         )
     if audio_engine.has_audio(assets):
         could_not_assess.append(audio_engine.P0_STATEMENT)
+    could_not_assess.extend(_history_limits(assets, vehicle))
 
     price = pricing_engine.build_price_check(
         asking_price_usd=asking_price_usd,
@@ -403,8 +477,10 @@ def build_report(
             could_not_assess=could_not_assess,
             summary=(
                 f"{coverage.statement} Red-flag score {score}/100, which reflects "
-                f"the severity and confidence of what was visible - not the "
-                f"condition of the vehicle overall."
+                f"the severity and confidence of what was visible on this vehicle "
+                f"- not the condition of the vehicle overall. Recalls and owner "
+                f"complaint patterns describe the model rather than this car, so "
+                f"they are reported separately and are not counted in the score."
             ),
         ),
         findings=findings,

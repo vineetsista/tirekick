@@ -65,6 +65,7 @@ export const findingType = pgEnum("finding_type", [
   "vin_decode",
   "open_recall",
   "complaint_pattern",
+  "title_brand_indicator",
   "price_comparison",
   "documentation_gap",
 ]);

@@ -143,6 +143,7 @@ export const findingTypeSchema = z.enum([
   "vin_decode",
   "open_recall",
   "complaint_pattern",
+  "title_brand_indicator",
   "price_comparison",
   "documentation_gap",
 ]);
@@ -205,35 +206,72 @@ export const recallSchema = z.object({
   campaignNumber: z.string().min(1),
   component: z.string().min(1),
   summary: z.string().min(1),
+  /** NHTSA's stated consequence of leaving it unfixed. Quoted, never paraphrased. */
+  consequence: z.string(),
   remedy: z.string(),
   reportReceivedDate: z.string(),
+  /** NHTSA's do-not-drive flag. */
+  parkIt: z.boolean(),
+  /** NHTSA's do-not-park-indoors flag (fire risk while parked). */
+  parkOutside: z.boolean(),
 });
+
+/** One federal lookup: what it covered, when, and the hash of the bytes returned. */
+export const sourceCitationSchema = z.object({
+  source: z.string().min(1),
+  url: z.string().min(1),
+  retrievedAt: z.string().min(1),
+  bodySha256: z.string().length(64),
+  statement: z.string().min(1),
+});
+export type SourceCitation = z.infer<typeof sourceCitationSchema>;
 
 export const vehicleRecordSchema = z.object({
   vin: z.string().min(1),
   /** Display form with the last 6 masked. LIABILITY section 6. */
   vinMasked: z.string().min(1),
+  /** Offline ISO 3779 check, run before any lookup. */
+  vinValid: z.boolean(),
+  vinStatement: z.string().min(1),
   decoded: z.object({
     year: z.number().int().nullable(),
     make: z.string().nullable(),
     model: z.string().nullable(),
+    /** Separates a Silverado 1500 from a 3500 - different vehicles to NHTSA. */
+    series: z.string().nullable(),
     trim: z.string().nullable(),
     bodyClass: z.string().nullable(),
+    vehicleType: z.string().nullable(),
     engine: z.string().nullable(),
+    fuelType: z.string().nullable(),
     driveType: z.string().nullable(),
+    transmission: z.string().nullable(),
+    doors: z.number().int().nullable(),
     plantCountry: z.string().nullable(),
   }),
+  /** vPIC's own error text when it could not decode. Surfaced, not swallowed. */
+  decodeError: z.string().nullable(),
   recalls: z.array(recallSchema),
+  /**
+   * LAW 1. NHTSA publishes recalls per model, not per VIN. This sentence is what
+   * stops the list from reading as "open on this particular car".
+   */
+  recallScope: z.string().min(1),
   complaintSummary: z
     .object({
       total: z.number().int().nonnegative(),
       topComponents: z.array(
         z.object({ component: z.string(), count: z.number().int() }),
       ),
+      withCrash: z.number().int().nonnegative(),
+      withFire: z.number().int().nonnegative(),
+      injuriesReported: z.number().int().nonnegative(),
+      deathsReported: z.number().int().nonnegative(),
+      /** What population these counts describe. Never this car. */
+      scope: z.string().min(1),
     })
     .nullable(),
-  source: z.string().min(1),
-  retrievedAt: z.string().min(1),
+  sources: z.array(sourceCitationSchema),
 });
 export type VehicleRecord = z.infer<typeof vehicleRecordSchema>;
 
@@ -307,6 +345,8 @@ export const costSchema = z.object({
   imagesAnalyzed: z.number().int().nonnegative(),
   audioSecondsProcessed: z.number().nonnegative(),
   storageBytes: z.number().int().nonnegative(),
+  /** vPIC and NHTSA queries. Free, and counted anyway. LAW 5. */
+  federalLookups: z.number().int().nonnegative(),
   usdTotal: z.number().nonnegative(),
   /** Why the total is what it is - "fixture mode, no API calls" counts. */
   note: z.string().min(1),

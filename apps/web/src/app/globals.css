@@ -1,0 +1,135 @@
+/*
+ * TIREKICK brand tokens. Values come from docs/BRAND.md - change them there first.
+ *
+ * Fonts are a system monospace stack rather than a hosted webfont. JetBrains Mono
+ * is the intended face and is used when a viewer has it; wiring up self-hosted
+ * font files is part of the P4 design pass. A CDN font would fail a network-less
+ * build and is not worth that in P0.
+ */
+
+:root {
+  --tk-bg: #0a0c0e;
+  --tk-panel: #101418;
+  --tk-line: #1e252c;
+  --tk-text: #e6edf3;
+  --tk-muted: #8b98a5;
+  --tk-accent: #38e1b0;
+
+  --tk-sev-info: #5b9dd9;
+  --tk-sev-minor: #e3b341;
+  --tk-sev-major: #f0883e;
+  --tk-sev-critical: #f85149;
+
+  /* Deliberately off the severity ramp - a locked row is a different kind of
+     statement, not a point on the good-bad axis. See DECISIONS.md D-007. */
+  --tk-locked: #a371f7;
+
+  /* Legible, not faded. "Cannot determine" is a first-class output. */
+  --tk-unknown: #6e7681;
+
+  --tk-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", "Menlo", "Consolas",
+    "Liberation Mono", monospace;
+  --tk-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--tk-bg);
+  color: var(--tk-text);
+  font-family: var(--tk-mono);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+a {
+  color: var(--tk-accent);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(56, 225, 176, 0.35);
+}
+
+a:hover {
+  border-bottom-color: var(--tk-accent);
+}
+
+.prose {
+  font-family: var(--tk-sans);
+}
+
+.wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* Section header: a rule and an uppercase label. No icons. */
+.section {
+  margin: 56px 0 0;
+}
+
+.section-label {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--tk-muted);
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--tk-line);
+  margin-bottom: 24px;
+}
+
+.panel {
+  background: var(--tk-panel);
+  border: 1px solid var(--tk-line);
+  padding: 20px;
+}
+
+.muted {
+  color: var(--tk-muted);
+}
+
+.mono-label {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--tk-muted);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--tk-line);
+  vertical-align: top;
+}
+
+th {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--tk-muted);
+  font-weight: 400;
+}
+
+@media (max-width: 720px) {
+  .wrap {
+    padding: 0 16px;
+  }
+  body {
+    font-size: 13px;
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "sync": "node ../../scripts/sync-fixture-to-web.mjs",
+    "dev": "pnpm run sync && next dev",
+    "build": "pnpm run sync && next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "pnpm run sync && tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@tirekick/shared": "workspace:*",
+    "next": "15.1.3",
+    "react": "19.0.0",
+    "react-dom": "19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.10.2",
+    "@types/react": "19.0.2",
+    "@types/react-dom": "19.0.2",
+    "eslint": "9.17.0",
+    "eslint-config-next": "15.1.3",
+    "typescript": "5.7.2",
+    "vitest": "2.1.8"
+  }
+}

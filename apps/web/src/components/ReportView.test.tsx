@@ -51,7 +51,11 @@ describe("disclaimer architecture (LAW 6, LIABILITY section 4)", () => {
 
   it("declares the synthetic media provenance (D-010)", () => {
     expect(demoReport.containsSyntheticMedia).toBe(true);
-    expect(text).toContain("nothing here describes a real vehicle");
+    expect(text).toContain("no statement here about condition");
+    // The fixture is mixed: drawn media, real federal records. Saying only
+    // "this is synthetic" would understate the vehicle record, and saying
+    // nothing would overstate the photographs.
+    expect(text).toContain("The federal records below are real");
   });
 
   it("states what the analysis could not assess", () => {
@@ -64,6 +68,91 @@ describe("disclaimer architecture (LAW 6, LIABILITY section 4)", () => {
 
   it("puts coverage before the verdict, so the conclusion is read in context", () => {
     expect(html.indexOf("Media coverage")).toBeLessThan(html.indexOf("Red-flag score"));
+  });
+});
+
+describe("vehicle record (P1 data engine)", () => {
+  const vehicle = demoReport.vehicle!;
+
+  it("renders the decoded vehicle from the federal record", () => {
+    expect(vehicle).not.toBeNull();
+    expect(text).toContain(vehicle.vinMasked);
+    expect(text).toContain(String(vehicle.decoded.year));
+    expect(text).toContain(vehicle.decoded.make!);
+  });
+
+  it("never renders the full VIN", () => {
+    // LIABILITY section 6. The serial identifies one physical car.
+    expect(html).not.toContain(vehicle.vin);
+    expect(vehicle.vinMasked).toContain("******");
+  });
+
+  it("states the recall scope above the recall count, not below it", () => {
+    expect(text).toContain(vehicle.recallScope);
+    expect(text).toContain("by model, not by VIN");
+    expect(html.indexOf("Recalls - what this list is")).toBeLessThan(
+      html.indexOf("Owner complaints for this model"),
+    );
+  });
+
+  it("never claims a recall is outstanding on this particular vehicle", () => {
+    // The single most likely misreading of this report.
+    const recalls = demoReport.findings.filter((f) => f.type === "open_recall");
+    expect(recalls.length).toBeGreaterThan(0);
+    for (const finding of recalls) {
+      expect(finding.detail).toContain("cannot tell whether it was ever carried out");
+    }
+    expect(text).not.toContain("open recalls on this VIN");
+  });
+
+  it("says complaint counts describe the model rather than this car", () => {
+    expect(vehicle.complaintSummary).not.toBeNull();
+    expect(text).toContain(vehicle.complaintSummary!.scope);
+    expect(text).toContain("None of them describes this car");
+  });
+
+  it("cites every federal lookup with what it covered and when", () => {
+    // LAW 1 - a database claim carries a citation exactly as a visual one does.
+    expect(vehicle.sources.length).toBeGreaterThan(0);
+    for (const source of vehicle.sources) {
+      expect(text).toContain(source.source);
+      expect(text).toContain(source.retrievedAt);
+      expect(source.bodySha256).toHaveLength(64);
+    }
+  });
+});
+
+describe("title brand indicators (P1 history engine)", () => {
+  it("quotes the document line behind every title-brand finding", () => {
+    const brands = demoReport.findings.filter(
+      (f) => f.type === "title_brand_indicator",
+    );
+    expect(brands.length).toBeGreaterThan(0);
+    for (const finding of brands) {
+      const excerpt = finding.evidence.find((e) => e.kind === "document_excerpt");
+      expect(excerpt, `${finding.id} cites no document excerpt`).toBeDefined();
+      expect(text).toContain(excerpt!.excerpt);
+    }
+  });
+
+  it("does not flag a brand the paperwork explicitly denies", () => {
+    // The fixture document denies salvage, flood, lemon and junk. A scanner
+    // that matched on the keyword alone would report all four.
+    const ids = demoReport.findings.map((f) => f.id).join(" ");
+    expect(ids).not.toContain("title_salvage");
+    expect(ids).not.toContain("title_flood");
+    expect(ids).not.toContain("title_lemon");
+    expect(ids).not.toContain("title_junk");
+  });
+
+  it("routes a document reporting structural damage to a mechanic referral", () => {
+    // LAW 2 does not care which engine spoke.
+    const referral = demoReport.mechanicReferrals.find(
+      (r) => r.id === "ref_title_structural_history_01",
+    );
+    expect(referral).toBeDefined();
+    expect(referral!.system).toBe("structure");
+    expect(demoReport.findings.some((f) => f.system === "structure")).toBe(false);
   });
 });
 

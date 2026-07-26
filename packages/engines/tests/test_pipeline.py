@@ -82,7 +82,22 @@ def test_the_fabricated_all_clear_never_reaches_the_report(run) -> None:  # type
 def test_the_adverse_brake_observation_survives_as_a_referral(run) -> None:  # type: ignore[no-untyped-def]
     referral_ids = {r.id for r in run.report.mechanic_referrals}
     assert "ref_vf_bay_02" in referral_ids
-    assert "ref_recall_FIX000001" in referral_ids
+
+
+def test_the_clamp_reaches_document_findings_too(run) -> None:  # type: ignore[no-untyped-def]
+    """LAW 2 is about the system, not about which engine spoke.
+
+    The fixture's paperwork reports structural repair. That has to leave the
+    pipeline as a mechanic referral carrying its document excerpt - visible to
+    the buyer, and never graded. Recalls naming a locked system take the same
+    path; the Takata campaigns in test_data_golden.py cover that on real records.
+    """
+    referral = next(
+        r for r in run.report.mechanic_referrals if r.id == "ref_title_structural_history_01"
+    )
+    assert referral.system == "structure"
+    assert referral.evidence[0].kind == "document_excerpt"
+    assert "structural damage" in referral.evidence[0].excerpt
 
 
 def test_every_finding_cites_evidence_that_resolves(run) -> None:  # type: ignore[no-untyped-def]

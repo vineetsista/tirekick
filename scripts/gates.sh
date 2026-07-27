@@ -41,7 +41,12 @@ gate() {
 
 # --- Python engines -----------------------------------------------------------
 gate "py:lint"    bash -c "'$PY/ruff' check packages/engines && '$PY/ruff' format --check packages/engines"
-gate "py:types"   "$PY/mypy" packages/engines/src
+# --config-file is not optional here. mypy discovers config from the working
+# directory, and this script runs from the repo root, where there is no
+# pyproject.toml - so from P0 until P2 this gate silently ran with default
+# settings and `strict = true` never applied. An entirely untyped function
+# passed it. Name the config or the gate is decoration.
+gate "py:types"   "$PY/mypy" --config-file packages/engines/pyproject.toml packages/engines/src
 gate "py:test"    "$PY/pytest" packages/engines -q
 
 # --- The fixture inspection must run end to end (P0 gate) ---------------------

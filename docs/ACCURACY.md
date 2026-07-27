@@ -1,7 +1,17 @@
 # TIREKICK ACCURACY
 
-**As of P1: there are still no accuracy numbers, because there have still been no
+**As of P2: there are still no accuracy numbers, because there have still been no
 measurements.**
+
+P2 built the machinery that will produce them - the vision engine, the prompts, and
+the eval harness that scores model output against human labels. What it did not
+build is a labeled set, because that needs photographs of real cars and those do
+not exist yet. The harness runs, correctly reports that it has nothing to score,
+and every finding type stays disabled.
+
+This page is generated from `bench/results/latest.json`. There is no second place
+to type a precision figure, so a number here that is not in that file cannot
+happen.
 
 That sentence is the important one on this page, and we would rather publish it than
 publish an estimate. Numbers appear here in P2 (vision) and P3 (audio), measured on a
@@ -75,6 +85,27 @@ of which deny a brand. It gets all fifteen right. That number is also not on the
 table, for a blunter reason: we wrote those lines ourselves, and a scanner scored
 against its author's own examples is measuring nothing. A labeled set of real
 history documents is what would count, and we do not have one yet.
+
+The same objection applies with more force to the vision engine, so P2 did not
+score it at all. Running the model against our own synthetic fixture drawings would
+produce a number, and the number would describe how well the model reads pictures we
+drew for it to read.
+
+## How the numbers will be produced
+
+`bench/README.md` is the protocol, and two rules in it decide whether any of this
+means anything.
+
+**The set must contain cars in good condition.** A model that reports rust on every
+photograph scores perfectly against a set where every photograph has rust. Precision
+cannot be measured without images whose correct answer is silence.
+
+**Labels are written before the model runs, and are never edited because the model
+disagreed.** If a label turns out to be wrong, it gets fixed and the fix gets
+recorded in the session file. An eval set quietly reconciled with model output is a
+description of the model.
+
+Both were fixed in P0's `docs/EVAL.md`, before there was anything to be tempted by.
 
 Thresholds were set at P0 by asking, per type, "at what error rate would this finding
 cost a buyer real money or a real car?" The rationale per threshold is in

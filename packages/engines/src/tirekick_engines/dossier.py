@@ -463,6 +463,8 @@ def build_report(
         comps=comps,
         subject_mileage=subject_mileage,
         findings=findings,
+        decoded=vehicle.decoded if vehicle is not None else None,
+        as_of=generated_at or _default_generated_at(mode),
     )
 
     for asset in assets:

@@ -330,8 +330,18 @@ export const compSchema = z.object({
   askingPriceUsd: z.number().nonnegative(),
   mileage: z.number().int().nonnegative(),
   year: z.number().int(),
+  make: z.string().nullable(),
+  model: z.string().nullable(),
   trim: z.string().nullable(),
+  /** When the listing was seen. A stale comp describes a different market. */
+  listedOn: z.string(),
   notes: z.string(),
+});
+
+/** A listing the buyer supplied that was not used, and why. */
+export const excludedCompSchema = z.object({
+  compId: z.string().min(1),
+  reason: z.string().min(1),
 });
 
 export const priceDeductionSchema = z.object({
@@ -346,6 +356,8 @@ export const priceCheckSchema = z.object({
   askingPriceUsd: z.number().nonnegative(),
   /** LAW 1 - never a verdict without the comps behind it. min 1 enforced here. */
   comps: z.array(compSchema).min(1),
+  /** Rendered - a comp silently dropped is a comp the buyer thinks was counted. */
+  excluded: z.array(excludedCompSchema),
   normalizationNotes: z.string().min(1),
   fairRangeUsd: z.object({
     low: z.number().nonnegative(),

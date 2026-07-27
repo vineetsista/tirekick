@@ -854,7 +854,10 @@
         "askingPriceUsd": 9400.0,
         "mileage": 112300,
         "year": 2013,
+        "make": "Honda",
+        "model": "Accord",
         "trim": "LX",
+        "listedOn": "2025-12-20",
         "notes": "Fixture comp. Not a real listing."
       },
       {
@@ -863,7 +866,10 @@
         "askingPriceUsd": 8100.0,
         "mileage": 134800,
         "year": 2013,
+        "make": "Honda",
+        "model": "Accord",
         "trim": "LX",
+        "listedOn": "2025-12-14",
         "notes": "Fixture comp. Not a real listing."
       },
       {
@@ -872,7 +878,10 @@
         "askingPriceUsd": 10200.0,
         "mileage": 98500,
         "year": 2013,
+        "make": "Honda",
+        "model": "Accord",
         "trim": "EX",
+        "listedOn": "2025-11-30",
         "notes": "Fixture comp. Not a real listing."
       },
       {
@@ -881,11 +890,32 @@
         "askingPriceUsd": 7300.0,
         "mileage": 151000,
         "year": 2013,
+        "make": "Honda",
+        "model": "Accord",
         "trim": "LX",
+        "listedOn": "2025-08-15",
         "notes": "Fixture comp. Not a real listing."
+      },
+      {
+        "id": "comp_5",
+        "sourceNote": "Pasted by the buyer - similar price, different car",
+        "askingPriceUsd": 8750.0,
+        "mileage": 121000,
+        "year": 2013,
+        "make": "Honda",
+        "model": "Civic",
+        "trim": "EX",
+        "listedOn": "2025-12-18",
+        "notes": "Fixture comp. Not a real listing. Present so the relevance check is exercised on every run."
       }
     ],
-    "normalizationNotes": "Mileage adjustment of $-0.056 per mile, fitted from the 4 comparable listings provided rather than from any assumed depreciation rate. Range built from 4 listing(s) you provided. It reflects those listings and nothing else - not a market index, not an appraisal. Asking prices, not sale prices. What a car is listed at and what it sells for are different numbers, and the second one is not public. Subject mileage of 128,540 is as stated by the seller and has not been verified.",
+    "excluded": [
+      {
+        "compId": "comp_5",
+        "reason": "listed as a Civic; this vehicle is a Accord"
+      }
+    ],
+    "normalizationNotes": "Mileage adjustment of $-0.056 per mile, fitted from the 4 comparable listings provided rather than from any assumed depreciation rate. Range built from 4 listing(s) you provided. It reflects those listings and nothing else - not a market index, not an appraisal. Asking prices, not sale prices. What a car is listed at and what it sells for are different numbers, and the second one is not public. 1 listing(s) you provided were left out of the range as comparisons for a different vehicle. They are listed above with the reason. 1 of 4 dated listing(s) are more than 90 days old. They are still counted - they are your research - but they describe an older market than the one you are buying in. Subject mileage of 128,540 is as stated by the seller and has not been verified.",
     "fairRangeUsd": {
       "low": 6927.95,
       "high": 7568.4

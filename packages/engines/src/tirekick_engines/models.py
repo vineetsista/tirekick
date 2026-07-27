@@ -426,8 +426,20 @@ class Comp(Base):
     asking_price_usd: float = Field(ge=0.0)
     mileage: int = Field(ge=0)
     year: int
+    make: str | None = None
+    model: str | None = None
     trim: str | None = None
+    #: When the listing was seen, ISO date. A comp from six months ago describes a
+    #: different market, and nothing in the arithmetic would notice.
+    listed_on: str = ""
     notes: str = ""
+
+
+class ExcludedComp(Base):
+    """A listing the buyer supplied that was not used, and the reason."""
+
+    comp_id: str = Field(min_length=1)
+    reason: str = Field(min_length=1)
 
 
 class PriceDeduction(Base):
@@ -447,6 +459,9 @@ class PriceCheck(Base):
     asking_price_usd: float = Field(ge=0.0)
     # LAW 1: never a price verdict without the comps behind it.
     comps: list[Comp] = Field(min_length=1)
+    #: Comps excluded from the range, and why. Rendered - a comp silently dropped
+    #: is a comp the buyer thinks was counted.
+    excluded: list[ExcludedComp] = Field(default_factory=list)
     normalization_notes: str = Field(min_length=1)
     fair_range_usd: PriceRange
     deductions: list[PriceDeduction] = Field(default_factory=list)

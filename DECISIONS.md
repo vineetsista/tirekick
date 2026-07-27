@@ -454,3 +454,39 @@ are the real ones, and the cost of that sits in `docs/UNIT_ECONOMICS.md` as the
 line most likely to decide whether this business works. It is still 86% gross
 margin at 10% conversion. It stops working somewhere near 1.5%, and that is a
 number worth watching from the first teaser rather than discovering later.
+
+### D-035 - The pricing engine can decline to price
+**P5.** The engine could always do the arithmetic. That was the problem: three
+listings for a Civic, or two listings for anything, produced a dollar range
+formatted identically to one built from twenty relevant comps. Nothing in the
+output distinguished them.
+
+Three changes, all of them refusals rather than features. A listing more than two
+model years away, or for a different make or model than the VIN decoded to, is
+excluded - and the exclusion is *rendered*, because a comp silently dropped is a
+comp the buyer believes was counted. Below three usable listings the verdict is
+`cannot_determine` and the range is not shown at all, while the listings still
+are. And listings that disagree with each other by more than 40% get a note saying
+that a range that wide is evidence the listings are not comparable, not evidence
+the car is worth anything inside it.
+
+Relevance is only checked when the VIN decoded. No decode means no basis to
+exclude on, and excluding on a guess is worse than not excluding.
+
+Cost: a buyer who pastes four listings and gets "cannot determine" will be
+annoyed. The alternative is pricing their car against a Civic.
+
+### D-036 - Comps carry a date, and a future date is an error
+**P5.** Used-car prices moved by tens of percent inside single years recently, so a
+range built from spring listings against an autumn market is wrong in a way no
+amount of arithmetic reveals. Comps gained `listed_on`, listings older than 90
+days are flagged and still counted - they are the buyer's own research - and comps
+with no date at all produce a note saying currency could not be checked rather
+than an assumption that they are fresh.
+
+The future-date branch was not designed; the fixture found it. Fixture mode
+freezes its clock at 2026-01-01 (D-011), so comps I had dated in July 2026 were
+silently treated as extremely fresh - a negative age passes any "older than 90
+days" check. A listing dated after the report is a paste error, and it now says
+so. Two of this project's own guarantees interacting badly is a better argument
+for the frozen clock than any test I would have written on purpose.

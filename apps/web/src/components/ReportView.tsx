@@ -652,6 +652,26 @@ export function ReportView({ report }: { report: Report }) {
               </table>
             </div>
 
+            {report.price.excluded.length > 0 && (
+              <div style={{ marginTop: 20 }}>
+                <div className="mono-label" style={{ color: "var(--tk-unknown)" }}>
+                  Listings you gave us that were left out, and why
+                </div>
+                <table style={{ marginTop: 8 }}>
+                  <tbody>
+                    {report.price.excluded.map((e) => (
+                      <tr key={e.compId}>
+                        <td style={{ whiteSpace: "nowrap" }}>{e.compId}</td>
+                        <td className="muted prose" style={{ fontSize: 12 }}>
+                          {e.reason}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
             {report.price.deductions.length > 0 && (
               <div style={{ marginTop: 20 }}>
                 <div className="mono-label">Deductions, each linked to a finding</div>

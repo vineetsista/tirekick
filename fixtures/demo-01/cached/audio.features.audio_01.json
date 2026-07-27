@@ -1,0 +1,29 @@
+{
+  "_note": "Measured from the committed audio by scripts/refresh_audio_cache.py. Deterministic arithmetic over the waveform - no model, no claims.",
+  "clipped_fraction": 0.0,
+  "dominant_hz": 32.3,
+  "dominant_prominence_db": 19.22,
+  "duration_sec": 22.0,
+  "peak_dbfs": -9.12,
+  "rms_dbfs": -24.98,
+  "sample_rate": 22050,
+  "steadiness": 0.992,
+  "transients": [
+    {
+      "at_sec": 3.959,
+      "prominence": 6.71
+    },
+    {
+      "at_sec": 4.981,
+      "prominence": 56.67
+    },
+    {
+      "at_sec": 11.482,
+      "prominence": 59.02
+    },
+    {
+      "at_sec": 17.229,
+      "prominence": 59.27
+    }
+  ]
+}

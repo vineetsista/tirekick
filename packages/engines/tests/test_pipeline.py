@@ -160,14 +160,43 @@ def test_price_verdict_shows_its_comps(run) -> None:  # type: ignore[no-untyped-
         assert deduction.finding_id in {f.id for f in run.report.findings}
 
 
-def test_audio_makes_no_claims_in_p0(run) -> None:  # type: ignore[no-untyped-def]
-    """P0 audio is deliberately silent. Silence is the correct output, not a stub."""
+def test_audio_still_makes_no_claims(run) -> None:  # type: ignore[no-untyped-def]
+    """P3 gave audio a working detector and it still says nothing. LAW 4.
+
+    This is the test that costs something. There is a spectrogram, three located
+    transients, and a measured idle frequency in the report - and zero findings,
+    because `audio_anomaly` has never been measured against a labelled set.
+    """
     assert not [f for f in run.report.findings if f.engine == "audio"]
     assert run.report.coverage.has_audio is True
+
+    track = run.report.audio
+    assert track is not None
+    assert track.claims_enabled is False
     assert any(
-        "does not yet analyze engine audio" in line
+        "does not make claims about engine condition" in line
         for line in run.report.verdict.could_not_assess
     )
+
+
+def test_the_audio_section_shows_evidence_without_interpreting_it(run) -> None:  # type: ignore[no-untyped-def]
+    """A picture, timestamps, and no diagnosis attached to either."""
+    track = run.report.audio
+    assert track is not None
+    assert track.spectrogram_path.endswith(".png")
+    assert track.transients, "the fixture clip has three deliberate impulses"
+    # Located, and explicitly not identified.
+    assert "not telling you what it heard" in track.transient_statement
+
+
+def test_implied_rpm_is_reported_only_with_a_cylinder_count(run) -> None:  # type: ignore[no-untyped-def]
+    """Guessing the cylinders puts the answer out by a clean factor of two."""
+    track = run.report.audio
+    assert track is not None
+    # demo-01 decodes to a 4-cylinder Accord, so the arithmetic is available.
+    assert track.implied_rpm is not None
+    assert 700 <= track.implied_rpm <= 1400
+    assert "arithmetic on the recording" in track.implied_rpm_basis
 
 
 def test_report_json_round_trips(run) -> None:  # type: ignore[no-untyped-def]

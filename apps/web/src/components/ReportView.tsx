@@ -5,6 +5,7 @@ import {
   type Report,
   type VehicleRecord,
 } from "@tirekick/shared";
+import { AudioTrackView } from "./AudioTrackView";
 import { ConfidenceBar } from "./ConfidenceBar";
 import { Overlay, annotationsFor } from "./Overlay";
 import {
@@ -590,6 +591,12 @@ export function ReportView({ report }: { report: Report }) {
               </div>
             ))}
           </div>
+        </Section>
+      )}
+
+      {report.audio && (
+        <Section label="Engine audio">
+          <AudioTrackView track={report.audio} inspectionId={report.inspectionId} />
         </Section>
       )}
 

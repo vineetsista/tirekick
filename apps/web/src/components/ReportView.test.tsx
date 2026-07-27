@@ -122,6 +122,50 @@ describe("vehicle record (P1 data engine)", () => {
   });
 });
 
+describe("engine audio (P3)", () => {
+  const track = demoReport.audio!;
+
+  it("renders a spectrogram and the measurements taken from it", () => {
+    expect(track).not.toBeNull();
+    expect(html).toContain(track.spectrogramPath);
+    expect(text).toContain(`${track.durationSec.toFixed(1)}s`);
+    expect(text).toContain(`${track.impliedRpm!.toLocaleString()} rpm`);
+  });
+
+  it("states the gate before the picture, not under it", () => {
+    // LAW 4 has to be read before the evidence it is qualifying.
+    //
+    // Anchored on the figure caption rather than the image URL: React hoists a
+    // <link rel="preload"> for every image to the top of the document, so the
+    // path appears long before the element a reader actually sees.
+    expect(text.indexOf(track.claimsStatement.slice(0, 40))).toBeLessThan(
+      text.indexOf("frequency, low at bottom"),
+    );
+  });
+
+  it("marks where the transients are without naming what made them", () => {
+    expect(track.transients.length).toBeGreaterThan(0);
+    for (const t of track.transients) {
+      expect(text).toContain(`${t.atSec.toFixed(1)}s`);
+    }
+    expect(text).toContain("not telling you what it heard");
+  });
+
+  it("makes no audio claim anywhere in the report", () => {
+    expect(track.claimsEnabled).toBe(false);
+    expect(demoReport.findings.some((f) => f.engine === "audio")).toBe(false);
+    expect(demoReport.findings.some((f) => f.type === "audio_anomaly")).toBe(false);
+    // The words a knocking-engine report would use, none of which we have earned.
+    for (const phrase of ["knock", "misfire", "bearing", "valvetrain", "tappet"]) {
+      expect(text.toLowerCase()).not.toContain(phrase);
+    }
+  });
+
+  it("says what the absence of transients would not mean", () => {
+    expect(track.transientStatement.length).toBeGreaterThan(0);
+  });
+});
+
 describe("title brand indicators (P1 history engine)", () => {
   it("quotes the document line behind every title-brand finding", () => {
     const brands = demoReport.findings.filter(

@@ -276,6 +276,46 @@ export const vehicleRecordSchema = z.object({
 export type VehicleRecord = z.infer<typeof vehicleRecordSchema>;
 
 /* ------------------------------------------------------------------ */
+/* audio                                                               */
+/* ------------------------------------------------------------------ */
+
+/** A sharp onset in the recording. A fact about the file, not a diagnosis. */
+export const audioTransientSchema = z.object({
+  atSec: z.number().nonnegative(),
+  prominence: z.number().nonnegative(),
+});
+export type AudioTransient = z.infer<typeof audioTransientSchema>;
+
+/**
+ * The audio section: a picture, and measurements taken from it.
+ *
+ * `claimsEnabled` is false and stays false until audio_anomaly clears its gate
+ * on a labelled set (LAW 4). Every field here is a property of the waveform;
+ * none of them is a statement about an engine.
+ */
+export const audioTrackSchema = z.object({
+  assetId: z.string().min(1),
+  durationSec: z.number().nonnegative(),
+  sampleRate: z.number().int().positive(),
+  /** Rendered spectrogram, relative to the media root. Empty if not rendered. */
+  spectrogramPath: z.string(),
+  rmsDbfs: z.number(),
+  peakDbfs: z.number(),
+  clippedFraction: z.number().min(0).max(1),
+  dominantHz: z.number().nullable(),
+  impliedRpm: z.number().int().nullable(),
+  impliedRpmBasis: z.string().min(1),
+  transients: z.array(audioTransientSchema),
+  transientStatement: z.string().min(1),
+  usable: z.boolean(),
+  qualityStatement: z.string().min(1),
+  qualityProblems: z.array(z.string()),
+  claimsEnabled: z.boolean(),
+  claimsStatement: z.string().min(1),
+});
+export type AudioTrack = z.infer<typeof audioTrackSchema>;
+
+/* ------------------------------------------------------------------ */
 /* pricing                                                             */
 /* ------------------------------------------------------------------ */
 
@@ -393,6 +433,7 @@ export const reportSchema = z.object({
   /** LAW 6 - the banner is part of the data, not just the template. */
   banner: z.string().min(1),
   vehicle: vehicleRecordSchema.nullable(),
+  audio: audioTrackSchema.nullable(),
   assets: z.array(assetSchema),
   coverage: coverageSchema,
   verdict: verdictSchema,

@@ -18,6 +18,7 @@ function baseReport(): Report {
     mode: "fixture",
     banner: "banner",
     vehicle: null,
+    audio: null,
     assets: [
       {
         id: "asset_1",

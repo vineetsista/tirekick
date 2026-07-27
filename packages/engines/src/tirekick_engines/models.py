@@ -374,6 +374,48 @@ class VehicleRecord(Base):
 
 
 # --------------------------------------------------------------------------- #
+# audio                                                                        #
+# --------------------------------------------------------------------------- #
+
+
+class AudioTransient(Base):
+    """A sharp onset in the recording. A fact about the file, not a diagnosis."""
+
+    at_sec: float = Field(ge=0.0)
+    prominence: float = Field(ge=0.0)
+
+
+class AudioTrack(Base):
+    """The audio section: a picture, and measurements taken from it.
+
+    `claims_enabled` is False and will stay False until `audio_anomaly` clears
+    its gate on a labelled set. Every field here is a property of the waveform.
+    None of them is a statement about an engine.
+    """
+
+    asset_id: str = Field(min_length=1)
+    duration_sec: float = Field(ge=0.0)
+    sample_rate: int = Field(gt=0)
+    #: Rendered spectrogram, relative to the inspection media root. Empty when
+    #: rendering has not been run.
+    spectrogram_path: str = ""
+    rms_dbfs: float
+    peak_dbfs: float
+    clipped_fraction: float = Field(ge=0.0, le=1.0)
+    dominant_hz: float | None = None
+    implied_rpm: int | None = None
+    implied_rpm_basis: str = Field(min_length=1)
+    transients: list[AudioTransient] = Field(default_factory=list)
+    transient_statement: str = Field(min_length=1)
+    usable: bool
+    quality_statement: str = Field(min_length=1)
+    quality_problems: list[str] = Field(default_factory=list)
+    #: LAW 4. False until the anomaly detector has been measured.
+    claims_enabled: bool = False
+    claims_statement: str = Field(min_length=1)
+
+
+# --------------------------------------------------------------------------- #
 # pricing                                                                      #
 # --------------------------------------------------------------------------- #
 
@@ -472,6 +514,7 @@ class Report(Base):
     mode: RunMode
     banner: str = Field(min_length=1)
     vehicle: VehicleRecord | None = None
+    audio: AudioTrack | None = None
     assets: list[Asset] = Field(default_factory=list)
     coverage: Coverage
     verdict: Verdict

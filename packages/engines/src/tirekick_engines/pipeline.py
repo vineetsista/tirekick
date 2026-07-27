@@ -54,7 +54,8 @@ def run_inspection(
     assets = vision_engine.classify_views(assets, client, media_root)
     drafts, examined_systems = vision_engine.draft_findings(assets, client, media_root)
 
-    # Audio makes no claims in P0; it records the clip against the cost meter.
+    # Audio makes no claims while its gate is unmet (LAW 4). It contributes a
+    # spectrogram and measurements, not findings.
     drafts.extend(audio_engine.analyze(assets, meter))
 
     vehicle = data_engine.lookup(inspection.vin, sources)
@@ -72,6 +73,14 @@ def run_inspection(
     # Reads the buyer's own paperwork. Queries no title registry.
     drafts.extend(history_engine.title_brand_findings(assets, media_root))
 
+    audio_track = audio_engine.load_track(
+        assets,
+        media_root,
+        inspection_dir / "cached",
+        meter,
+        vehicle=vehicle,
+    )
+
     report, clamp_log = build_report(
         inspection_id=inspection.id,
         report_id=f"rpt_{inspection.id}",
@@ -79,6 +88,7 @@ def run_inspection(
         assets=assets,
         drafts=drafts,
         vehicle=vehicle,
+        audio=audio_track,
         asking_price_usd=inspection.asking_price_usd,
         comps=inspection.comps,
         subject_mileage=inspection.seller_stated_mileage,

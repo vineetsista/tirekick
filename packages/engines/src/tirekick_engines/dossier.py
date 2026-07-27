@@ -20,6 +20,7 @@ from .engines import pricing as pricing_engine
 from .models import (
     REPORT_BANNER,
     Asset,
+    AudioTrack,
     Comp,
     Coverage,
     DraftFinding,
@@ -419,6 +420,7 @@ def build_report(
     assets: list[Asset],
     drafts: list[DraftFinding],
     vehicle: VehicleRecord | None,
+    audio: AudioTrack | None,
     asking_price_usd: float | None,
     comps: list[Comp],
     subject_mileage: int | None,
@@ -449,7 +451,11 @@ def build_report(
             f"{', '.join(v.replace('_', ' ') for v in coverage.missing_views)}."
         )
     if audio_engine.has_audio(assets):
-        could_not_assess.append(audio_engine.P0_STATEMENT)
+        could_not_assess.append(
+            audio.claims_statement if audio is not None else audio_engine.P0_STATEMENT
+        )
+    if audio is not None and not audio.usable:
+        could_not_assess.extend(audio.quality_problems)
     could_not_assess.extend(_history_limits(assets, vehicle))
 
     price = pricing_engine.build_price_check(
@@ -469,6 +475,7 @@ def build_report(
         mode=mode,  # type: ignore[arg-type]
         banner=REPORT_BANNER,
         vehicle=vehicle,
+        audio=audio,
         assets=assets,
         coverage=coverage,
         verdict=Verdict(

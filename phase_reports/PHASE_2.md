@@ -1,6 +1,6 @@
 # PHASE 2 - VISION ENGINE
 
-Tag: `v0.3` | Branch: `main` | 24 commits | 161 tracked files
+Tag: `v0.3` | Branch: `main` | 27 commits | 161 tracked files
 Remote: `github.com/vineetsista/tirekick` (private - D-013, and now D-022)
 Gates: 9/9 green, locally and in CI. 255 tests.
 
@@ -59,7 +59,7 @@ number can be typed.
 | | |
 |---|---|
 | Gates | 9/9 green, local and CI |
-| Tests | 255 (195 pytest / 41 web / 14 shared / 5 db) |
+| Tests | 257 (197 pytest / 41 web / 14 shared / 5 db) |
 | Prompt files | 10, versioned, all scanned for banned language |
 | Model calls per 8-photo capture | 22 (8 classify + 14 targeted passes) |
 | Image tokens per phone photo | 2,459 (4032x3024 downscaled to 1568x1176) |
@@ -90,6 +90,33 @@ banned word in order to forbid it. I rephrased rather than widening the sanction
 list, because that list exists for buyer-facing disclaimers and would be weakened
 by absorbing internal instructions.
 
+### Two things CI found after the tag, and one of them matters a lot
+
+The first push of this phase went red, and chasing it turned up a worse problem
+than the one it reported.
+
+**The live path imported the SDK even when faked.** `_send` had `import anthropic`
+at the top of the retry loop, which runs even when the client is a test double. So
+the entire live-vision suite passed on this machine - where the `live` extra
+happens to be installed - and every test in it failed in CI, where it deliberately
+is not. That is LAW 7's gate doing precisely its job: the environment without the
+optional dependency is the only one that can catch this, and the machine writing
+the code is the one machine that cannot. Fixed, plus two regression tests that
+simulate the SDK's absence rather than trusting the environment.
+
+**The mypy gate has never been strict.** Not since P0. `mypy` discovers its config
+from the working directory, `scripts/gates.sh` runs from the repo root, and there
+is no `pyproject.toml` there - so `strict = true` in
+`packages/engines/pyproject.toml` was never read by CI or by the local gate script.
+Verified rather than assumed: a function with no annotations at all passes the root
+invocation and is caught by the package one.
+
+LAW 7 says "TS strict + ruff/mypy". Half of that has been decoration for three
+phases. The gate now names its config file, strict genuinely applies, and the
+codebase passes it cleanly - the code was written to the standard, only the check
+was hollow. Worth sitting with: this was found by accident, while chasing an
+unrelated failure, and nothing else would have surfaced it.
+
 ---
 
 ## 4. Gaps
@@ -115,6 +142,11 @@ by absorbing internal instructions.
    so it wants doing when the fixtures are regenerated from real captures anyway.
 7. **Documents still are not OCR'd.** A photographed title is reported as unread.
 8. **`min_n = 50` is still a judgment, not a derivation** - carried over from P1.
+9. **Three phases of mypy runs proved nothing.** The gate is fixed now, but every
+   "py:types PASS" in the P0, P1 and P2 reports was a weaker claim than it looked.
+   I have not gone back and re-verified those phases under strict; the code passes
+   strict today, which covers it, but the earlier green ticks were not what they
+   said.
 
 ---
 

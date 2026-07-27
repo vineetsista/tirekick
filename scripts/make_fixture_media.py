@@ -15,8 +15,8 @@ Run: packages/engines/.venv/bin/python scripts/make_fixture_media.py
 
 from __future__ import annotations
 
-import subprocess
 import sys
+import wave
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
@@ -70,7 +70,9 @@ def watermark(img: Image.Image) -> None:
     for i in range(-2, 4):
         d.text((80, 300 + i * 260), text, font=font, fill=(255, 255, 255, 34))
     rotated = layer.rotate(18, resample=Image.BICUBIC)
-    img.paste(Image.alpha_composite(img.convert("RGBA"), rotated).convert("RGB"), (0, 0))
+    img.paste(
+        Image.alpha_composite(img.convert("RGBA"), rotated).convert("RGB"), (0, 0)
+    )
 
 
 def region(
@@ -112,37 +114,65 @@ def panel(
     print(f"  wrote {out.relative_to(ROOT)}")
 
 
-def make_audio() -> None:
-    """A synthesized tone, not an engine.
+#: Impulse times burned into the synthetic clip, in seconds. Ground truth for
+#: the onset detector - see tests/test_signal.py.
+IMPULSE_TIMES = (5.0, 11.5, 17.25)
 
-    ffmpeg is a hard dependency of the video/audio pipeline anyway, so generating
-    the clip here keeps the fixture reproducible from source rather than shipping
-    an opaque binary blob nobody can regenerate.
+
+def make_audio() -> None:
+    """A synthesized signal with engine-like structure. Still not an engine.
+
+    The previous fixture was two mixed sine tones. It was honest about being
+    synthetic and it was useless as a test: a pure tone has no transients, so the
+    onset detector in signal.py ran against it and found nothing, forever, without
+    that ever being distinguishable from the detector being broken.
+
+    This builds something with the shape of engine audio - a low firing
+    fundamental, a stack of harmonics, amplitude modulation, and broadband noise -
+    and then places three impulses at KNOWN times. Those times are ground truth by
+    construction, which is what lets `test_signal.py` assert the detector finds
+    them rather than merely running.
+
+    It still does not sound like a car and no accuracy claim will ever cite it.
+    See fixtures/PROVENANCE.md and DECISIONS.md D-010.
     """
+    import numpy as np
+
+    sample_rate = 22050
+    duration = 22.0
+    t = np.arange(int(sample_rate * duration), dtype=np.float64) / sample_rate
+
+    # ~31.5Hz fundamental: roughly a 4-cylinder four-stroke at a 945rpm idle.
+    fundamental = 31.5
+    signal = np.zeros_like(t)
+    for harmonic, gain in enumerate((1.0, 0.55, 0.32, 0.2, 0.12, 0.08), start=1):
+        signal += gain * np.sin(2 * np.pi * fundamental * harmonic * t)
+
+    # Idle wander, so the tone is not perfectly stationary.
+    signal *= 1.0 + 0.06 * np.sin(2 * np.pi * 0.7 * t)
+
+    rng = np.random.default_rng(20260726)
+    signal += 0.12 * rng.standard_normal(t.size)
+
+    # Three impulses at known times. IMPULSE_TIMES is the ground truth.
+    for at in IMPULSE_TIMES:
+        index = int(at * sample_rate)
+        length = int(0.012 * sample_rate)
+        envelope = np.exp(-np.linspace(0, 9, length))
+        tick = envelope * rng.standard_normal(length) * 3.2
+        signal[index : index + length] += tick
+
+    signal *= 0.35 / np.max(np.abs(signal))
+    pcm = (signal * 32767).astype("<i2")
+
     out = MEDIA / "audio_01.wav"
-    cmd = [
-        "ffmpeg",
-        "-y",
-        "-loglevel",
-        "error",
-        "-f",
-        "lavfi",
-        "-i",
-        "sine=frequency=42:duration=22",
-        "-f",
-        "lavfi",
-        "-i",
-        "sine=frequency=126:duration=22",
-        "-filter_complex",
-        "[0:a][1:a]amix=inputs=2:duration=longest,volume=0.4",
-        "-ar",
-        "22050",
-        "-ac",
-        "1",
-        str(out),
-    ]
-    subprocess.run(cmd, check=True)
-    print(f"  wrote {out.relative_to(ROOT)}")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with wave.open(str(out), "wb") as handle:
+        handle.setnchannels(1)
+        handle.setsampwidth(2)
+        handle.setframerate(sample_rate)
+        handle.writeframes(pcm.tobytes())
+    print(f"  wrote {out.relative_to(ROOT)}  (impulses at {IMPULSE_TIMES})")
 
 
 def main() -> int:
@@ -207,7 +237,9 @@ def main() -> int:
     )
 
     make_audio()
-    print("\n  All fixture media is synthetic and watermarked. See fixtures/PROVENANCE.md")
+    print(
+        "\n  All fixture media is synthetic and watermarked. See fixtures/PROVENANCE.md"
+    )
     return 0
 
 

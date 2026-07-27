@@ -14,6 +14,7 @@ import sys
 from pathlib import Path
 
 from . import bench as bench_module
+from . import teaser as teaser_module
 from .client import resolve_mode
 from .pipeline import run_inspection
 from .registry import gate_status_table
@@ -84,6 +85,13 @@ def cmd_inspect(args: argparse.Namespace) -> int:
     print(result.meter.render())
     print()
 
+    if args.teaser_out:
+        teaser = teaser_module.build_teaser(report, price_usd=args.price)
+        teaser_path = _resolve(args.teaser_out)
+        teaser_path.parent.mkdir(parents=True, exist_ok=True)
+        teaser_path.write_text(teaser.to_json(), encoding="utf-8")
+        print(f"  wrote {teaser_path}  (free projection, {len(teaser.to_json())} bytes)")
+
     if args.out:
         out_path = Path(args.out)
         if not out_path.is_absolute():
@@ -148,6 +156,8 @@ def build_parser() -> argparse.ArgumentParser:
     source.add_argument("--dir", help="path to an inspection directory")
     inspect.add_argument("--mode", choices=["fixture", "live"], default=None)
     inspect.add_argument("--out", help="write the report JSON here")
+    inspect.add_argument("--teaser-out", default=None, help="write the free teaser here")
+    inspect.add_argument("--price", type=float, default=25.0, help="price shown on the teaser")
     inspect.add_argument(
         "--generated-at",
         default=None,

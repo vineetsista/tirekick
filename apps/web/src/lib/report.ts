@@ -1,5 +1,13 @@
-import { parseReport, type Report, type Severity, type SystemStatus } from "@tirekick/shared";
+import {
+  parseReport,
+  parseTeaser,
+  type Report,
+  type Severity,
+  type SystemStatus,
+  type Teaser,
+} from "@tirekick/shared";
 import raw from "@/generated/demo-01.report.json";
+import rawTeaser from "@/generated/demo-01.teaser.json";
 
 /**
  * Parsed at module scope on purpose. The fixture report is emitted by the Python
@@ -7,6 +15,15 @@ import raw from "@/generated/demo-01.report.json";
  * rather than the viewer rendering something malformed in front of a buyer.
  */
 export const demoReport: Report = parseReport(raw);
+
+/**
+ * The free projection, parsed through the same guard the paid report gets.
+ *
+ * `parseTeaser` throws if the payload carries any paid-only field, so a refactor
+ * that starts routing a full report down the free path fails the build rather
+ * than shipping the product for nothing.
+ */
+export const demoTeaser: Teaser = parseTeaser(rawTeaser);
 
 export function severityColor(severity: Severity): string {
   switch (severity) {

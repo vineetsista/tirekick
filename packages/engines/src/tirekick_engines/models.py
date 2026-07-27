@@ -565,3 +565,75 @@ class Report(Base):
         import json
 
         return json.dumps(self.model_dump(by_alias=True, mode="json"), indent=2) + "\n"
+
+
+# --------------------------------------------------------------------------- #
+# teaser - the free projection. See teaser.py.                                 #
+# --------------------------------------------------------------------------- #
+
+
+class SeverityCount(Base):
+    severity: Severity
+    count: int = Field(ge=0)
+
+
+class TeaserSystemRow(Base):
+    """A systems row with no statement that could leak a finding.
+
+    The paid row carries the worst finding's title. That is the product, so it
+    does not survive the projection - except for locked systems, whose statement
+    is identical in every report TIREKICK will ever emit (LAW 2).
+    """
+
+    system: SystemKey
+    status: SystemStatus
+    statement: str = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _law_2_locked_rows(self) -> TeaserSystemRow:
+        if self.system in LOCKED_SYSTEMS:
+            if self.status != "locked_mechanic_required":
+                raise ValueError(f"LAW 2: teaser row {self.system!r} is not locked")
+            if self.statement != LOCKED_SYSTEM_STATEMENT:
+                raise ValueError(
+                    f"LAW 2: teaser row {self.system!r} must use the exact locked "
+                    f"statement, not a paraphrase"
+                )
+        return self
+
+
+class Teaser(Base):
+    """What a buyer sees before paying. A smaller object, not a hidden one."""
+
+    schema_version: Literal["1.0.0"] = SCHEMA_VERSION
+    report_id: str = Field(min_length=1)
+    inspection_id: str = Field(min_length=1)
+    generated_at: str = Field(min_length=1)
+    mode: RunMode
+    banner: str = Field(min_length=1)
+    #: Year make model. Never a VIN, masked or otherwise.
+    vehicle_summary: str = ""
+    #: Kept in full. It is what tells a buyer whether this could answer their
+    #: question at all, and that belongs before the payment rather than after.
+    coverage: Coverage
+    red_flag_score: int = Field(ge=0, le=100)
+    headline: str = Field(min_length=1)
+    finding_count: int = Field(ge=0)
+    counts: list[SeverityCount] = Field(default_factory=list)
+    mechanic_referral_count: int = Field(ge=0)
+    systems: list[TeaserSystemRow] = Field(default_factory=list)
+    #: Never behind the paywall. Charging someone to discover that we cannot
+    #: assess their brakes would be indefensible.
+    could_not_assess: list[str] = Field(min_length=1)
+    has_audio: bool = False
+    has_price_check: bool = False
+    #: Generated from the eval-gate registry, not written by hand (D-032).
+    accuracy_statement: str = Field(min_length=1)
+    price_usd: float = Field(ge=0.0)
+    unlocks: list[str] = Field(min_length=1)
+    contains_synthetic_media: bool = False
+
+    def to_json(self) -> str:
+        import json
+
+        return json.dumps(self.model_dump(by_alias=True, mode="json"), indent=2) + "\n"

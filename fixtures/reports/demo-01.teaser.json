@@ -1,0 +1,158 @@
+{
+  "schemaVersion": "1.0.0",
+  "reportId": "rpt_demo-01",
+  "inspectionId": "demo-01",
+  "generatedAt": "2026-01-01T00:00:00Z",
+  "mode": "fixture",
+  "banner": "Automated analysis of media you provided. This is not an inspection, a certification, or a warranty. Confidence is not certainty. Have an independent mechanic examine any vehicle before you buy it.",
+  "vehicleSummary": "2013 HONDA Accord",
+  "coverage": {
+    "requestedViews": [
+      "exterior_front",
+      "exterior_rear",
+      "exterior_side_left",
+      "exterior_side_right",
+      "exterior_three_quarter",
+      "interior_front",
+      "interior_rear",
+      "engine_bay",
+      "odometer",
+      "dash",
+      "tire",
+      "vin_plate"
+    ],
+    "receivedViews": [
+      "exterior_front",
+      "exterior_rear",
+      "exterior_side_left",
+      "interior_front",
+      "engine_bay",
+      "odometer",
+      "dash",
+      "tire"
+    ],
+    "missingViews": [
+      "exterior_side_right",
+      "exterior_three_quarter",
+      "interior_rear",
+      "vin_plate"
+    ],
+    "photoCount": 8,
+    "hasVideo": false,
+    "hasAudio": true,
+    "score": 0.67,
+    "statement": "8 photos covering 8 of 12 standard views. Not covered: exterior side right, exterior three quarter, interior rear, vin plate. Nothing in this report describes what those views would have shown."
+  },
+  "redFlagScore": 50,
+  "headline": "2 finding(s) that are likely to cost money. Separately, 5 recall campaign(s) are on record for this model year - free to fix, and worth one phone call to a dealer.",
+  "findingCount": 14,
+  "counts": [
+    {
+      "severity": "major",
+      "count": 7
+    },
+    {
+      "severity": "minor",
+      "count": 5
+    },
+    {
+      "severity": "info",
+      "count": 2
+    }
+  ],
+  "mechanicReferralCount": 2,
+  "systems": [
+    {
+      "system": "exterior",
+      "status": "attention",
+      "statement": "Something was found here. The full report says what, where, and how sure."
+    },
+    {
+      "system": "interior",
+      "status": "attention",
+      "statement": "Something was found here. The full report says what, where, and how sure."
+    },
+    {
+      "system": "engine",
+      "status": "attention",
+      "statement": "Something was found here. The full report says what, where, and how sure."
+    },
+    {
+      "system": "transmission",
+      "status": "attention",
+      "statement": "Something was found here. The full report says what, where, and how sure."
+    },
+    {
+      "system": "brakes",
+      "status": "locked_mechanic_required",
+      "statement": "Not remotely verifiable - independent mechanic required."
+    },
+    {
+      "system": "suspension",
+      "status": "cannot_determine",
+      "statement": "Could not be determined from the media provided. The full report says why."
+    },
+    {
+      "system": "steering",
+      "status": "locked_mechanic_required",
+      "statement": "Not remotely verifiable - independent mechanic required."
+    },
+    {
+      "system": "tires",
+      "status": "attention",
+      "statement": "Something was found here. The full report says what, where, and how sure."
+    },
+    {
+      "system": "electrical",
+      "status": "attention",
+      "statement": "Something was found here. The full report says what, where, and how sure."
+    },
+    {
+      "system": "restraints",
+      "status": "locked_mechanic_required",
+      "statement": "Not remotely verifiable - independent mechanic required."
+    },
+    {
+      "system": "structure",
+      "status": "locked_mechanic_required",
+      "statement": "Not remotely verifiable - independent mechanic required."
+    },
+    {
+      "system": "fluids",
+      "status": "cannot_determine",
+      "statement": "Could not be determined from the media provided. The full report says why."
+    },
+    {
+      "system": "glass",
+      "status": "cannot_determine",
+      "statement": "Could not be determined from the media provided. The full report says why."
+    },
+    {
+      "system": "documentation",
+      "status": "attention",
+      "statement": "Something was found here. The full report says what, where, and how sure."
+    }
+  ],
+  "couldNotAssess": [
+    "Brakes - not remotely verifiable, independent mechanic required.",
+    "Airbags and restraints - not remotely verifiable, independent mechanic required.",
+    "Frame and structural integrity - not remotely verifiable, independent mechanic required.",
+    "Steering - not remotely verifiable, independent mechanic required.",
+    "4 standard view(s) were not provided: exterior side right, exterior three quarter, interior rear, vin plate.",
+    "TIREKICK does not make claims about engine condition from audio. The anomaly detector has not been measured against a labelled set, so under our own accuracy rules it cannot appear in a report. What is below is the recording itself, drawn as a spectrogram, and the measurements taken from it. Listen to the clip yourself, and play it to a mechanic at a cold start.",
+    "Title status - TIREKICK queries no title registry. Any title brand named in this report was read out of paperwork you uploaded. Confirm the title with your state motor vehicle agency before you buy."
+  ],
+  "hasAudio": true,
+  "hasPriceCheck": true,
+  "accuracyStatement": "None of the 16 finding types TIREKICK can produce has cleared its accuracy threshold yet - 0 have been measured at all. That means no finding in this report has a published accuracy number behind it. Everything is shown with its evidence so you can judge it yourself, and the accuracy page explains exactly what has and has not been tested.",
+  "priceUsd": 25.0,
+  "unlocks": [
+    "Every finding, with the photograph it came from and a box drawn on it",
+    "Why we are as confident as we are, per finding, in plain words",
+    "The full vehicle record: recalls on record, owner complaint patterns, and what your own paperwork says",
+    "The engine audio spectrogram, with the sharp sounds marked",
+    "Questions to ask the seller, written from what was actually found",
+    "A negotiation script that never asks you to overstate anything"
+  ],
+  "containsSyntheticMedia": true
+}

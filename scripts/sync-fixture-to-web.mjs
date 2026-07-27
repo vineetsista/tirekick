@@ -21,6 +21,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const fixture = "demo-01";
 
 const reportSrc = resolve(root, `fixtures/reports/${fixture}.report.json`);
+const teaserSrc = resolve(root, `fixtures/reports/${fixture}.teaser.json`);
 const mediaSrc = resolve(root, `fixtures/${fixture}/media`);
 const generatedDir = resolve(root, "apps/web/src/generated");
 const mediaDest = resolve(root, `apps/web/public/f/${fixture}`);
@@ -34,6 +35,11 @@ if (!existsSync(reportSrc)) {
 
 await mkdir(generatedDir, { recursive: true });
 await mkdir(mediaDest, { recursive: true });
+
+await writeFile(
+  resolve(generatedDir, `${fixture}.teaser.json`),
+  await readFile(teaserSrc, "utf8"),
+);
 
 await writeFile(
   resolve(generatedDir, `${fixture}.report.json`),

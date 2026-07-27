@@ -382,3 +382,75 @@ Stated as pixel counts rather than as a speedup, deliberately. This machine take
 six seconds to multiply two 2000x2000 matrices, and the drafted decode has
 measured *slower* than the full one on pure noise; any timing published from here
 would be fiction.
+
+### D-031 - The teaser is a projection, not a redaction
+**P4.** The quick way to build a paywall is to send the report and hide the
+findings in the browser. It is also not a paywall: the whole product is one
+network tab away, and the first person to notice will publish how. Chose to build
+a genuinely smaller object in `teaser.py`. What the free route omits was never
+serialised - there is no `display: none` anywhere in it.
+
+Two tests guard it from opposite directions. `test_teaser.py` searches the teaser
+JSON for every finding title, detail, confidence basis and evidence caption in the
+paid report. `TeaserView.test.tsx` does the same against the rendered HTML, by
+importing the full report alongside the teaser. The dangerous refactor is one that
+keeps the shape and changes what fills it, which a type checker cannot see, so
+both tests assert on text rather than on structure. `parseTeaser` additionally
+throws if a payload carries any paid-only key, because zod strips unknown keys
+silently by default and would have let a whole report through.
+
+### D-032 - The checkout page states how much of the product is measured
+**P4.** Writing the purchase flow surfaced the question I had been deferring since
+P2: it is now possible to charge $25 for a report in which zero of sixteen finding
+types has cleared its accuracy gate. Flagged it in the P3 report rather than
+building quietly around it.
+
+The resolution is not to hide the number or to wait. It is `accuracy_statement()`,
+generated from the eval-gate registry and rendered above the payment button on
+both the teaser and the checkout page. Today it reads: *none of the 16 finding
+types has cleared its accuracy threshold yet - 0 have been measured at all.*
+
+It is generated rather than written for one reason. A hand-written sentence gets
+softened when it becomes commercially inconvenient, and it will become
+commercially inconvenient. A generated one changes only when the measurements
+change, and the test asserts it starts saying something better the moment a type
+clears its gate. Cost: this is the single worst sentence that could appear next to
+a payment button, and it is going to cost conversions. That is the correct price
+for the LAW 6 claim that we market the machine and never oversell it.
+
+### D-033 - The pay button does not exist until the acknowledgements are ticked
+**P4.** LIABILITY section 4 specifies a checkbox, unticked by default, in its own
+paragraph, at the moment of the decision it qualifies. The design rule in that
+document is that a disclaimer a user can reach the verdict without reading has not
+been placed correctly.
+
+A greyed-out button satisfies the letter and not the rule - it is still a thing to
+click at, and the eye goes to it rather than to the text above it. Chose to render
+no payment control at all until all three boxes are ticked, so the only thing on
+screen to act on is the text. Three acknowledgements, chosen as the three things a
+person who felt cheated afterwards would say nobody told them: that this is not a
+physical inspection, that the four locked systems cannot be assessed at all, and
+that a mechanic should look at the car regardless.
+
+Also decided here: an unconfigured Stripe link renders a panel saying payment is
+not connected, never a dead href. A checkout that appears to work and does not is
+worse than one that admits it is not ready.
+
+### D-034 - The teaser costs the same to produce as the report it is teasing
+**P4.** The teaser is a projection of a finished report, which means every engine
+has already run by the time a buyer sees the free page. A teaser therefore costs
+the same ~$0.34 of inference as the paid product, and conversion rate multiplies
+that directly: at 10% conversion, ten teasers make one paid report cost $3.40.
+
+The obvious optimisation is to run a cheap subset for the teaser and the rest on
+payment. Rejected, and not on engineering grounds. The teaser shows a red-flag
+score and severity counts. If those are computed from a partial analysis, they
+change after payment - a buyer sees 50/100 for free, pays, and gets 72/100. There
+is no way to present that which is not either a bait or an apology, and the
+version where the number goes *down* after payment is worse.
+
+So the whole analysis runs before anything is shown, the numbers on the free page
+are the real ones, and the cost of that sits in `docs/UNIT_ECONOMICS.md` as the
+line most likely to decide whether this business works. It is still 86% gross
+margin at 10% conversion. It stops working somewhere near 1.5%, and that is a
+number worth watching from the first teaser rather than discovering later.

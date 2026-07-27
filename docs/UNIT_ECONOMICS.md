@@ -77,6 +77,40 @@ cost of one paid report $3.40 rather than $0.34 - a tenfold difference that no m
 choice comes close to. That line is already in the measurement list below, and it is
 the one to watch.
 
+## The teaser costs full price - P4
+
+The teaser is a projection of a finished report, so every engine has already run by
+the time anyone sees the free page. **A teaser costs the same as the report it is
+teasing.** That is a deliberate choice, not an oversight - see D-034. Running a
+cheap subset for the teaser would make the free red-flag score change after
+payment, and there is no honest way to present that.
+
+So conversion rate multiplies inference cost directly:
+
+| Conversion | Teasers per sale | Inference per paid report | Gross margin on $25 |
+|---|---|---|---|
+| 50% | 2 | $0.68 | 97.3% |
+| 20% | 5 | $1.71 | 93.2% |
+| **10%** | **10** | **$3.42** | **86.3%** |
+| 5% | 20 | $6.84 | 72.6% |
+| 2% | 50 | $17.11 | 31.6% |
+| 1.5% | 67 | $22.81 | 8.8% |
+
+Two things fall out of that table.
+
+**The $5 inference ceiling from D-006 binds on conversion, not on the model.** At
+Sonnet pricing it is crossed somewhere between 5% and 10% conversion. That is the
+number to instrument first, and it is why cost-per-*paid*-report, not
+cost-per-report, is the line that matters.
+
+**Below roughly 1.5% conversion the product does not work at this price**, whatever
+model it runs on. The responses are a cheaper teaser stage, a higher price, or
+fewer teasers - and the first of those is the one D-034 rules out on honesty
+grounds, so it would need a different design rather than a switch.
+
+These are projections built on a projected per-report cost. Both halves get
+replaced by measurement the moment there is a live run and a real funnel.
+
 ## Fixed costs (monthly, assumption)
 
 | Item | Assumption |

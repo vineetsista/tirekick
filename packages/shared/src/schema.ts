@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { LOCKED_SYSTEMS, SCHEMA_VERSION } from "./constants";
+import {
+  LOCKED_SYSTEMS,
+  LOCKED_SYSTEM_STATEMENT,
+  SCHEMA_VERSION,
+} from "./constants";
 
 /* ------------------------------------------------------------------ */
 /* primitives                                                          */
@@ -532,4 +536,90 @@ export function parseReport(input: unknown): Report {
   const report = reportSchema.parse(input);
   assertLaws(report);
   return report;
+}
+
+/* ------------------------------------------------------------------ */
+/* teaser - the free projection                                        */
+/* ------------------------------------------------------------------ */
+
+export const severityCountSchema = z.object({
+  severity: severitySchema,
+  count: z.number().int().nonnegative(),
+});
+
+/**
+ * A systems row with no statement that could leak a finding. The paid row
+ * carries the worst finding's title; locked rows carry the LAW 2 statement,
+ * which is identical in every report TIREKICK emits, paid or free.
+ */
+export const teaserSystemRowSchema = z.object({
+  system: systemKeySchema,
+  status: systemStatusSchema,
+  statement: z.string().min(1),
+});
+
+/**
+ * What a buyer sees before paying.
+ *
+ * This is a genuinely smaller object, not the paid report with things hidden in
+ * CSS. Nothing omitted here was ever serialised, which is the only version of a
+ * paywall that survives someone opening the network tab.
+ */
+export const teaserSchema = z.object({
+  schemaVersion: z.literal(SCHEMA_VERSION),
+  reportId: z.string().min(1),
+  inspectionId: z.string().min(1),
+  generatedAt: z.string().min(1),
+  mode: runModeSchema,
+  banner: z.string().min(1),
+  /** Year make model. Never a VIN, masked or otherwise. */
+  vehicleSummary: z.string(),
+  /** Kept in full - it says whether this could answer the question at all. */
+  coverage: coverageSchema,
+  redFlagScore: z.number().int().min(0).max(100),
+  headline: z.string().min(1),
+  findingCount: z.number().int().nonnegative(),
+  counts: z.array(severityCountSchema),
+  mechanicReferralCount: z.number().int().nonnegative(),
+  systems: z.array(teaserSystemRowSchema),
+  /** Never behind the paywall. */
+  couldNotAssess: z.array(z.string()).min(1),
+  hasAudio: z.boolean(),
+  hasPriceCheck: z.boolean(),
+  /** Generated from the eval-gate registry, not written by hand. */
+  accuracyStatement: z.string().min(1),
+  priceUsd: z.number().nonnegative(),
+  unlocks: z.array(z.string()).min(1),
+  containsSyntheticMedia: z.boolean(),
+});
+export type Teaser = z.infer<typeof teaserSchema>;
+
+/**
+ * Parse a teaser, and assert it is actually a teaser.
+ *
+ * The failure this guards against is a refactor that starts passing the full
+ * report through the teaser route. Zod alone would not notice - extra keys are
+ * stripped silently by default - so the shape is checked explicitly.
+ */
+export function parseTeaser(input: unknown): Teaser {
+  const teaser = teaserSchema.parse(input);
+
+  const leaked = ["findings", "mechanicReferrals", "assets", "price", "vehicle", "audio"];
+  const present = leaked.filter(
+    (key) => typeof input === "object" && input !== null && key in input,
+  );
+  if (present.length > 0) {
+    throw new Error(
+      `Teaser payload carries paid-only fields: ${present.join(", ")}. ` +
+        "The teaser must be built by teaser.build_teaser, not by deleting keys " +
+        "from a report.",
+    );
+  }
+
+  for (const row of teaser.systems) {
+    if (isLockedSystem(row.system) && row.statement !== LOCKED_SYSTEM_STATEMENT) {
+      throw new Error(`LAW 2: teaser row ${row.system} paraphrases the locked statement`);
+    }
+  }
+  return teaser;
 }

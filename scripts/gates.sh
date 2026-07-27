@@ -51,7 +51,8 @@ gate "py:test"    "$PY/pytest" packages/engines -q
 
 # --- The fixture inspection must run end to end (P0 gate) ---------------------
 gate "inspect:fixture" "$PY/python" -m tirekick_engines.cli inspect \
-  --fixture demo-01 --out fixtures/reports/demo-01.report.json
+  --fixture demo-01 --out fixtures/reports/demo-01.report.json \
+  --teaser-out fixtures/reports/demo-01.teaser.json
 
 # --- The emitted report must still satisfy the zod contract (D-002) -----------
 gate "contract:check" pnpm run contract:check

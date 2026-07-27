@@ -93,6 +93,8 @@ function baseReport(): Report {
     negotiationScript: [],
     cost: {
       mode: "fixture",
+      model: "",
+      promptFingerprint: "",
       inputTokens: 0,
       outputTokens: 0,
       imagesAnalyzed: 0,

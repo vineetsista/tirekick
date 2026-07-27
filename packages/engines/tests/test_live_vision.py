@@ -74,9 +74,7 @@ def _client(
 ) -> tuple[ModelClient, FakeAnthropic, CostMeter]:
     fake = FakeAnthropic(payload, **kwargs)
     meter = CostMeter(mode="live", model="claude-sonnet-5")
-    client = ModelClient(
-        mode="live", cache_dir=tmp_path, meter=meter, model="claude-sonnet-5"
-    )
+    client = ModelClient(mode="live", cache_dir=tmp_path, meter=meter, model="claude-sonnet-5")
     client._anthropic = lambda: fake  # type: ignore[method-assign]
     return client, fake, meter
 
@@ -207,9 +205,7 @@ def test_the_schema_still_permits_a_locked_system(tmp_path: Path) -> None:
 def test_a_client_error_is_not_retried(tmp_path: Path) -> None:
     """Retrying a 400 spends money slower without changing the outcome."""
     anthropic = pytest.importorskip("anthropic")
-    error = anthropic.APIStatusError(
-        "bad request", response=_FakeResponse(400), body=None
-    )
+    error = anthropic.APIStatusError("bad request", response=_FakeResponse(400), body=None)
     client, fake, _ = _client(tmp_path, {"findings": []}, raise_first=error)
 
     with pytest.raises(anthropic.APIStatusError):

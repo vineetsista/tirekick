@@ -37,6 +37,7 @@ FALLBACK_PRICE = (15.00, 75.00)
 def prices_for(model: str) -> tuple[float, float]:
     return MODEL_PRICES.get(model, FALLBACK_PRICE)
 
+
 #: Storage assumption for the per-report line, USD per GB-month.
 PRICE_PER_GB_MONTH = 0.023
 

@@ -490,3 +490,41 @@ silently treated as extremely fresh - a negative age passes any "older than 90
 days" check. A listing dated after the report is a paste error, and it now says
 so. Two of this project's own guarantees interacting badly is a better argument
 for the frozen clock than any test I would have written on purpose.
+
+### D-037 - The landing page is scanned against the product, not just for banned words
+**P6.** The P0 landing page promised "the open recalls on that VIN". P1 established
+that NHTSA publishes recalls per model and nothing per vehicle (D-016), added three
+separate caveats to the report saying so - and left the front page promising the
+thing the report now explicitly refuses to claim. It also advertised walkaround
+video analysis, which has never existed in any phase.
+
+Nothing failed, because nothing looked. The banned-language scan checks for
+forbidden *phrases*; it cannot notice a true-sounding sentence that the product no
+longer supports. Marketing copy drifts silently and always in the same direction.
+
+Added `Marketing.test.tsx`, which renders the landing page and asserts against the
+current product: no per-VIN recall claim, no title search, no audio diagnosis, no
+features that do not exist, and no clearance language. Plus the positive half - the
+banner and the generated accuracy statement both appear above the first call to
+action, asserted on position rather than presence, because a disclaimer under the
+button is not a disclaimer.
+
+Also, the accuracy statement now appears on the landing page, the teaser and the
+checkout page, from one generated source. Three surfaces, one sentence, and it is
+the least flattering fact about the product.
+
+### D-038 - The banned-language exemption excuses files by role, never by sentence
+**P6.** The copy scan caught `Marketing.test.tsx`, which asserts that the word
+"certified" does not appear on the landing page - and therefore contains it. Same
+shape as the P2 case where the scan caught the prompts I had just written to
+forbid those words.
+
+Chose to exempt test files by suffix, alongside `copy_rules.py`, on the criterion
+the scan is actually applying: a surface a buyer can reach. The globs are an
+approximation of that, and test files are where the approximation is wrong.
+
+The exemption is the obvious place to hide a real violation - add a file, move on -
+so it excuses by role and never by sentence, and
+`test_the_exemption_list_does_not_swallow_product_code` asserts that nothing
+exempted is a component or a page, and that the landing page, report view, teaser
+view, purchase gate and prompts are all still scanned. A guard on the guard.

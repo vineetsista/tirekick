@@ -28,12 +28,47 @@ SCANNED_GLOBS = (
 )
 
 
+#: Files that necessarily contain banned phrases in order to forbid them.
+#:
+#: `copy_rules.py` declares the phrase list. Test files assert that copy does NOT
+#: contain a phrase, which means writing it down. Neither is a surface a buyer can
+#: reach, which is the criterion this scan is actually applying - the globs above
+#: are an approximation of "text that could be read by a customer", and these are
+#: where that approximation is wrong.
+#:
+#: This exemption is narrow on purpose. It excuses files by role, never a specific
+#: sentence, so nothing product-facing can be quietly added to it.
+_EXEMPT_NAMES = ("copy_rules.py",)
+_EXEMPT_SUFFIXES = (".test.tsx", ".test.ts", "_test.py")
+
+
+def _is_exempt(path: Path) -> bool:
+    return path.name in _EXEMPT_NAMES or path.name.endswith(_EXEMPT_SUFFIXES)
+
+
 def _scanned_files() -> list[Path]:
     files: list[Path] = []
     for pattern in SCANNED_GLOBS:
         files.extend(sorted(REPO_ROOT.glob(pattern)))
-    # The rules module names the banned phrases in order to ban them.
-    return [f for f in files if f.name not in ("copy_rules.py",)]
+    return [f for f in files if not _is_exempt(f)]
+
+
+def test_the_exemption_list_does_not_swallow_product_code() -> None:
+    """A guard on the guard.
+
+    The exemption is the obvious place to hide a violation - add a file, move on.
+    So: it must never exempt a component, a page, or an engine module.
+    """
+    exempted = [f for f in REPO_ROOT.glob("apps/web/src/**/*.tsx") if _is_exempt(f)]
+    for path in exempted:
+        assert path.name.endswith(".test.tsx"), f"{path.name} is not a test file"
+
+    scanned = _scanned_files()
+    assert any(f.name == "page.tsx" for f in scanned), "the landing page must be scanned"
+    assert any(f.name == "ReportView.tsx" for f in scanned)
+    assert any(f.name == "TeaserView.tsx" for f in scanned)
+    assert any(f.name == "PurchaseGate.tsx" for f in scanned)
+    assert any(f.suffix == ".md" for f in scanned), "prompts must be scanned"
 
 
 def test_no_banned_language_in_product_surfaces() -> None:

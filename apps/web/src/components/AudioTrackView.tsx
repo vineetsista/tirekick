@@ -119,7 +119,10 @@ export function AudioTrackView({
         controls
         preload="none"
         src={assetUrl(inspectionId, `${track.assetId}.wav`)}
-        style={{ width: "100%", marginTop: 16 }}
+        // colorScheme tells the browser to draw its native control dark.
+        // The alternative is rebuilding a media player, which is a lot of
+        // surface area for something the platform already does well.
+        style={{ width: "100%", marginTop: 16, colorScheme: "dark" }}
       >
         Your browser cannot play this audio clip.
       </audio>

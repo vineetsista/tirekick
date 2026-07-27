@@ -132,9 +132,7 @@ def test_a_missed_label_is_a_false_negative() -> None:
 
 
 def test_the_right_box_with_the_wrong_type_is_not_a_hit() -> None:
-    result = bench.score(
-        [prediction(type_="exterior_damage")], [label(type_="rust_corrosion")]
-    )
+    result = bench.score([prediction(type_="exterior_damage")], [label(type_="rust_corrosion")])
     assert result.by_type["exterior_damage"].false_positives == 1
     assert result.by_type["rust_corrosion"].false_negatives == 1
 
@@ -286,9 +284,7 @@ def test_the_gate_reads_measurements_from_the_bench_file(tmp_path: Path) -> None
         json.dumps(
             {
                 "headline": {
-                    "by_type": {
-                        "rust_corrosion": {"precision": 0.91, "n_predictions": 120}
-                    }
+                    "by_type": {"rust_corrosion": {"precision": 0.91, "n_predictions": 120}}
                 }
             }
         ),

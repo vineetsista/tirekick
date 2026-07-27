@@ -107,9 +107,9 @@ def cmd_bench(args: argparse.Namespace) -> int:
         inspections_dir = _resolve(args.inspections)
         reports_dir.mkdir(parents=True, exist_ok=True)
         for manifest in sorted(inspections_dir.glob("*/manifest.json")):
-            result = run_inspection(inspection_dir=manifest.parent, mode=resolve_mode(args.mode))
+            run = run_inspection(inspection_dir=manifest.parent, mode=resolve_mode(args.mode))
             out = reports_dir / f"{manifest.parent.name}.report.json"
-            out.write_text(result.report.to_json(), encoding="utf-8")
+            out.write_text(run.report.to_json(), encoding="utf-8")
             print(f"  ran {manifest.parent.name} -> {out.name}")
         print()
 
@@ -117,13 +117,13 @@ def cmd_bench(args: argparse.Namespace) -> int:
         print(f"error: no labels directory at {labels_dir}", file=sys.stderr)
         return 2
 
-    result = bench_module.run(labels_dir, reports_dir)
-    print(bench_module.render(result))
+    scored = bench_module.run(labels_dir, reports_dir)
+    print(bench_module.render(scored))
     print()
 
     results_path.parent.mkdir(parents=True, exist_ok=True)
     results_path.write_text(
-        json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        json.dumps(scored, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
     print(f"  wrote {results_path}")
     print(

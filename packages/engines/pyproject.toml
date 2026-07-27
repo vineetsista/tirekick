@@ -30,6 +30,11 @@ tirekick = "tirekick_engines.cli:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+# Prompts ship with the package. They are product code that happens to be prose,
+# and an install that silently lacked them would fall back to nothing.
+[tool.setuptools.package-data]
+tirekick_engines = ["prompts/**/*.md"]
+
 [tool.ruff]
 line-length = 96
 target-version = "py312"

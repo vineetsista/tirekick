@@ -14,8 +14,14 @@ from tirekick_engines.copy_rules import scan_paths, scan_text
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 #: Directories whose text can reach a buyer.
+#:
+#: Prompts are in this list for the same reason the web copy is. A banned phrase
+#: in a prompt does not reach the buyer directly - it teaches the model to write
+#: it back to us, which is worse, because then it arrives wearing a confidence
+#: score.
 SCANNED_GLOBS = (
     "packages/engines/src/tirekick_engines/**/*.py",
+    "packages/engines/src/tirekick_engines/prompts/**/*.md",
     "apps/web/src/**/*.tsx",
     "apps/web/src/**/*.ts",
     "packages/shared/src/constants.ts",

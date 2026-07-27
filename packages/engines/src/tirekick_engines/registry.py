@@ -10,9 +10,17 @@ and is not the same as bad. It means we do not know, so we do not sell it.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import json
+from dataclasses import dataclass, replace
+from pathlib import Path
 
 from .models import FindingType
+
+#: Written by `tirekick bench`. The gate table and docs/ACCURACY.md both read it,
+#: so a published number and a measured number cannot drift apart - there is no
+#: second place to type a precision figure. Absent means unmeasured, which is the
+#: state the project starts in and stays in until an eval set exists.
+BENCH_RESULT_PATH = Path(__file__).resolve().parents[4] / "bench" / "results" / "latest.json"
 
 
 @dataclass(frozen=True)
@@ -202,6 +210,32 @@ FINDING_TYPES: dict[str, FindingTypeSpec] = {
         ),
     )
 }
+
+
+def _measured(path: Path = BENCH_RESULT_PATH) -> dict[str, tuple[float | None, int]]:
+    """Precision and sample size per finding type, from the last bench run."""
+    if not path.is_file():
+        return {}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    rows = (data.get("headline") or {}).get("by_type") or {}
+    return {
+        name: (row.get("precision"), int(row.get("n_predictions") or 0))
+        for name, row in rows.items()
+    }
+
+
+def _with_measurements(
+    specs: dict[str, FindingTypeSpec], path: Path = BENCH_RESULT_PATH
+) -> dict[str, FindingTypeSpec]:
+    measured = _measured(path)
+    out: dict[str, FindingTypeSpec] = {}
+    for key, spec in specs.items():
+        precision, n = measured.get(key, (None, 0))
+        out[key] = replace(spec, measured_precision=precision, n=n)
+    return out
+
+
+FINDING_TYPES = _with_measurements(FINDING_TYPES)
 
 
 def enabled_types() -> set[str]:

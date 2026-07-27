@@ -430,6 +430,11 @@ class Coverage(Base):
 
 class Cost(Base):
     mode: RunMode
+    #: Which model produced this report. Empty in fixture mode, where no model ran.
+    model: str = ""
+    #: Which prompt versions were in force. LAW 1 - a finding is traceable to the
+    #: instructions that produced it, not only to the image.
+    prompt_fingerprint: str = ""
     input_tokens: int = Field(ge=0)
     output_tokens: int = Field(ge=0)
     images_analyzed: int = Field(ge=0)

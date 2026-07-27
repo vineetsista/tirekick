@@ -1,0 +1,18 @@
+{
+  "_template": "Copy this to capture-NN.json and fill it in. Delete this key. Files named TEMPLATE.json are skipped by the harness only because they contain no assets - there is no special case for them, so leave the assets object empty here.",
+  "session": "capture-NN",
+  "labeled_by": "",
+  "labeled_at": "YYYY-MM-DD",
+  "vehicle": "year make model, indicated mileage",
+  "notes": [
+    "Things known to be true that a photograph cannot show. These do not become labels.",
+    "They are how we find out what this product is structurally blind to."
+  ],
+  "_asset_help": {
+    "labels_empty_list": "A human looked and there is nothing to report. Findings here are false positives. Most assets should look like this.",
+    "asset_absent": "Nobody looked. Predictions are ignored rather than counted wrong.",
+    "box": "Normalized. x,y is the top-left corner. All values 0..1. Need not be tight - matching is at IoU 0.4 (D-008).",
+    "do_not_label": "brakes, restraints, structure, steering - LAW 2, we have disclaimed assessing these from a photograph"
+  },
+  "assets": {}
+}

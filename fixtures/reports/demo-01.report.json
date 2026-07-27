@@ -925,6 +925,8 @@
   ],
   "cost": {
     "mode": "fixture",
+    "model": "",
+    "promptFingerprint": "classify@v1,damage@v1,dash_lights@v1,engine_bay@v1,interior_wear@v1,odometer@v1,repaint@v1,rust@v1,system@v1,tire_tread@v1",
     "inputTokens": 0,
     "outputTokens": 0,
     "imagesAnalyzed": 18,

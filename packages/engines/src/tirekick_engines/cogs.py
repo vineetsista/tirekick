@@ -14,10 +14,28 @@ from dataclasses import dataclass, field
 
 from .models import Cost, RunMode
 
-# USD per million tokens. Update deliberately; a stale number here understates COGS.
-# Source: Anthropic public pricing. Verify before quoting these anywhere external.
-PRICE_PER_MTOK_INPUT = 3.00
-PRICE_PER_MTOK_OUTPUT = 15.00
+# USD per million tokens, per model. Update deliberately; a stale number here
+# understates COGS. Source: Anthropic public pricing. Verify before quoting these
+# anywhere external.
+#
+# Keyed by model because the price and the model choice are one decision, not two.
+# A single global pair silently reprices the moment TIREKICK_MODEL changes, which
+# is exactly when the number matters most.
+MODEL_PRICES: dict[str, tuple[float, float]] = {
+    "claude-opus-5": (15.00, 75.00),
+    "claude-sonnet-5": (3.00, 15.00),
+    "claude-haiku-4-5-20251001": (1.00, 5.00),
+}
+
+#: Used when the configured model is not in the table. Deliberately the most
+#: expensive row rather than an average: an unknown model that turns out to be
+#: cheap makes us look conservative, and one that turns out to be dear does not
+#: silently blow the unit economics.
+FALLBACK_PRICE = (15.00, 75.00)
+
+
+def prices_for(model: str) -> tuple[float, float]:
+    return MODEL_PRICES.get(model, FALLBACK_PRICE)
 
 #: Storage assumption for the per-report line, USD per GB-month.
 PRICE_PER_GB_MONTH = 0.023
@@ -28,12 +46,19 @@ class CostMeter:
     """Accumulates real usage across a single inspection."""
 
     mode: RunMode
+    #: The model these prices are for. Recorded so a cost figure names the model
+    #: that produced it rather than floating free of it.
+    model: str = ""
     input_tokens: int = 0
     output_tokens: int = 0
     images_analyzed: int = 0
     audio_seconds_processed: float = 0.0
     storage_bytes: int = 0
     federal_lookups: int = 0
+    #: Image tokens computed from the dimensions we actually sent. Kept beside the
+    #: API's reported usage rather than instead of it, so the projection in
+    #: UNIT_ECONOMICS can be checked against the invoice instead of trusted.
+    projected_image_tokens: int = 0
     _calls: list[str] = field(default_factory=list)
 
     def record_model_call(
@@ -60,6 +85,9 @@ class CostMeter:
         self.federal_lookups += 1
         self._calls.append(f"{label}: federal lookup, no charge")
 
+    def record_projected_image_tokens(self, tokens: int) -> None:
+        self.projected_image_tokens += tokens
+
     def record_audio(self, seconds: float) -> None:
         self.audio_seconds_processed += seconds
 
@@ -71,9 +99,10 @@ class CostMeter:
         if self.mode == "fixture":
             # Cached responses. No inference was billed, so the honest total is zero.
             return 0.0
+        price_in, price_out = prices_for(self.model)
         tokens = (
-            self.input_tokens / 1_000_000 * PRICE_PER_MTOK_INPUT
-            + self.output_tokens / 1_000_000 * PRICE_PER_MTOK_OUTPUT
+            self.input_tokens / 1_000_000 * price_in
+            + self.output_tokens / 1_000_000 * price_out
         )
         storage = self.storage_bytes / 1_000_000_000 * PRICE_PER_GB_MONTH
         return round(tokens + storage, 6)
@@ -84,15 +113,27 @@ class CostMeter:
                 "Fixture mode: responses served from cache, no API calls billed. "
                 "$0.00 is the true cost of this run and not a placeholder."
             )
+        price_in, price_out = prices_for(self.model)
+        caveat = (
+            ""
+            if self.model in MODEL_PRICES
+            else " This model is not in the price table, so it is charged here at "
+            "the most expensive rate we know of - the figure is an upper bound, "
+            "not a quote."
+        )
         return (
-            f"Live mode: {len(self._calls)} model calls, "
-            f"{self.input_tokens} input and {self.output_tokens} output tokens at "
-            f"${PRICE_PER_MTOK_INPUT}/${PRICE_PER_MTOK_OUTPUT} per Mtok."
+            f"Live mode on {self.model or 'an unnamed model'}: {len(self._calls)} "
+            f"model calls, {self.input_tokens} input and {self.output_tokens} output "
+            f"tokens at ${price_in}/${price_out} per Mtok.{caveat}"
         )
 
     def to_model(self) -> Cost:
+        from .prompts import fingerprint
+
         return Cost(
             mode=self.mode,
+            model=self.model,
+            prompt_fingerprint=fingerprint(),
             input_tokens=self.input_tokens,
             output_tokens=self.output_tokens,
             images_analyzed=self.images_analyzed,
@@ -114,6 +155,7 @@ class CostMeter:
             f"    audio seconds       {self.audio_seconds_processed:.1f}",
             f"    storage             {self.storage_bytes / 1_000_000:.1f} MB",
             f"    federal lookups     {self.federal_lookups}  (vPIC/NHTSA, no charge)",
+            f"    model               {self.model or '-'}",
             f"    TOTAL               ${self.usd_total:.4f}",
             f"    {self.note()}",
         ]

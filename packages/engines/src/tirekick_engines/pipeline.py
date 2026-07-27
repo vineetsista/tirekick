@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from .client import ModelClient
+from .client import ModelClient, resolve_model
 from .cogs import CostMeter
 from .dossier import build_report
 from .engines import audio as audio_engine
@@ -36,8 +36,11 @@ def run_inspection(
     Layout: manifest.json, media/, cached/ (fixture responses).
     """
     inspection = InspectionInput.load(inspection_dir / "manifest.json")
-    meter = CostMeter(mode=mode)
-    client = ModelClient(mode=mode, cache_dir=inspection_dir / "cached", meter=meter)
+    model = resolve_model()
+    meter = CostMeter(mode=mode, model=model if mode == "live" else "")
+    client = ModelClient(
+        mode=mode, cache_dir=inspection_dir / "cached", meter=meter, model=model
+    )
     sources = FederalSources(
         mode=mode,
         cache_dir=federal_cache_dir or DEFAULT_CACHE_DIR,
@@ -48,8 +51,8 @@ def run_inspection(
     assets = materialize_assets(inspection, media_root)
 
     # Vision stage 1, then stage 2 against the classified views.
-    assets = vision_engine.classify_views(assets, client)
-    drafts, examined_systems = vision_engine.draft_findings(assets, client)
+    assets = vision_engine.classify_views(assets, client, media_root)
+    drafts, examined_systems = vision_engine.draft_findings(assets, client, media_root)
 
     # Audio makes no claims in P0; it records the clip against the cost meter.
     drafts.extend(audio_engine.analyze(assets, meter))

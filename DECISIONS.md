@@ -232,3 +232,66 @@ reported in full at their own severity, and the headline now names them in a
 separate clause with their own count. The score returned to 50/100. Cost: a buyer
 who reads only the number sees nothing of the recall history, which is why the
 headline sentence carries it and the vehicle record section repeats it.
+
+### D-022 - Real vehicle media means the repository stays private
+**P2.** The eval set has to be committed or it is not reproducible - CI cannot score
+against photographs that live on somebody's laptop, and an accuracy number nobody
+else can recompute is an assertion rather than a measurement. Committing them means
+committing photographs of real cars in real streets, which carry number plates and
+sometimes faces belonging to people who did not agree to any of this. Chose to
+commit the media and hold the repository private until a plate-and-face blur step
+exists and has been run over everything in `bench/`. The founder chose this over
+the alternatives when asked. Cost: the "built in the open" option from D-013 is
+foreclosed for now, and it is no longer one command - `git rm` does not remove
+anything from history, so a plate committed today is public the moment the
+repository is, forever. That is why the constraint is written here rather than
+assumed.
+
+### D-023 - Sonnet 5 is the default, and the eval decides, not the price
+**P2.** A report runs 22 model calls over 8 photographs, so the per-image model
+choice is essentially the whole of COGS, and the obvious move is to pick the
+cheapest model that seems adequate. Set the default to Sonnet 5 on the reasoning
+that these passes are constrained detection and transcription against an explicit
+schema rather than open-ended reasoning.
+
+Then computed the actual numbers, and they undercut the reasoning: Sonnet 5
+projects to $0.34 per report and Opus 5 to $1.71, against a $25 price and a
+pre-committed $5 ceiling. A $1.37 difference does not decide anything. Cost was not
+a real input to this decision and it was wrong to treat it as one.
+
+So the default stays Sonnet 5 for now, because something has to be the default, and
+the decision is explicitly deferred to the eval: when a labeled set exists, both
+models are scored on it and the more accurate one wins. `TIREKICK_MODEL` selects,
+`MODEL_PRICES` knows both rates, and the cost block names the model that produced
+each report so the two can never be compared against the wrong price. Cost: we ship
+a default chosen on an argument this entry partly retracts, which is why it says so.
+
+### D-024 - The model is never asked for a repair cost
+**P2.** Repair estimates are the single most useful thing a report could carry and
+the easiest thing to fabricate. A model will produce a confident dollar band for
+any damage in any photograph, and there is nothing behind it - not a parts
+catalogue, not a labour rate, not a quote. It is the line a buyer acts on, and they
+would be acting on a number we made up. Chose to leave `estimated_cost_usd` out of
+the tool schema entirely, rather than asking for it and filtering afterwards: a
+field that is not in the schema cannot be returned, and a field that is merely
+discouraged eventually gets through. Locked by
+`test_the_model_is_never_asked_for_a_repair_cost`. Cost: the negotiation script has
+less to work with, and cost bands stay absent until they have a real source. The
+P0 fixtures still carry invented bands, which `fixtures/PROVENANCE.md` declares.
+
+### D-025 - Prompts are versioned files inside the scanned surface
+**P2.** Prompts began as string literals in `vision.py`, which fails three ways: a
+prompt change is invisible in a diff full of Python, a cached response cannot name
+the prompt that produced it, and - the one that matters - the banned-language scan
+did not cover them. A prompt that uses the vocabulary of official approval teaches
+the model to hand it back, where it arrives wearing a confidence score, which is
+worse than a banned phrase in our own copy. Chose one Markdown file per prompt with
+an `id` and `version` header, added to the LIABILITY scan globs, with the version
+stamped into every live response and the full set fingerprinted into the report's
+cost block.
+
+The scan immediately caught two violations in the prompts I had just written, both
+of them cases of using a banned word in order to forbid it. Rephrased rather than
+widening the sanctioned-disclaimer list, which exists for buyer-facing denials and
+would be weakened by absorbing internal instructions. Cost: prompts are now package
+data that has to ship with an install, declared in `pyproject.toml`.

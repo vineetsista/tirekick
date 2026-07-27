@@ -1,0 +1,17 @@
+{
+  "_note": "Written by tirekick bench. docs/ACCURACY.md and the eval gate read this file; do not hand-edit it. Regenerate it instead.",
+  "headline": {
+    "assets_evaluated": 0,
+    "by_type": {},
+    "iou": 0.4,
+    "reports_evaluated": 0,
+    "unscored_referrals": 0
+  },
+  "strict": {
+    "assets_evaluated": 0,
+    "by_type": {},
+    "iou": 0.5,
+    "reports_evaluated": 0,
+    "unscored_referrals": 0
+  }
+}

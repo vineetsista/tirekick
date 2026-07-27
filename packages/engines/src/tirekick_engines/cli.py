@@ -9,9 +9,11 @@ reads.
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
+from . import bench as bench_module
 from .client import resolve_mode
 from .pipeline import run_inspection
 from .registry import gate_status_table
@@ -95,6 +97,47 @@ def cmd_inspect(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_bench(args: argparse.Namespace) -> int:
+    """LAW 4. Score generated reports against human labels."""
+    labels_dir = _resolve(args.labels)
+    reports_dir = _resolve(args.reports)
+    results_path = _resolve(args.out)
+
+    if args.inspections:
+        inspections_dir = _resolve(args.inspections)
+        reports_dir.mkdir(parents=True, exist_ok=True)
+        for manifest in sorted(inspections_dir.glob("*/manifest.json")):
+            result = run_inspection(inspection_dir=manifest.parent, mode=resolve_mode(args.mode))
+            out = reports_dir / f"{manifest.parent.name}.report.json"
+            out.write_text(result.report.to_json(), encoding="utf-8")
+            print(f"  ran {manifest.parent.name} -> {out.name}")
+        print()
+
+    if not labels_dir.is_dir():
+        print(f"error: no labels directory at {labels_dir}", file=sys.stderr)
+        return 2
+
+    result = bench_module.run(labels_dir, reports_dir)
+    print(bench_module.render(result))
+    print()
+
+    results_path.parent.mkdir(parents=True, exist_ok=True)
+    results_path.write_text(
+        json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    print(f"  wrote {results_path}")
+    print(
+        "  The eval gate and docs/ACCURACY.md read this file. Nothing ships to a "
+        "paid report until it clears its gate here (LAW 4)."
+    )
+    return 0
+
+
+def _resolve(value: str) -> Path:
+    path = Path(value)
+    return path if path.is_absolute() else REPO_ROOT / path
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="tirekick", description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -111,6 +154,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="fixed timestamp, so golden fixture output is byte-stable",
     )
     inspect.set_defaults(func=cmd_inspect)
+
+    bench = sub.add_parser("bench", help="score reports against labels (LAW 4)")
+    bench.add_argument("--labels", default="bench/labels")
+    bench.add_argument("--reports", default="bench/reports")
+    bench.add_argument("--out", default="bench/results/latest.json")
+    bench.add_argument(
+        "--inspections",
+        default=None,
+        help="run every inspection in this directory before scoring",
+    )
+    bench.add_argument("--mode", choices=["fixture", "live"], default=None)
+    bench.set_defaults(func=cmd_bench)
 
     return parser
 

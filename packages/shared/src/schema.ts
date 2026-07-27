@@ -340,6 +340,10 @@ export type Coverage = z.infer<typeof coverageSchema>;
 
 export const costSchema = z.object({
   mode: runModeSchema,
+  /** Which model produced this report. Empty in fixture mode - no model ran. */
+  model: z.string(),
+  /** Which prompt versions were in force, so a finding traces to its instructions. */
+  promptFingerprint: z.string(),
   inputTokens: z.number().int().nonnegative(),
   outputTokens: z.number().int().nonnegative(),
   imagesAnalyzed: z.number().int().nonnegative(),

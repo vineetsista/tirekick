@@ -1,0 +1,4 @@
+{
+  "_fixture_note": "Hand-authored placeholder. Not a model response. An empty findings list is a correct and frequently correct answer - see prompts/vision/system.md. It is also what lets the systems table distinguish 'we looked and saw nothing' from 'nothing looked'.",
+  "findings": []
+}

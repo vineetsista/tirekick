@@ -16,9 +16,14 @@
     "py:setup": "bash scripts/py-setup.sh",
     "py:test": "packages/engines/.venv/bin/pytest packages/engines -q",
     "py:lint": "packages/engines/.venv/bin/ruff check packages/engines && packages/engines/.venv/bin/ruff format --check packages/engines",
-    "py:types": "packages/engines/.venv/bin/mypy packages/engines/src",
-    "inspect:fixture": "packages/engines/.venv/bin/python -m tirekick_engines.cli inspect --fixture demo-01 --out fixtures/reports/demo-01.report.json",
-    "gates": "bash scripts/gates.sh"
+    "py:types": "packages/engines/.venv/bin/mypy --config-file packages/engines/pyproject.toml packages/engines/src",
+    "inspect:fixture": "packages/engines/.venv/bin/python -m tirekick_engines.cli inspect --fixture demo-01 --out fixtures/reports/demo-01.report.json --teaser-out fixtures/reports/demo-01.teaser.json",
+    "gates": "bash scripts/gates.sh",
+    "refresh:audio": "packages/engines/.venv/bin/python scripts/refresh_audio_cache.py",
+    "refresh:video": "packages/engines/.venv/bin/python scripts/refresh_video_cache.py",
+    "refresh:federal": "packages/engines/.venv/bin/python scripts/refresh_federal_cache.py",
+    "bench": "packages/engines/.venv/bin/python -m tirekick_engines.cli bench",
+    "redact": "packages/engines/.venv/bin/python scripts/redact_media.py"
   },
   "devDependencies": {
     "@types/node": "22.10.2",

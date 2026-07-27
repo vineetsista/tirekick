@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import Home from "@/app/page";
@@ -98,5 +100,38 @@ describe("the landing page carries the honesty architecture", () => {
     expect(text).toContain("synthetic fixture media");
     // ...and is precise about the half of it that is real.
     expect(text).toContain("except the vehicle record, which is real federal data");
+  });
+});
+
+describe("the disclaimer architecture matches LIABILITY section 4", () => {
+  /**
+   * That table names seven placements. Six phases shipped with two of them -
+   * the share page and the print footer - specified and unbuilt, which is the
+   * same drift P6 found on the landing page, sitting in the liability document.
+   */
+  const liability = readFileSync(
+    resolve(process.cwd(), "../../docs/LIABILITY.md"),
+    "utf8",
+  );
+
+  it("still specifies a share surface, and one exists", () => {
+    expect(liability).toContain("Share page / public link");
+    expect(existsSync(resolve(process.cwd(), "src/app/share/demo-01/page.tsx"))).toBe(true);
+  });
+
+  it("still specifies a PDF/print footer, and one exists", () => {
+    expect(liability).toContain("PDF export");
+    const css = readFileSync(resolve(process.cwd(), "src/app/globals.css"), "utf8");
+    expect(css).toContain("@media print");
+    // "Running footer" means every page, which is what position:fixed buys.
+    expect(css).toMatch(/body::after[\s\S]*position:\s*fixed/);
+    expect(css).toContain("Not an inspection");
+  });
+
+  it("keeps the watermark off the printed page", () => {
+    // On screen it is behind the evidence at 6% opacity. On paper it would be
+    // ink across a photograph somebody is trying to read.
+    const css = readFileSync(resolve(process.cwd(), "src/app/globals.css"), "utf8");
+    expect(css).toMatch(/@media print[\s\S]*\.share-watermark[\s\S]*display:\s*none/);
   });
 });

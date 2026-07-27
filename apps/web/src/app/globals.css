@@ -133,3 +133,79 @@ th {
     font-size: 13px;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* print - LIABILITY section 4, row seven                              */
+/* ------------------------------------------------------------------ */
+
+/*
+ * A printed report gets handed to a seller across a bonnet, so the disclaimer
+ * has to survive the paper. The liability table has specified "first page and
+ * running footer" since P0 and nothing implemented it until P7.
+ *
+ * `position: fixed` inside an @media print block repeats on every printed page
+ * in every engine that matters, which is what makes it a running footer rather
+ * than a footer.
+ */
+@media print {
+  :root {
+    --tk-bg: #ffffff;
+    --tk-text: #101418;
+    --tk-muted: #444c54;
+    --tk-line: #c8ced4;
+    --tk-unknown: #5c646c;
+  }
+
+  body {
+    background: #fff;
+    color: #101418;
+  }
+
+  /* Ink, and a watermark that would obscure the evidence on paper. */
+  .share-watermark {
+    display: none !important;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: underline;
+  }
+
+  /* Print the destination of a link - a printed page cannot be clicked, and the
+     accuracy page is the one link a reader most needs to be able to reach. */
+  a[href^="/"]::after {
+    content: " (tirekick.app" attr(href) ")";
+    font-size: 9pt;
+    color: #5c646c;
+  }
+
+  .panel,
+  section,
+  figure,
+  table {
+    break-inside: avoid;
+  }
+
+  .section {
+    break-before: auto;
+  }
+
+  /* The running footer. Repeats on every sheet. */
+  body::after {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    content: "INSPECTED BY TIREKICK AI - automated analysis of buyer-supplied media. Not an inspection, a certification, or a warranty. Have an independent mechanic examine any vehicle before you buy it.";
+    font-size: 8pt;
+    line-height: 1.35;
+    padding: 6pt 0;
+    border-top: 1px solid #c8ced4;
+    color: #444c54;
+    background: #fff;
+  }
+
+  @page {
+    margin: 14mm 12mm 22mm 12mm;
+  }
+}

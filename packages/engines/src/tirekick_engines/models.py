@@ -415,6 +415,26 @@ class AudioTrack(Base):
     claims_statement: str = Field(min_length=1)
 
 
+class WalkaroundTrack(Base):
+    """What was taken from the video, and what was thrown away.
+
+    The dropped counts are reported, not just the kept ones. A report that says
+    "12 frames analysed" without saying 40 were discarded invites the reader to
+    assume the whole video was examined.
+    """
+
+    asset_id: str = Field(min_length=1)
+    duration_sec: float = Field(ge=0.0)
+    frames_sampled: int = Field(ge=0)
+    frames_analysed: int = Field(ge=0)
+    dropped_blurred: int = Field(ge=0)
+    dropped_duplicate: int = Field(ge=0)
+    dropped_over_cap: int = Field(ge=0)
+    frame_asset_ids: list[str] = Field(default_factory=list)
+    frame_times_sec: list[float] = Field(default_factory=list)
+    statement: str = Field(min_length=1)
+
+
 # --------------------------------------------------------------------------- #
 # pricing                                                                      #
 # --------------------------------------------------------------------------- #
@@ -499,6 +519,9 @@ class Cost(Base):
     storage_bytes: int = Field(ge=0)
     #: vPIC and NHTSA queries. Free, and counted anyway - see CostMeter.
     federal_lookups: int = Field(default=0, ge=0)
+    #: Seconds of walkaround video decoded locally. Free of API cost, and the
+    #: frames it yields are not - they are counted in images_analyzed.
+    video_seconds_processed: float = Field(default=0.0, ge=0.0)
     usd_total: float = Field(ge=0.0)
     note: str = Field(min_length=1)
 
@@ -530,6 +553,7 @@ class Report(Base):
     banner: str = Field(min_length=1)
     vehicle: VehicleRecord | None = None
     audio: AudioTrack | None = None
+    walkaround: WalkaroundTrack | None = None
     assets: list[Asset] = Field(default_factory=list)
     coverage: Coverage
     verdict: Verdict

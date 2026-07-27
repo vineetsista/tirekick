@@ -60,6 +60,12 @@
       "view_hint": "engine_bay"
     },
     {
+      "id": "video_01",
+      "kind": "video",
+      "file": "video_01.mp4",
+      "duration_sec": 14.0
+    },
+    {
       "id": "audio_01",
       "kind": "audio",
       "file": "audio_01.wav",

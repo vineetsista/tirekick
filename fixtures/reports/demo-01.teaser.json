@@ -25,6 +25,8 @@
       "exterior_front",
       "exterior_rear",
       "exterior_side_left",
+      "exterior_side_right",
+      "exterior_three_quarter",
       "interior_front",
       "engine_bay",
       "odometer",
@@ -32,16 +34,14 @@
       "tire"
     ],
     "missingViews": [
-      "exterior_side_right",
-      "exterior_three_quarter",
       "interior_rear",
       "vin_plate"
     ],
-    "photoCount": 8,
-    "hasVideo": false,
+    "photoCount": 13,
+    "hasVideo": true,
     "hasAudio": true,
-    "score": 0.67,
-    "statement": "8 photos covering 8 of 12 standard views. Not covered: exterior side right, exterior three quarter, interior rear, vin plate. Nothing in this report describes what those views would have shown."
+    "score": 0.83,
+    "statement": "13 photos covering 10 of 12 standard views. Not covered: interior rear, vin plate. Nothing in this report describes what those views would have shown."
   },
   "redFlagScore": 50,
   "headline": "2 finding(s) that are likely to cost money. Separately, 5 recall campaign(s) are on record for this model year - free to fix, and worth one phone call to a dealer.",
@@ -138,9 +138,10 @@
     "Airbags and restraints - not remotely verifiable, independent mechanic required.",
     "Frame and structural integrity - not remotely verifiable, independent mechanic required.",
     "Steering - not remotely verifiable, independent mechanic required.",
-    "4 standard view(s) were not provided: exterior side right, exterior three quarter, interior rear, vin plate.",
+    "2 standard view(s) were not provided: interior rear, vin plate.",
     "TIREKICK does not make claims about engine condition from audio. The anomaly detector has not been measured against a labelled set, so under our own accuracy rules it cannot appear in a report. What is below is the recording itself, drawn as a spectrogram, and the measurements taken from it. Listen to the clip yourself, and play it to a mechanic at a cold start.",
-    "Title status - TIREKICK queries no title registry. Any title brand named in this report was read out of paperwork you uploaded. Confirm the title with your state motor vehicle agency before you buy."
+    "Title status - TIREKICK queries no title registry. Any title brand named in this report was read out of paperwork you uploaded. Confirm the title with your state motor vehicle agency before you buy.",
+    "5 frame(s) were taken from 14 seconds of video and analysed as photographs. 4 were too blurred to read - a blurred frame is worse than no frame, because it is the input most likely to turn a shadow into a dent. 4 showed the same view as a frame already chosen."
   ],
   "hasAudio": true,
   "hasPriceCheck": true,

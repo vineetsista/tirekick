@@ -209,16 +209,29 @@ def classify_views(
         if asset.kind != "photo":
             classified.append(asset)
             continue
-        response = client.call(
-            engine="vision",
-            task="classify",
-            subject=asset.id,
-            prompt=prompt.text,
-            system=system.text,
-            schema=CLASSIFY_SCHEMA,
-            image_paths=_image_path(asset, media_root),
-            prompt_ref=prompt.ref,
-        )
+        try:
+            response = client.call(
+                engine="vision",
+                task="classify",
+                subject=asset.id,
+                prompt=prompt.text,
+                system=system.text,
+                schema=CLASSIFY_SCHEMA,
+                image_paths=_image_path(asset, media_root),
+                prompt_ref=prompt.ref,
+            )
+        except FixtureMissing:
+            # An image with no cached classification simply was not classified.
+            # It stays in the report as an asset, carries no view, receives no
+            # stage-2 pass, and counts toward no coverage - so the systems table
+            # reads `cannot_determine` rather than clean.
+            #
+            # Stage 2 has always degraded this way. Stage 1 did not, so a single
+            # uncached photograph took down the entire run - found by the LAW 7
+            # end-to-end test the moment it first uploaded a real file.
+            classified.append(asset)
+            continue
+
         view: ViewClass = response["view_class"]
         classified.append(
             asset.model_copy(

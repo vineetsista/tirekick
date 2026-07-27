@@ -33,6 +33,7 @@ from .models import (
     VehicleRecord,
     Verdict,
     ViewClass,
+    WalkaroundTrack,
 )
 from .safety import ALL_SYSTEMS, apply_safety_law, could_not_assess_lines, is_locked
 
@@ -421,6 +422,7 @@ def build_report(
     drafts: list[DraftFinding],
     vehicle: VehicleRecord | None,
     audio: AudioTrack | None,
+    walkaround: WalkaroundTrack | None,
     asking_price_usd: float | None,
     comps: list[Comp],
     subject_mileage: int | None,
@@ -457,6 +459,11 @@ def build_report(
     if audio is not None and not audio.usable:
         could_not_assess.extend(audio.quality_problems)
     could_not_assess.extend(_history_limits(assets, vehicle))
+    if walkaround is not None:
+        # What was discarded from the video belongs next to the conclusions, not
+        # buried in a media section. A report that analysed 5 frames of a 40-frame
+        # walkaround has a coverage gap the buyer cannot see otherwise.
+        could_not_assess.append(walkaround.statement)
 
     price = pricing_engine.build_price_check(
         asking_price_usd=asking_price_usd,
@@ -478,6 +485,7 @@ def build_report(
         banner=REPORT_BANNER,
         vehicle=vehicle,
         audio=audio,
+        walkaround=walkaround,
         assets=assets,
         coverage=coverage,
         verdict=Verdict(

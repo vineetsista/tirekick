@@ -12,6 +12,7 @@ from .engines import audio as audio_engine
 from .engines import data as data_engine
 from .engines import history as history_engine
 from .engines import vision as vision_engine
+from .engines import walkaround as walkaround_engine
 from .inputs import InspectionInput, materialize_assets
 from .models import Report, RunMode
 from .sources import DEFAULT_CACHE_DIR, FederalSources
@@ -49,6 +50,15 @@ def run_inspection(
 
     media_root = inspection_dir / "media"
     assets = materialize_assets(inspection, media_root)
+
+    # Frames chosen from the walkaround join the asset list before vision runs,
+    # so they are classified, analysed and counted toward coverage exactly like
+    # an uploaded photograph. A walkaround is the only input that can close a
+    # coverage gap, and it only does so if the frames are treated as views.
+    frames, walkaround_track = walkaround_engine.load_frames(
+        assets, media_root, inspection_dir / "cached", meter
+    )
+    assets = assets + frames
 
     # Vision stage 1, then stage 2 against the classified views.
     assets = vision_engine.classify_views(assets, client, media_root)
@@ -89,6 +99,7 @@ def run_inspection(
         drafts=drafts,
         vehicle=vehicle,
         audio=audio_track,
+        walkaround=walkaround_track,
         asking_price_usd=inspection.asking_price_usd,
         comps=inspection.comps,
         subject_mileage=inspection.seller_stated_mileage,

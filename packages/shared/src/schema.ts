@@ -319,6 +319,27 @@ export const audioTrackSchema = z.object({
 });
 export type AudioTrack = z.infer<typeof audioTrackSchema>;
 
+/**
+ * What was taken from the walkaround video, and what was thrown away.
+ *
+ * The dropped counts are part of the contract. A report saying "12 frames
+ * analysed" without saying 40 were discarded invites the reader to assume the
+ * whole video was examined.
+ */
+export const walkaroundTrackSchema = z.object({
+  assetId: z.string().min(1),
+  durationSec: z.number().nonnegative(),
+  framesSampled: z.number().int().nonnegative(),
+  framesAnalysed: z.number().int().nonnegative(),
+  droppedBlurred: z.number().int().nonnegative(),
+  droppedDuplicate: z.number().int().nonnegative(),
+  droppedOverCap: z.number().int().nonnegative(),
+  frameAssetIds: z.array(z.string()),
+  frameTimesSec: z.array(z.number()),
+  statement: z.string().min(1),
+});
+export type WalkaroundTrack = z.infer<typeof walkaroundTrackSchema>;
+
 /* ------------------------------------------------------------------ */
 /* pricing                                                             */
 /* ------------------------------------------------------------------ */
@@ -404,6 +425,7 @@ export const costSchema = z.object({
   outputTokens: z.number().int().nonnegative(),
   imagesAnalyzed: z.number().int().nonnegative(),
   audioSecondsProcessed: z.number().nonnegative(),
+  videoSecondsProcessed: z.number().nonnegative(),
   storageBytes: z.number().int().nonnegative(),
   /** vPIC and NHTSA queries. Free, and counted anyway. LAW 5. */
   federalLookups: z.number().int().nonnegative(),
@@ -450,6 +472,7 @@ export const reportSchema = z.object({
   banner: z.string().min(1),
   vehicle: vehicleRecordSchema.nullable(),
   audio: audioTrackSchema.nullable(),
+  walkaround: walkaroundTrackSchema.nullable(),
   assets: z.array(assetSchema),
   coverage: coverageSchema,
   verdict: verdictSchema,

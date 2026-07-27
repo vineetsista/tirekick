@@ -528,3 +528,95 @@ so it excuses by role and never by sentence, and
 `test_the_exemption_list_does_not_swallow_product_code` asserts that nothing
 exempted is a component or a page, and that the landing page, report view, teaser
 view, purchase gate and prompts are all still scanned. A guard on the guard.
+
+### D-039 - Walkaround video ships as a frame-selection problem
+**P7.** Video was a stated input in the brief and was never built. `kind: "video"`
+existed in the schema and `has_video` in coverage, and nothing processed one. In
+P6 I removed the claim from the landing page, which made the copy honest and
+quietly turned a missing feature into a smaller product. That was the wrong
+trade and this reverses it.
+
+The engineering is entirely selection. A 45-second walkaround at 30fps is 1,350
+frames; sending them all costs about $30 in image tokens, most of it spent on
+motion blur and on the same rear quarter from four angles. So: sample on a fixed
+grid, keep the sharpest frame per 1.5-second bucket by variance of the Laplacian,
+drop perceptual near-duplicates, cap at 12 frames. Everything that survives goes
+through the *same* vision path as an uploaded photograph - classified, routed,
+clamped, cited - because a frame is a photograph that arrived inside a video and
+does not deserve its own rules.
+
+The payoff is coverage, which is the thing every report so far has had to
+apologise for. On the demo fixture, adding the walkaround took coverage from 67%
+to 83% by supplying the exterior side and three-quarter views the photographs
+never had. A seller photographs the side they want shown; a buyer walking round
+the car covers all of it.
+
+The discards are reported, not just the keeps. A report saying "5 frames
+analysed" without saying 23 were discarded invites the reader to assume the whole
+video was examined.
+
+### D-040 - The perceptual dedupe threshold is a guess, and says so
+**P7.** The first value was 8 of 64 bits, chosen for no reason at all. On the
+fixture it merged frames two seconds and half a car apart: genuinely different
+views scored 7, while frames from a deliberate camera pause scored 0. A threshold
+that cannot separate those is not doing its job.
+
+Changed to 5, which is the conventional near-duplicate distance for an average
+hash - a defensible default rather than a tuned one. Deliberately **not** tuned
+against the fixture: a synthetic panning strip has far less texture than a car in
+daylight, so its hash distances are compressed, and fitting to it would be
+overfitting to a drawing. The constant carries a comment saying it is unvalidated
+and the test asserts the property that matters (pause distance below the
+threshold, sweep distance above it) rather than the number.
+
+### D-041 - The paid report is gated by a signed grant
+**P7.** `/report/demo-01` was a static route with no check on it for six phases.
+The teaser projection was correct - the free payload genuinely never contained the
+findings - but the paid page itself was open to anyone who guessed a URL, which is
+a different hole and a worse one, and P4's own report listed it as gap 4.
+
+Chose a stateless HMAC grant over the inspection id and the reason it was issued.
+Stateless because there is no database yet and a signed token needs no lookup;
+when persistence lands this becomes a row without the interface changing. The
+reason travels *inside* the signature so a `demo` grant cannot be replayed as
+`paid` by editing a prefix. Exactly one id is publicly readable and it is named as
+a constant rather than inferred from a flag, so the free sample is greppable.
+
+In production an unset signing key is a hard failure rather than a fallback. A
+well-known development key is the same as no signing at all, and the failure mode
+of getting that wrong is that every paid report is free forever.
+
+### D-042 - The laws are now checked against the build
+**P7.** LAW 7 has required "an e2e upload -> paid dossier test" since P0. No such
+test existed. Six phases were tagged ALL GATES GREEN with a clause of one of the
+seven laws simply unmet - not disputed, not deferred with a note, unnoticed.
+
+The cause is structural and worth naming: `scripts/gates.sh` encodes the checks
+that exist, not the checks the laws require, and `docs/LAWS.md` is prose that
+nothing parses. Individual laws were enforced well. The *list* was never compared
+against the repository.
+
+`test_laws_are_kept.py` now reads LAWS.md, extracts every file it names, and fails
+if one is missing; asserts the e2e test exists and actually walks the flow;
+asserts each law is still present with its key clause; and asserts the gate script
+still runs the suites the laws depend on. It cannot judge whether a test is any
+good. It can catch a law pointing at nothing, which is the failure that happened.
+
+Writing it immediately found two more: `pnpm run py:types` still lacked the
+`--config-file` flag that made the gate non-strict for three phases, and
+`inspect:fixture` did not emit the teaser, so `fixture:clean` could not see the
+teaser going stale.
+
+### D-043 - The share page and print footer exist because the liability doc said they did
+**P7.** LIABILITY section 4 is a table of seven disclaimer placements. Two of them
+- the share page and the PDF/print running footer - had been specified since P0
+and never built. That is precisely the drift P6 found on the landing page, except
+it was inside the document that describes our liability position.
+
+Both now exist. The share page carries a fixed diagonal watermark behind the
+content, because a shared link arrives with no context - forwarded to a seller, a
+partner, or a forum - and a watermark survives a screenshot where a footer does
+not. It is `noindex`, because a shared report should not end up in a search index
+attached to somebody's car. The print stylesheet uses a fixed `body::after`, which
+is what makes it a *running* footer rather than a footer, and hides the watermark
+on paper where it would be ink across the evidence.

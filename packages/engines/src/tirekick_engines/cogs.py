@@ -54,6 +54,7 @@ class CostMeter:
     output_tokens: int = 0
     images_analyzed: int = 0
     audio_seconds_processed: float = 0.0
+    video_seconds_processed: float = 0.0
     storage_bytes: int = 0
     federal_lookups: int = 0
     #: Image tokens computed from the dimensions we actually sent. Kept beside the
@@ -91,6 +92,9 @@ class CostMeter:
 
     def record_audio(self, seconds: float) -> None:
         self.audio_seconds_processed += seconds
+
+    def record_video_seconds(self, seconds: float) -> None:
+        self.video_seconds_processed += seconds
 
     def record_storage(self, byte_count: int) -> None:
         self.storage_bytes += byte_count
@@ -139,6 +143,7 @@ class CostMeter:
             output_tokens=self.output_tokens,
             images_analyzed=self.images_analyzed,
             audio_seconds_processed=round(self.audio_seconds_processed, 3),
+            video_seconds_processed=round(self.video_seconds_processed, 3),
             storage_bytes=self.storage_bytes,
             federal_lookups=self.federal_lookups,
             usd_total=self.usd_total,
@@ -154,6 +159,7 @@ class CostMeter:
             f"    output tokens       {self.output_tokens:,}",
             f"    images analyzed     {self.images_analyzed}",
             f"    audio seconds       {self.audio_seconds_processed:.1f}",
+            f"    video seconds       {self.video_seconds_processed:.1f}  (decoded locally)",
             f"    storage             {self.storage_bytes / 1_000_000:.1f} MB",
             f"    federal lookups     {self.federal_lookups}  (vPIC/NHTSA, no charge)",
             f"    model               {self.model or '-'}",

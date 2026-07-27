@@ -169,6 +169,30 @@
     "claimsEnabled": false,
     "claimsStatement": "TIREKICK does not make claims about engine condition from audio. The anomaly detector has not been measured against a labelled set, so under our own accuracy rules it cannot appear in a report. What is below is the recording itself, drawn as a spectrogram, and the measurements taken from it. Listen to the clip yourself, and play it to a mechanic at a cold start."
   },
+  "walkaround": {
+    "assetId": "video_01",
+    "durationSec": 14.0,
+    "framesSampled": 28,
+    "framesAnalysed": 5,
+    "droppedBlurred": 4,
+    "droppedDuplicate": 4,
+    "droppedOverCap": 0,
+    "frameAssetIds": [
+      "video_01_f01",
+      "video_01_f02",
+      "video_01_f03",
+      "video_01_f04",
+      "video_01_f05"
+    ],
+    "frameTimesSec": [
+      0.0,
+      2.0,
+      3.5,
+      8.5,
+      13.5
+    ],
+    "statement": "5 frame(s) were taken from 14 seconds of video and analysed as photographs. 4 were too blurred to read - a blurred frame is worse than no frame, because it is the input most likely to turn a shadow into a dent. 4 showed the same view as a frame already chosen."
+  },
   "assets": [
     {
       "id": "photo_01",
@@ -259,6 +283,17 @@
       "synthetic": true
     },
     {
+      "id": "video_01",
+      "kind": "video",
+      "path": "video_01.mp4",
+      "sha256": "27d5f95e73437c9c6f576af995181698aab8365eaa2ab42a39079171dbc24016",
+      "bytes": 54524,
+      "viewClass": null,
+      "viewConfidence": null,
+      "durationSec": 14.0,
+      "synthetic": true
+    },
+    {
       "id": "audio_01",
       "kind": "audio",
       "path": "audio_01.wav",
@@ -277,6 +312,61 @@
       "bytes": 1218,
       "viewClass": null,
       "viewConfidence": null,
+      "durationSec": null,
+      "synthetic": true
+    },
+    {
+      "id": "video_01_f01",
+      "kind": "photo",
+      "path": "video_01.frame_01.jpg",
+      "sha256": "5ec77dfd61eebc660221966fc71f8dea130d50dbaed5c78d5236a24116eac49e",
+      "bytes": 9175,
+      "viewClass": "exterior_three_quarter",
+      "viewConfidence": 0.81,
+      "durationSec": null,
+      "synthetic": true
+    },
+    {
+      "id": "video_01_f02",
+      "kind": "photo",
+      "path": "video_01.frame_02.jpg",
+      "sha256": "38b1970c485b15589cc934c15d42b2290c946f7f9ae1976dbc7de60fc2b29ca8",
+      "bytes": 6990,
+      "viewClass": "exterior_side_right",
+      "viewConfidence": 0.86,
+      "durationSec": null,
+      "synthetic": true
+    },
+    {
+      "id": "video_01_f03",
+      "kind": "photo",
+      "path": "video_01.frame_03.jpg",
+      "sha256": "be5d3c2f01ce2fcaf6046e2682f2a35eecfcfae84956b1de0118f7a2fc792035",
+      "bytes": 5833,
+      "viewClass": "exterior_side_right",
+      "viewConfidence": 0.74,
+      "durationSec": null,
+      "synthetic": true
+    },
+    {
+      "id": "video_01_f04",
+      "kind": "photo",
+      "path": "video_01.frame_04.jpg",
+      "sha256": "18fbe9f9b7dbd15ecca88f07c912445b37e868b26b764b9b16016c2f76c8849e",
+      "bytes": 5949,
+      "viewClass": "exterior_rear",
+      "viewConfidence": 0.79,
+      "durationSec": null,
+      "synthetic": true
+    },
+    {
+      "id": "video_01_f05",
+      "kind": "photo",
+      "path": "video_01.frame_05.jpg",
+      "sha256": "c5aef2e3d60deaa0abc3055598c29a2f70543c8d6534e00fb6593323f6ac76d3",
+      "bytes": 6801,
+      "viewClass": "unknown",
+      "viewConfidence": 0.42,
       "durationSec": null,
       "synthetic": true
     }
@@ -300,6 +390,8 @@
       "exterior_front",
       "exterior_rear",
       "exterior_side_left",
+      "exterior_side_right",
+      "exterior_three_quarter",
       "interior_front",
       "engine_bay",
       "odometer",
@@ -307,16 +399,14 @@
       "tire"
     ],
     "missingViews": [
-      "exterior_side_right",
-      "exterior_three_quarter",
       "interior_rear",
       "vin_plate"
     ],
-    "photoCount": 8,
-    "hasVideo": false,
+    "photoCount": 13,
+    "hasVideo": true,
     "hasAudio": true,
-    "score": 0.67,
-    "statement": "8 photos covering 8 of 12 standard views. Not covered: exterior side right, exterior three quarter, interior rear, vin plate. Nothing in this report describes what those views would have shown."
+    "score": 0.83,
+    "statement": "13 photos covering 10 of 12 standard views. Not covered: interior rear, vin plate. Nothing in this report describes what those views would have shown."
   },
   "verdict": {
     "redFlagScore": 50,
@@ -326,11 +416,12 @@
       "Airbags and restraints - not remotely verifiable, independent mechanic required.",
       "Frame and structural integrity - not remotely verifiable, independent mechanic required.",
       "Steering - not remotely verifiable, independent mechanic required.",
-      "4 standard view(s) were not provided: exterior side right, exterior three quarter, interior rear, vin plate.",
+      "2 standard view(s) were not provided: interior rear, vin plate.",
       "TIREKICK does not make claims about engine condition from audio. The anomaly detector has not been measured against a labelled set, so under our own accuracy rules it cannot appear in a report. What is below is the recording itself, drawn as a spectrogram, and the measurements taken from it. Listen to the clip yourself, and play it to a mechanic at a cold start.",
-      "Title status - TIREKICK queries no title registry. Any title brand named in this report was read out of paperwork you uploaded. Confirm the title with your state motor vehicle agency before you buy."
+      "Title status - TIREKICK queries no title registry. Any title brand named in this report was read out of paperwork you uploaded. Confirm the title with your state motor vehicle agency before you buy.",
+      "5 frame(s) were taken from 14 seconds of video and analysed as photographs. 4 were too blurred to read - a blurred frame is worse than no frame, because it is the input most likely to turn a shadow into a dent. 4 showed the same view as a frame already chosen."
     ],
-    "summary": "8 photos covering 8 of 12 standard views. Not covered: exterior side right, exterior three quarter, interior rear, vin plate. Nothing in this report describes what those views would have shown. Red-flag score 50/100, which reflects the severity and confidence of what was visible on this vehicle - not the condition of the vehicle overall. Recalls and owner complaint patterns describe the model rather than this car, so they are reported separately and are not counted in the score."
+    "summary": "13 photos covering 10 of 12 standard views. Not covered: interior rear, vin plate. Nothing in this report describes what those views would have shown. Red-flag score 50/100, which reflects the severity and confidence of what was visible on this vehicle - not the condition of the vehicle overall. Recalls and owner complaint patterns describe the model rather than this car, so they are reported separately and are not counted in the score."
   },
   "findings": [
     {
@@ -991,10 +1082,11 @@
     "promptFingerprint": "locate@v1,system@v1,classify@v1,damage@v1,dash_lights@v1,engine_bay@v1,interior_wear@v1,odometer@v1,repaint@v1,rust@v1,system@v1,tire_tread@v1",
     "inputTokens": 0,
     "outputTokens": 0,
-    "imagesAnalyzed": 18,
+    "imagesAnalyzed": 29,
     "audioSecondsProcessed": 22.0,
-    "storageBytes": 2949340,
+    "storageBytes": 3038612,
     "federalLookups": 4,
+    "videoSecondsProcessed": 14.0,
     "usdTotal": 0.0,
     "note": "Fixture mode: responses served from cache, no API calls billed. $0.00 is the true cost of this run and not a placeholder."
   },

@@ -16,6 +16,7 @@ Run: packages/engines/.venv/bin/python scripts/make_fixture_media.py
 from __future__ import annotations
 
 import sys
+import subprocess
 import wave
 from pathlib import Path
 
@@ -237,10 +238,103 @@ def main() -> int:
     )
 
     make_audio()
+    make_video()
     print(
         "\n  All fixture media is synthetic and watermarked. See fixtures/PROVENANCE.md"
     )
     return 0
+
+
+#: Seconds of the synthetic walkaround that are deliberately motion-blurred, and
+#: seconds where the camera deliberately stops. Ground truth for test_video.py.
+BLURRED_WINDOW = (4.0, 6.0)
+PAUSED_WINDOW = (8.0, 10.5)
+VIDEO_SECONDS = 14.0
+VIDEO_FPS = 15
+
+
+def make_video() -> None:
+    """A synthetic walkaround. Still not a car.
+
+    Pans a window across a wide painted strip so consecutive frames show
+    different regions, exactly as walking round a vehicle does. Two segments are
+    deliberate: a blurred stretch, because a phone in motion produces one
+    constantly, and a stationary stretch, because people stop to look at things.
+
+    Both windows are declared above, which makes them ground truth - the frame
+    selector is measured against them in test_video.py rather than against a
+    guess about what it probably did.
+    """
+    import numpy as np
+    from PIL import Image, ImageDraw, ImageFilter
+
+    width, height = 640, 400
+    strip_width = 2400
+
+    strip = Image.new("RGB", (strip_width, height), (26, 30, 36))
+    draw = ImageDraw.Draw(strip)
+    rng = np.random.default_rng(4242)
+    # Distinct blocks so that panning genuinely changes the view, and so the
+    # perceptual hash of one region differs from the next.
+    for i in range(24):
+        x = i * 100
+        shade = 40 + int(rng.integers(0, 120))
+        draw.rectangle([x, 120, x + 88, 300], fill=(shade, shade + 12, shade + 20))
+        draw.text((x + 8, 320), f"{i:02d}", fill=(210, 210, 210))
+    draw.text((20, 20), "SYNTHETIC WALKAROUND - NOT A VEHICLE", fill=(235, 200, 90))
+
+    frames_dir = MEDIA / "_video_build"
+    frames_dir.mkdir(parents=True, exist_ok=True)
+    for stale in frames_dir.glob("*.png"):
+        stale.unlink()
+
+    total = int(VIDEO_SECONDS * VIDEO_FPS)
+    travel = strip_width - width
+    for n in range(total):
+        t = n / VIDEO_FPS
+        if t < PAUSED_WINDOW[0]:
+            progress = t / PAUSED_WINDOW[0] * 0.6
+        elif t < PAUSED_WINDOW[1]:
+            progress = 0.6  # stationary: consecutive frames are near-identical
+        else:
+            span = VIDEO_SECONDS - PAUSED_WINDOW[1]
+            progress = 0.6 + (t - PAUSED_WINDOW[1]) / span * 0.4
+
+        left = int(progress * travel)
+        frame = strip.crop((left, 0, left + width, height))
+        if BLURRED_WINDOW[0] <= t < BLURRED_WINDOW[1]:
+            frame = frame.filter(ImageFilter.GaussianBlur(radius=6))
+        frame.save(frames_dir / f"f_{n:04d}.png")
+
+    out = MEDIA / "video_01.mp4"
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-loglevel",
+            "error",
+            "-framerate",
+            str(VIDEO_FPS),
+            "-i",
+            str(frames_dir / "f_%04d.png"),
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            "-crf",
+            "26",
+            str(out),
+        ],
+        check=True,
+    )
+    for stale in frames_dir.glob("*.png"):
+        stale.unlink()
+    frames_dir.rmdir()
+    print(
+        f"  wrote {out.relative_to(ROOT)}  "
+        f"(blurred {BLURRED_WINDOW[0]}-{BLURRED_WINDOW[1]}s, "
+        f"paused {PAUSED_WINDOW[0]}-{PAUSED_WINDOW[1]}s)"
+    )
 
 
 if __name__ == "__main__":

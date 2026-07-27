@@ -1,0 +1,6 @@
+{
+  "_fixture_note": "Hand-authored placeholder. Not a model response. The frame it describes is a synthetic panning strip, not a photograph of a car. These view classes are assigned so the fixture demonstrates the thing that matters about a walkaround: frames close coverage gaps the seller's photographs left. See fixtures/PROVENANCE.md and DECISIONS.md D-010.",
+  "view_class": "unknown",
+  "confidence": 0.42,
+  "basis": "Frame is mid-sweep and shows no identifiable aspect."
+}

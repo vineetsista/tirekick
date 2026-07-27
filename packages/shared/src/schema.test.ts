@@ -19,6 +19,7 @@ function baseReport(): Report {
     banner: "banner",
     vehicle: null,
     audio: null,
+    walkaround: null,
     assets: [
       {
         id: "asset_1",
@@ -100,6 +101,7 @@ function baseReport(): Report {
       outputTokens: 0,
       imagesAnalyzed: 0,
       audioSecondsProcessed: 0,
+      videoSecondsProcessed: 0,
       storageBytes: 0,
       federalLookups: 0,
       usdTotal: 0,

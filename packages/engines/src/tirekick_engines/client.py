@@ -99,23 +99,51 @@ def resolve_model(explicit: str | None = None) -> str:
     return (explicit or os.environ.get("TIREKICK_MODEL") or DEFAULT_MODEL).strip()
 
 
-def encode_image(path: Path, *, max_edge: int = MAX_IMAGE_EDGE) -> tuple[str, str, int, int]:
-    """Return (base64 data, media type, width, height), downscaled if oversized.
+#: Only resize when the image is meaningfully oversized. Shrinking a 1600px photo
+#: to 1568px costs a full-quality resample of two million pixels and saves about
+#: 4% of the image tokens - a trade that was costing roughly a second per image
+#: before anyone measured it.
+RESIZE_TOLERANCE = 1.08
 
-    Downscaling here rather than letting the API do it keeps the cost meter
-    honest: image tokens are a function of dimensions, and we can only report a
-    number we computed from the bytes we actually sent.
+
+def _target_size(size: tuple[int, int], max_edge: int) -> tuple[int, int] | None:
+    """The size to decode to, or None when the image is already small enough."""
+    if max(size) <= max_edge * RESIZE_TOLERANCE:
+        return None
+    ratio = max_edge / max(size)
+    return (max(1, round(size[0] * ratio)), max(1, round(size[1] * ratio)))
+
+
+@cache
+def _encoded(path: str, mtime_ns: int, size: int, max_edge: int) -> tuple[str, str, int, int]:
+    """Cached encode, keyed on the file's identity rather than its name.
+
+    A single photograph is sent to the classifier and then to up to three
+    stage-2 passes, so without this a report re-encodes the same bytes four
+    times. Keyed on mtime and size so editing a file invalidates the entry.
     """
     from PIL import Image
 
     with Image.open(path) as image:
+        target = _target_size(image.size, max_edge)
+        if target is not None:
+            # Ask libjpeg to decode straight to roughly the size we want, in the
+            # DCT domain at 1/2, 1/4 or 1/8 scale. Far cheaper than decoding at
+            # full resolution and resampling afterwards, and a no-op on formats
+            # that do not support it.
+            #
+            # The target has to be the real box, not a square. Pillow picks its
+            # scale with integer division on BOTH axes and takes the minimum, so
+            # passing (1568, 1568) for a 4032x3024 photo computes
+            # min(4032//1568, 3024//1568) = min(2, 1) = 1 and quietly does
+            # nothing at all.
+            image.draft("RGB", target)
+
         image = image.convert("RGB")
-        if max(image.size) > max_edge:
-            ratio = max_edge / max(image.size)
-            image = image.resize(
-                (max(1, round(image.width * ratio)), max(1, round(image.height * ratio))),
-                Image.Resampling.LANCZOS,
-            )
+
+        if target is not None and image.size != target:
+            image = image.resize(target, Image.Resampling.LANCZOS)
+
         buffer = io.BytesIO()
         image.save(buffer, format="JPEG", quality=88)
         return (
@@ -124,6 +152,17 @@ def encode_image(path: Path, *, max_edge: int = MAX_IMAGE_EDGE) -> tuple[str, st
             image.width,
             image.height,
         )
+
+
+def encode_image(path: Path, *, max_edge: int = MAX_IMAGE_EDGE) -> tuple[str, str, int, int]:
+    """Return (base64 data, media type, width, height), downscaled if oversized.
+
+    Downscaling here rather than letting the API do it keeps the cost meter
+    honest: image tokens are a function of dimensions, and we can only report a
+    number we computed from the bytes we actually sent.
+    """
+    stat = path.stat()
+    return _encoded(str(path), stat.st_mtime_ns, stat.st_size, max_edge)
 
 
 def image_tokens(width: int, height: int) -> int:

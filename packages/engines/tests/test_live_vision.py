@@ -243,10 +243,29 @@ def test_live_mode_refuses_a_call_with_no_schema(tmp_path: Path) -> None:
 
 
 def test_images_are_downscaled_to_the_documented_limit() -> None:
+    """Within the tolerance, not to the pixel.
+
+    The fixture photos are 1600px, which is 2% over the limit. Resampling them
+    to 1568 costs a full-quality pass over two million pixels and saves about 4%
+    of the image tokens, so RESIZE_TOLERANCE deliberately leaves them alone.
+    """
+    from tirekick_engines.client import MAX_IMAGE_EDGE, RESIZE_TOLERANCE
+
     data, media_type, width, height = encode_image(FIXTURE_MEDIA / "photo_01.jpg")
-    assert max(width, height) <= 1568
+    assert max(width, height) <= MAX_IMAGE_EDGE * RESIZE_TOLERANCE
     assert media_type == "image/jpeg"
     assert data
+
+    # Anything genuinely oversized is still brought down to the limit exactly.
+    from PIL import Image
+
+    big = Path("/tmp") / "tirekick-oversize-probe.jpg"
+    Image.new("RGB", (3000, 2000), (60, 60, 60)).save(big, quality=85)
+    try:
+        _, _, w, h = encode_image(big)
+        assert max(w, h) == MAX_IMAGE_EDGE
+    finally:
+        big.unlink(missing_ok=True)
 
 
 def test_image_tokens_follow_the_published_formula() -> None:
@@ -303,3 +322,85 @@ def test_the_whole_send_loop_runs_with_the_sdk_absent(
         assert result["view_class"] == "exterior_front"
     finally:
         _retryable_errors.cache_clear()
+
+
+def test_a_large_photo_is_decoded_at_reduced_resolution(tmp_path: Path) -> None:
+    """Pixels decoded, not wall clock.
+
+    A phone photo is 12 megapixels and we send 1.8. Letting libjpeg do the first
+    reduction in the DCT domain means decoding a quarter of the pixels; the
+    naive version decodes all twelve million and then throws most away.
+
+    Asserted as a pixel count because it is deterministic. Timings on this
+    hardware are not - a 2000x2000 matmul takes six seconds here, and the
+    drafted decode has measured *slower* than the full one purely on noise.
+    """
+    from PIL import Image
+
+    from tirekick_engines.client import _target_size
+
+    photo = tmp_path / "big.jpg"
+    Image.new("RGB", (4032, 3024), (90, 110, 130)).save(photo, quality=90)
+
+    target = _target_size((4032, 3024), 1568)
+    assert target == (1568, 1176)
+
+    with Image.open(photo) as image:
+        image.draft("RGB", target)
+        decoded = image.size
+
+    assert decoded == (2016, 1512), "libjpeg should decode at half scale"
+    assert decoded[0] * decoded[1] < 4032 * 3024 / 3
+
+
+def test_the_draft_target_must_be_the_real_box_not_a_square() -> None:
+    """The bug this replaced, pinned so it cannot come back.
+
+    Pillow picks its DCT scale with integer division on both axes and takes the
+    minimum. Passing a square (1568, 1568) for a 4032x3024 photo computes
+    min(4032//1568, 3024//1568) = min(2, 1) = 1 - no reduction, silently.
+    """
+    from PIL import Image
+
+    from tirekick_engines.client import _target_size
+
+    photo = Path("/tmp") / "tirekick-draft-probe.jpg"
+    Image.new("RGB", (4032, 3024), (10, 20, 30)).save(photo, quality=85)
+    try:
+        with Image.open(photo) as square:
+            square.draft("RGB", (1568, 1568))
+            assert square.size == (4032, 3024), "a square target scales nothing"
+
+        with Image.open(photo) as box:
+            box.draft("RGB", _target_size((4032, 3024), 1568))
+            assert box.size == (2016, 1512)
+    finally:
+        photo.unlink(missing_ok=True)
+
+
+def test_an_image_already_within_the_limit_is_not_resampled() -> None:
+    """Shrinking 1600px to 1568px resamples two million pixels to save 4% of the
+    tokens. The tolerance exists so that trade is not made."""
+    from tirekick_engines.client import _target_size
+
+    assert _target_size((1600, 1200), 1568) is None
+    assert _target_size((1568, 1176), 1568) is None
+    assert _target_size((2400, 1800), 1568) == (1568, 1176)
+
+
+def test_the_same_photo_is_encoded_once_per_report() -> None:
+    """An exterior photo goes to the classifier and three stage-2 passes.
+
+    Without the cache that is four full decodes of the same bytes, and a report
+    does twenty-two image calls over eight photographs.
+    """
+    from tirekick_engines.client import _encoded, encode_image
+
+    _encoded.cache_clear()
+    photo = FIXTURE_MEDIA / "photo_01.jpg"
+    for _ in range(4):
+        encode_image(photo)
+
+    info = _encoded.cache_info()
+    assert info.misses == 1
+    assert info.hits == 3

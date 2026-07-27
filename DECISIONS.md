@@ -295,3 +295,90 @@ of them cases of using a banned word in order to forbid it. Rephrased rather tha
 widening the sanctioned-disclaimer list, which exists for buyer-facing denials and
 would be weakened by absorbing internal instructions. Cost: prompts are now package
 data that has to ship with an install, declared in `pyproject.toml`.
+
+### D-026 - Audio features are cached, even though computing them is free
+**P3.** Audio analysis is deterministic arithmetic over a waveform. No API call, no
+cost, no non-determinism - so caching it looks like pure ceremony. It is not: the
+computation needs ffmpeg, and LAW 7 says a fixture run needs nothing. Computing
+the spectrogram at report time would make the gate that proves fixture mode
+dependency-free itself depend on ffmpeg being installed on the runner, which is
+the same shape of mistake as the mypy gate that never read its config. Chose to
+cache the measured features and the rendered spectrogram, written by
+`scripts/refresh_audio_cache.py` and committed, exactly as the federal records
+are. Cost: a change to the signal code does not show up in the report until
+someone re-runs the script, and the numbers can silently go stale. The spectrogram
+is committed alongside, so a stale cache is at least visible as an image that no
+longer matches.
+
+### D-027 - The audio engine ships a picture and says nothing
+**P3.** P3 produced a working onset detector that locates all three planted
+impulses in the fixture clip to within 21ms, at eight times the prominence of the
+strongest false positive. It would be one line to label those "possible valvetrain
+tick", and the report would look far more impressive for it.
+
+`audio_anomaly` has a 0.70 precision gate and no measurement behind it, and
+`docs/EVAL.md` committed in P0 to what happens in exactly this case: the engine
+ships as a spectrogram and a list of things to ask a mechanic, with no anomaly
+claims attached. Honoured it. The report shows the spectrogram, marks where the
+transients are, gives the measured idle frequency, and states in the section
+header that no claims are attached to any of it.
+
+The transient copy is the part that took longest to write: it has to be useful
+without being a diagnosis. It settled on naming what a transient is, listing the
+mundane things that also produce one - a door, a footstep, a sleeve over the
+microphone - and saying we are showing where to listen rather than what we heard.
+Cost: a competitor will say "knocking detected" and sound better. We will be right
+more often.
+
+### D-028 - Implied RPM is shown only when the VIN supplied the cylinder count
+**P3.** Firing frequency converts to RPM exactly, given the cylinder count and the
+stroke. The arithmetic is not the risk; the input is. Guess four cylinders on a V6
+and the answer is wrong by exactly 1.5x - not noisy, not obviously broken, just a
+plausible number on a dashboard. Chose to report RPM only when vPIC returned the
+cylinder count, and to say in the basis line where the number came from. When the
+VIN did not decode, the report shows the dominant frequency and explains why no
+RPM follows from it. Cost: a buyer with an unreadable VIN gets a Hz reading
+instead of an rpm reading, which is less friendly and more honest.
+
+### D-029 - Redaction is model-proposed and human-signed, and it moved up a phase
+**P3.** D-022 made the plate-and-face blur step a blocker: real photographs cannot
+be committed without it, the eval set cannot be labelled without them, and no
+finding type can ship without the eval set. So it moved from P6 to here, ahead of
+its scheduled phase, because the schedule was blocking the gate.
+
+The design decision is who gets the last word. An automatic detector that misses
+one plate in fifty is worse than no detector, because it produces a folder
+everybody now believes is safe - and `git rm` does not remove anything from
+history, so a single miss is permanent the moment the repository goes public.
+Chose a three-step flow: the model proposes regions, a person checks every one
+against the image and signs with their name, and only then will `apply` blur
+anything or `check` pass. `assert_reviewed` fails on absence rather than passing
+on it - an image with no record is unreviewed, not empty. "Nothing to redact" is a
+legitimate answer that a human has to state explicitly.
+
+Blurring pixelates before it blurs, because Gaussian blur alone is recoverable if
+the kernel is known, and re-encodes rather than copies, because the original EXIF
+carries the GPS coordinates of somebody's driveway. Cost: capture is now a
+two-person-minute-per-image chore rather than a script.
+
+### D-030 - Image encoding: decode small, resize rarely, encode once
+**P3.** Found while chasing a test suite that had gone from 2 seconds to 180.
+Three separate faults, all in the same twenty lines:
+
+Every image was re-encoded for every pass. A report makes 22 image calls over 8
+photographs, so the same bytes were decoded up to four times. Now cached on the
+file's identity - path, mtime, size - so editing a file still invalidates it.
+
+`draft()` was being asked for a square target. Pillow picks its DCT scale with
+integer division on *both* axes and takes the minimum, so `(1568, 1568)` against a
+4032x3024 photo computes `min(2, 1) = 1` and silently does nothing. Passing the
+real target box makes libjpeg decode 3.0 megapixels instead of 12.2.
+
+A 1600px fixture photo was being resampled to 1568px - a full-quality pass over
+two million pixels to save about 4% of the image tokens. Added a tolerance so that
+trade is not made.
+
+Stated as pixel counts rather than as a speedup, deliberately. This machine takes
+six seconds to multiply two 2000x2000 matrices, and the drafted decode has
+measured *slower* than the full one on pure noise; any timing published from here
+would be fiction.

@@ -137,6 +137,38 @@
       }
     ]
   },
+  "audio": {
+    "assetId": "audio_01",
+    "durationSec": 22.0,
+    "sampleRate": 22050,
+    "spectrogramPath": "audio_01.spectrogram.png",
+    "rmsDbfs": -24.98,
+    "peakDbfs": -9.12,
+    "clippedFraction": 0.0,
+    "dominantHz": 32.3,
+    "impliedRpm": 969,
+    "impliedRpmBasis": "The loudest steady tone is 32.3Hz. A four-stroke 4-cylinder engine fires 2 times per revolution, which puts this at about 969 rpm. That is arithmetic on the recording, not a reading from the vehicle.",
+    "transients": [
+      {
+        "atSec": 4.981,
+        "prominence": 56.67
+      },
+      {
+        "atSec": 11.482,
+        "prominence": 59.02
+      },
+      {
+        "atSec": 17.229,
+        "prominence": 59.27
+      }
+    ],
+    "transientStatement": "3 sharp transient(s) stand out from the rest of the recording, at 5.0s, 11.5s, 17.2s of 22s. A transient is a sudden broadband sound. It could be a mechanical tick. It could equally be a door, a footstep, or the phone brushing a sleeve. TIREKICK is showing you where to listen, not telling you what it heard.",
+    "usable": true,
+    "qualityStatement": "The recording is long enough, loud enough, and steady enough to analyze. Whether TIREKICK can tell you anything from it is a separate question, answered on the accuracy page.",
+    "qualityProblems": [],
+    "claimsEnabled": false,
+    "claimsStatement": "TIREKICK does not make claims about engine condition from audio. The anomaly detector has not been measured against a labelled set, so under our own accuracy rules it cannot appear in a report. What is below is the recording itself, drawn as a spectrogram, and the measurements taken from it. Listen to the clip yourself, and play it to a mechanic at a cold start."
+  },
   "assets": [
     {
       "id": "photo_01",
@@ -230,8 +262,8 @@
       "id": "audio_01",
       "kind": "audio",
       "path": "audio_01.wav",
-      "sha256": "020dd83720e912288c619715bf9a4ddda0dca603eb3f70a1ad3ee115f3cfd43f",
-      "bytes": 970278,
+      "sha256": "c210681450d35fdb17878cf2b98d2bbc9623bbd948ee8a6d045f141f2ea21edb",
+      "bytes": 970244,
       "viewClass": null,
       "viewConfidence": null,
       "durationSec": 22.0,
@@ -295,7 +327,7 @@
       "Frame and structural integrity - not remotely verifiable, independent mechanic required.",
       "Steering - not remotely verifiable, independent mechanic required.",
       "4 standard view(s) were not provided: exterior side right, exterior three quarter, interior rear, vin plate.",
-      "An engine audio clip was provided and stored with this inspection. TIREKICK does not yet analyze engine audio - that engine is in development and will not make claims until its accuracy has been measured and published. Listen to the clip yourself, and ask a mechanic to listen at a cold start.",
+      "TIREKICK does not make claims about engine condition from audio. The anomaly detector has not been measured against a labelled set, so under our own accuracy rules it cannot appear in a report. What is below is the recording itself, drawn as a spectrogram, and the measurements taken from it. Listen to the clip yourself, and play it to a mechanic at a cold start.",
       "Title status - TIREKICK queries no title registry. Any title brand named in this report was read out of paperwork you uploaded. Confirm the title with your state motor vehicle agency before you buy."
     ],
     "summary": "8 photos covering 8 of 12 standard views. Not covered: exterior side right, exterior three quarter, interior rear, vin plate. Nothing in this report describes what those views would have shown. Red-flag score 50/100, which reflects the severity and confidence of what was visible on this vehicle - not the condition of the vehicle overall. Recalls and owner complaint patterns describe the model rather than this car, so they are reported separately and are not counted in the score."
@@ -926,12 +958,12 @@
   "cost": {
     "mode": "fixture",
     "model": "",
-    "promptFingerprint": "classify@v1,damage@v1,dash_lights@v1,engine_bay@v1,interior_wear@v1,odometer@v1,repaint@v1,rust@v1,system@v1,tire_tread@v1",
+    "promptFingerprint": "locate@v1,system@v1,classify@v1,damage@v1,dash_lights@v1,engine_bay@v1,interior_wear@v1,odometer@v1,repaint@v1,rust@v1,system@v1,tire_tread@v1",
     "inputTokens": 0,
     "outputTokens": 0,
     "imagesAnalyzed": 18,
     "audioSecondsProcessed": 22.0,
-    "storageBytes": 2949374,
+    "storageBytes": 2949340,
     "federalLookups": 4,
     "usdTotal": 0.0,
     "note": "Fixture mode: responses served from cache, no API calls billed. $0.00 is the true cost of this run and not a placeholder."

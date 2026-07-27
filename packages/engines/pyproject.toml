@@ -50,6 +50,13 @@ mypy_path = "src"
 packages = ["tirekick_engines"]
 warn_unreachable = true
 
+# The live extra is optional and CI installs only dev, so its stubs are absent
+# there by design. Missing stubs must not be a type error, or the gate that proves
+# fixture mode needs nothing would itself need the thing.
+[[tool.mypy.overrides]]
+module = ["anthropic", "anthropic.*"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]

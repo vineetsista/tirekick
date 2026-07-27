@@ -261,3 +261,45 @@ class _FakeResponse:
         self.status_code = status_code
         self.headers: dict[str, str] = {}
         self.request = None
+
+
+def test_the_live_path_does_not_need_the_sdk_to_be_importable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """LAW 7, as a regression test.
+
+    An earlier version of `_send` imported `anthropic` at the top of the retry
+    loop. That runs even when the client is a test double, so this whole file
+    passed on a laptop where the `live` extra happens to be installed, and every
+    test in it failed in CI, where it deliberately is not.
+
+    Simulating absence rather than trusting the environment is the point: the
+    machine writing this code is the one machine that cannot reproduce the bug.
+    """
+    import sys
+
+    from tirekick_engines.client import _retryable_errors
+
+    monkeypatch.setitem(sys.modules, "anthropic", None)
+    _retryable_errors.cache_clear()
+    try:
+        assert _retryable_errors() == ()
+    finally:
+        _retryable_errors.cache_clear()
+
+
+def test_the_whole_send_loop_runs_with_the_sdk_absent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The fixture-mode promise, end to end: no key, no extra, still works."""
+    import sys
+
+    from tirekick_engines.client import _retryable_errors
+
+    monkeypatch.setitem(sys.modules, "anthropic", None)
+    _retryable_errors.cache_clear()
+    try:
+        result, _, _ = _classify_call(tmp_path)
+        assert result["view_class"] == "exterior_front"
+    finally:
+        _retryable_errors.cache_clear()

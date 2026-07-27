@@ -31,6 +31,7 @@ import os
 import time
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from functools import cache
 from pathlib import Path
 from typing import Any
 
@@ -54,6 +55,29 @@ MAX_IMAGE_EDGE = 1568
 
 MAX_ATTEMPTS = 3
 RETRY_BACKOFF_SEC = (1.0, 4.0)
+
+
+@cache
+def _retryable_errors() -> tuple[type[BaseException], ...]:
+    """Transport errors worth trying again, resolved without importing at module load.
+
+    This function is the reason CI caught a bug the author's laptop could not.
+    An earlier version imported `anthropic` at the top of the send loop, which
+    runs even when the client is a test double - so the whole live-path suite
+    passed locally, where the `live` extra happens to be installed, and failed in
+    CI, where it deliberately is not.
+
+    An empty tuple is a valid `except` clause and catches nothing, which is the
+    correct behaviour when the SDK is absent: there is no real transport to have
+    a transient failure.
+    """
+    try:
+        import anthropic
+    except ImportError:
+        return ()
+    # RateLimitError subclasses APIStatusError; the 429 is separated by status
+    # code in the handler rather than by type.
+    return (anthropic.APIStatusError, anthropic.APIConnectionError)
 
 
 class FixtureMissing(RuntimeError):
@@ -236,10 +260,9 @@ class ModelClient:
         self, *, system: str | None, content: list[dict[str, Any]], tool: dict[str, Any]
     ) -> Any:
         """One call, retried on transient failures only."""
-        import anthropic
-
         client = self._anthropic()
-        last: Exception | None = None
+        retryable = _retryable_errors()
+        last: BaseException | None = None
         for attempt in range(MAX_ATTEMPTS):
             try:
                 return client.messages.create(
@@ -250,14 +273,12 @@ class ModelClient:
                     tool_choice={"type": "tool", "name": tool["name"]},
                     messages=[{"role": "user", "content": content}],
                 )
-            except (anthropic.RateLimitError, anthropic.APIStatusError) as exc:
+            except retryable as exc:
                 status = getattr(exc, "status_code", None)
                 # A 4xx that is not rate limiting is our bug - a bad schema, a bad
                 # image, a bad key - and retrying it just spends money slower.
                 if status is not None and 400 <= status < 500 and status != 429:
                     raise
-                last = exc
-            except anthropic.APIConnectionError as exc:
                 last = exc
             if attempt < MAX_ATTEMPTS - 1:
                 time.sleep(RETRY_BACKOFF_SEC[min(attempt, len(RETRY_BACKOFF_SEC) - 1)])
@@ -276,7 +297,7 @@ class ModelClient:
     def _anthropic(self) -> Any:
         try:
             import anthropic
-        except ModuleNotFoundError as exc:  # pragma: no cover - depends on extras
+        except ImportError as exc:
             raise LiveModeUnavailable(
                 "Live mode needs the 'live' extra: pip install -e "
                 "'packages/engines[live]'. Fixture mode needs nothing."

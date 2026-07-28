@@ -19,7 +19,9 @@ is the failure that actually happened.
 
 from __future__ import annotations
 
+import os
 import re
+from functools import cache
 from pathlib import Path
 
 import pytest
@@ -38,17 +40,29 @@ def _named_paths() -> set[str]:
     return set(_PATH_PATTERN.findall(text))
 
 
+#: Directories that hold installed dependencies rather than this project. Pruned
+#: rather than filtered: `.venv` alone is tens of thousands of files, and walking
+#: it once per named path is what made this the second-slowest test in the suite.
+_PRUNED = {".venv", "node_modules", ".next", ".git", "__pycache__", ".turbo"}
+
+
+@cache
+def _repo_index() -> dict[str, Path]:
+    """Every source file in the repository, by basename, walked once."""
+    index: dict[str, Path] = {}
+    for directory, subdirs, files in os.walk(REPO_ROOT):
+        subdirs[:] = [d for d in subdirs if d not in _PRUNED]
+        for name in files:
+            index.setdefault(name, Path(directory) / name)
+    return index
+
+
 def _resolve(name: str) -> Path | None:
     """Find a file the laws name, wherever it lives."""
     direct = REPO_ROOT / name
     if direct.exists():
         return direct
-    matches = [
-        p
-        for p in REPO_ROOT.rglob(Path(name).name)
-        if ".venv" not in p.parts and "node_modules" not in p.parts and ".next" not in p.parts
-    ]
-    return matches[0] if matches else None
+    return _repo_index().get(Path(name).name)
 
 
 def test_every_file_the_laws_name_exists() -> None:

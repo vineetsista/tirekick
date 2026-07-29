@@ -1,6 +1,6 @@
 # PHASE 8 - THE EVIDENCE
 
-Branch: `main` | 444 tests | 49 decisions logged
+Branch: `main` | 469 tests | 50 decisions logged
 Gates: 9/9 green.
 
 P7 ended by saying there was no P8 to define and that the next phase was the
@@ -166,7 +166,7 @@ the same change.** Not a comment saying "mirrored in X" - that is a note asking 
 future reader to do the check by hand, and five phases of evidence say they do
 not.
 
-Five such tests now exist beside the P2 enum check:
+Six such tests now exist beside the P2 enum check:
 
 - `column-parity.test.ts` - every contract field has a column, and every column
   is explained by a contract field.
@@ -178,6 +178,10 @@ Five such tests now exist beside the P2 enum check:
 - `fonts.test.ts` - every bundled `.woff2` has its OFL beside it, the licence is
   the real upstream text rather than a summary, the notice accounts for every
   face, and nothing is vendored that no stylesheet loads.
+- `layout.test.ts` - the one that opens a browser (D-050). The real components,
+  the real stylesheet, laid out in chromium at 320/390/768/1440: nothing
+  overflows, no paragraph passes 92 characters a line, and every piece of text
+  clears WCAG AA against the first opaque background above it.
 
 Each was written by first breaking the thing it checks and watching it go red.
 
@@ -195,9 +199,9 @@ code for them.
 | | |
 |---|---|
 | Phases | 8 |
-| Tests | 444 |
+| Tests | 469 |
 | Gates | 9/9 green |
-| Decisions logged | 49 |
+| Decisions logged | 50 |
 | Finding types the engines can produce | 16 |
 | **Finding types with a measured accuracy** | **0** |
 | **Finding types enabled for a paid report** | **0** |
@@ -236,20 +240,15 @@ Newly named this phase, and not yet handled:
 - **`BOX_FILL = 0.55` and the 700px/620px layout breakpoints are judgement, not
   measurement.** They have been checked against one synthetic fixture at three
   viewport widths.
-- **No test opens a browser.** Six of the eight defects above were invisible to a
-  suite of 444 tests and obvious within a minute of loading the built page. Each
-  one now has a static test that catches *that* defect - a dangling token, an
-  uncapped measure, a prose class on a `<td>` - and those tests are real. What
-  does not exist is the general check: nothing asserts that the markup, once
-  styled and laid out, produces something a person can read. The static tests are
-  the shape of the last bug, not a guard against the next one.
+- **The layout gate is one fixture wide.** `layout.test.ts` (D-050) lays the real
+  components out in chromium and measures overflow, line length and contrast at
+  four widths - but against `demo-01`, which is synthetic media and one vehicle.
+  A report with forty findings, a 900-character detail string, or a make with a
+  very long name has never been laid out by anything. The check is general; the
+  input is not, and the input is where the next overflow will come from.
 
-  A rendering test that does not render is the 2026 version of a law in a
-  markdown file. The browser probes that found all six are throwaway scripts in a
-  scratch directory, which is not the same as a gate.
-
-That last one is the honest successor to this phase. A rendering test that does
-not render is the 2026 version of a law in a markdown file.
+The measurement phase is still the honest successor to this one, and it still
+needs a key and a car.
 
 ---
 

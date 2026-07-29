@@ -18,7 +18,7 @@ those are hard-locked to "independent mechanic required" in code, not in copy.
 | | |
 |---|---|
 | Phases shipped | 8 |
-| Tests | 444 |
+| Tests | 469 |
 | Gates | 9/9 green, local and CI |
 | Finding types the engines can produce | 16 |
 | **Finding types with a measured accuracy** | **0** |
@@ -112,6 +112,7 @@ apps/web              Next.js 15. Landing, teaser, checkout, report, share
   src/lib/crop.ts       geometry that puts a cited region beside its claim
   src/lib/flow.test.ts  the LAW 7 end-to-end test
   src/lib/tokens.test.ts  every var(--tk-*) exists; BRAND.md matches the CSS
+  src/lib/layout.test.ts  the gate that opens a browser (D-050)
 packages/shared       zod contracts. The schema the web app trusts
 packages/db           Drizzle schema for Neon. Written, not yet connected
   src/column-parity.test.ts  every contract field has a column (D-049)
@@ -130,7 +131,7 @@ bench/                labels, reports, results. Currently empty
 fixtures/             synthetic media + committed federal records
 docs/                 LAWS, LIABILITY, ACCURACY, EVAL, BRAND, UNIT_ECONOMICS
 phase_reports/        what shipped, what was measured, what is missing
-DECISIONS.md          49 judgment calls, with what each cost
+DECISIONS.md          50 judgment calls, with what each cost
 ```
 
 ---

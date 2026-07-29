@@ -335,10 +335,29 @@ a:hover {
   text-decoration: none;
 }
 
+/*
+ * The primary action. A modifier on .btn, which carries the layout.
+ *
+ * Paper on void is 17.3:1 - the highest contrast the palette has, which is how a
+ * product with no brand hue says "this is the button" (D-048). The checkout page
+ * used to set this inline instead, and when `--tk-accent` was deleted it kept
+ * asking for it: near-black text on a dropped background, on the one page that
+ * takes money. Inline styling inside a conditionally-rendered branch of a client
+ * component is styling no test can reach - it exists in the DOM only after three
+ * checkboxes are ticked and Stripe is configured. As a class it is something
+ * `layout.test.ts` can put on a page and measure.
+ *
+ * `min-height` is here and not on `.btn`: WCAG 2.5.5 asks for a 44px target, and
+ * of every control in this product the one a nervous buyer taps to spend $25 on a
+ * phone is the one that should not need aiming at. The secondary buttons stay at
+ * their natural height.
+ */
 .btn-primary {
   border-color: var(--tk-paper);
   background: var(--tk-paper);
   color: var(--tk-void);
+  min-height: 44px;
+  justify-content: center;
 }
 
 .btn-primary:hover {
@@ -492,6 +511,7 @@ th {
   border-color: transparent;
   color: var(--tk-void);
 }
+
 
 /* --------------------------------------------------------------------- */
 /* motion                                                                 */

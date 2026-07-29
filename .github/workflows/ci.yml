@@ -51,6 +51,17 @@ jobs:
       - name: Install ffmpeg
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
 
+      # layout.test.ts lays the real components out in a real engine and measures
+      # overflow, line length and contrast (D-050). Six of P8's eight defects were
+      # invisible to every other test and visible here. `--with-deps` pulls the
+      # shared libraries headless chromium needs on a bare ubuntu runner.
+      #
+      # This step is not optional and the test does not skip when the browser is
+      # missing: a gate that quietly passes because it never ran is the exact
+      # failure this project has now found six times.
+      - name: Install chromium for the layout gate
+        run: pnpm --filter web exec playwright install --with-deps chromium
+
       - name: Run all gates
         run: bash scripts/gates.sh
 

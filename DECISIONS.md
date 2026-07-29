@@ -748,3 +748,50 @@ checks and confirming it went red.
 
 A comment saying "mirrored in X" is not this. It is a note asking a future reader
 to do the check by hand, and the evidence is that they do not.
+
+### D-050 - One gate opens a browser, and it is not allowed to skip
+**P8.** P8 found eight defects. Six were invisible to a suite of 444 tests and
+visible within a minute of loading the built page: a pay button rendering
+near-black on nothing, three layouts overflowing a phone viewport, a federal
+recall title pushing its heading 40px past its panel, and prose set at 159
+characters a line.
+
+Every one of them got a static test in the same phase, and those tests are real -
+a dangling `var(--tk-*)`, an uncapped measure, a prose class on a `<td>`. But
+each is the shape of a bug that already happened. `renderToStaticMarkup` returns
+a string, and a string has no width, no cascade and no computed colour, so the
+existing suite could confirm that the right elements exist in the right order
+while the result was unreadable.
+
+`layout.test.ts` renders the real components, applies the real stylesheet, and
+lays it out in chromium at 320, 390, 768 and 1440px. It asserts three things the
+markup cannot express: nothing overflows the viewport; no paragraph exceeds 92
+characters a line, counted as real text over real line boxes from
+`Range.getClientRects()`; and every piece of text clears WCAG AA against the
+first opaque background above it. That last check is the general form of the pay
+button bug - black on a dropped background measures 1.06:1 and fails without
+anyone having to anticipate that particular button.
+
+**It builds the page rather than fetching it.** No `next build`, no listening
+port. Neither is what is under test, and a gate that needs both is slow enough to
+be skipped and flaky enough to be disabled. Media and fonts are served off disk
+through a route handler so images carry their real intrinsic size and text is
+laid out in the real faces; without that every `<img>` measures zero and the
+overflow numbers are fiction. The whole suite runs in about four seconds.
+
+**It fails rather than skips when chromium is absent.** The tempting design is a
+graceful skip so CI never breaks on a missing binary. That produces a gate that
+reports success because nothing ran, which is the precise failure this project
+has now found six times in three phases. CI installs the browser explicitly and
+the test throws with the install command if it cannot launch.
+
+The checkout button gets there by a specific route. It only exists in the DOM
+after three checkboxes are ticked and Stripe is configured, so no static render
+reaches it; its styling moved from inline into `.btn-primary` so that the class
+can be put on a page and measured. That also gave it a `min-height: 44px` target,
+since of every control in this product the one a nervous buyer taps to spend $25
+on a phone is the one that should not need aiming at.
+
+Each of the three checks was verified by reintroducing the defect it was written
+for and confirming it went red - the overflow check reproduced the original 76px
+at 390px exactly.

@@ -157,20 +157,7 @@ export function PurchaseGate({ teaser }: { teaser: Teaser }) {
         {/* Not rendered at all until confirmed, rather than rendered-and-disabled.
             A greyed-out button is still a thing to click at. */}
         {allTicked && configured && link && (
-          <a
-            href={link}
-            style={{
-              display: "inline-block",
-              padding: "15px 30px",
-              background: "var(--tk-paper)",
-              color: "var(--tk-void)",
-              fontSize: 15,
-              letterSpacing: "0.12em",
-              textTransform: "uppercase",
-              textDecoration: "none",
-              fontWeight: 500,
-            }}
-          >
+          <a href={link} className="btn btn-primary">
             Pay ${PRICE_USD} and open the report
           </a>
         )}

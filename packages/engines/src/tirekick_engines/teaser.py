@@ -30,17 +30,22 @@ sentence is on the checkout page. See D-032.
 
 from __future__ import annotations
 
+from .dossier import MODEL_LEVEL_TYPES
 from .models import (
     LOCKED_SYSTEM_STATEMENT,
     LOCKED_SYSTEMS,
     Coverage,
+    Finding,
+    ImageRegionEvidence,
     Report,
     SeverityCount,
     SystemStatus,
     Teaser,
+    TeaserSample,
     TeaserSystemRow,
 )
 from .registry import FINDING_TYPES
+from .safety import is_locked
 
 #: What a non-locked system row says in the teaser.
 #:
@@ -127,6 +132,81 @@ def _vehicle_summary(report: Report) -> str:
     return " ".join(p for p in parts if p).strip()
 
 
+_SEVERITY_RANK = {"info": 0, "minor": 1, "major": 2, "critical": 3}
+
+
+def _sample(report: Report) -> TeaserSample | None:
+    """Pick the one finding that crosses the paywall.
+
+    The worst-severity, best-evidenced finding *about this vehicle* that cites a
+    photograph. Model-level records - recall campaigns, complaint patterns - are
+    excluded: they describe every car of that model year rather than this one, so
+    handing one over as the sample would advertise the product with a fact that
+    is true of a car the buyer has never seen.
+
+    Deliberately the strongest finding rather than the weakest. Showing the least
+    of what the report found in order to hold the best back would be a sales
+    tactic, and the coverage block directly above it already tells the buyer
+    exactly how much of the car this could speak for.
+
+    Locked systems are skipped explicitly even though `apply_safety_law` has
+    already converted every such finding into a referral by the time a Report
+    exists. The redundancy is deliberate: this is the most-read surface in the
+    product, and a brake claim arriving on the free page would be the worst
+    available place for that clamp to have failed silently (LAW 2).
+    """
+    best: Finding | None = None
+    best_evidence: ImageRegionEvidence | None = None
+    for finding in report.findings:
+        if finding.type in MODEL_LEVEL_TYPES or is_locked(finding.system):
+            continue
+        evidence = next(
+            (e for e in finding.evidence if isinstance(e, ImageRegionEvidence)), None
+        )
+        if evidence is None:
+            continue
+        if best is None or (
+            _SEVERITY_RANK[finding.severity],
+            finding.confidence,
+        ) > (_SEVERITY_RANK[best.severity], best.confidence):
+            best, best_evidence = finding, evidence
+
+    if best is None or best_evidence is None:
+        return None
+
+    asset = next((a for a in report.assets if a.id == best_evidence.asset_id), None)
+    if asset is None:  # pragma: no cover - referential integrity forbids this
+        return None
+
+    total = sum(1 for f in report.findings if f.type not in MODEL_LEVEL_TYPES)
+    statement = (
+        f"One of {total} findings about this vehicle, shown in full. "
+        f"The other {total - 1} are in the paid report, each with its own "
+        f"photograph and box."
+        if total > 1
+        else "The only finding about this vehicle, shown in full."
+    )
+
+    return TeaserSample(
+        finding_id=best.id,
+        type=best.type,
+        system=best.system,
+        severity=best.severity,
+        confidence=best.confidence,
+        confidence_basis=best.confidence_basis,
+        title=best.title,
+        detail=best.detail,
+        asset_id=asset.id,
+        asset_path=asset.path,
+        asset_width=asset.width,
+        asset_height=asset.height,
+        asset_synthetic=asset.synthetic,
+        box=best_evidence.box,
+        caption=best_evidence.caption,
+        statement=statement,
+    )
+
+
 def build_teaser(report: Report, *, price_usd: float) -> Teaser:
     """Project a full report down to what may be shown for free."""
     coverage: Coverage = report.coverage
@@ -146,6 +226,7 @@ def build_teaser(report: Report, *, price_usd: float) -> Teaser:
         counts=_counts(report),
         mechanic_referral_count=len(report.mechanic_referrals),
         systems=_system_rows(report),
+        sample=_sample(report),
         # Honesty is not behind the paywall. This block is the same in both.
         could_not_assess=list(report.verdict.could_not_assess),
         has_audio=report.audio is not None,

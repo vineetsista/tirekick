@@ -78,8 +78,9 @@ def load_frames(
             # asset that does not resolve - Report._referential_integrity would
             # reject the report anyway, and loudly is better than late.
             continue
-        from ..inputs import sha256_of
+        from ..inputs import image_size, sha256_of
 
+        width, height = image_size(frame_path)
         frames.append(
             Asset(
                 id=entry["id"],
@@ -91,6 +92,8 @@ def load_frames(
                 view_confidence=None,
                 duration_sec=None,
                 synthetic=clip.synthetic,
+                width=width,
+                height=height,
             )
         )
 

@@ -31,6 +31,8 @@ function baseReport(): Report {
         viewConfidence: 0.9,
         durationSec: null,
         synthetic: true,
+        width: 1600,
+        height: 1200,
       },
     ],
     coverage: {

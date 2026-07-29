@@ -22,23 +22,72 @@ const text = html
   .replace(/&amp;/g, "&");
 
 describe("the paywall holds in the markup", () => {
-  it("renders no finding title, detail or basis", () => {
-    expect(demoReport.findings.length).toBeGreaterThan(0);
+  /**
+   * Exactly one finding is disclosed, on purpose, and this suite pins that to
+   * one.
+   *
+   * The teaser used to render no images at all, and this file asserted
+   * `expect(html).not.toContain("<img")`. That was a true statement about a
+   * broken product: the page sold "every finding, with the photograph it came
+   * from" and showed a stranger nothing before asking for $25.
+   *
+   * `teaser.sample` now crosses the paywall in full. The guard did not get
+   * weaker - it got specific. "No images" is a blunt instrument that a future
+   * refactor could satisfy while leaking thirteen findings as text; "everything
+   * except this one named finding is absent" is the property that actually
+   * matters, and it fails if the sample ever grows a second element.
+   */
+  const sample = demoTeaser.sample;
+
+  it("discloses exactly one finding, and it is a real one from the report", () => {
+    expect(sample).not.toBeNull();
+    const source = demoReport.findings.find((f) => f.id === sample!.findingId);
+    expect(source, "the sample cites a finding that is not in the report").toBeDefined();
+    expect(sample!.title).toBe(source!.title);
+    expect(sample!.confidence).toBe(source!.confidence);
+  });
+
+  it("never samples a recall or a complaint pattern", () => {
+    // Those describe every car of that model year rather than this one, so
+    // advertising the product with one would be advertising with a fact about a
+    // car the buyer has never seen.
+    expect(["open_recall", "complaint_pattern"]).not.toContain(sample!.type);
+  });
+
+  it("renders no OTHER finding's title, detail or basis", () => {
+    expect(demoReport.findings.length).toBeGreaterThan(1);
     for (const finding of demoReport.findings) {
+      if (finding.id === sample!.findingId) continue;
       expect(text).not.toContain(finding.title);
       expect(text).not.toContain(finding.detail);
       expect(text).not.toContain(finding.confidenceBasis);
     }
   });
 
-  it("renders no evidence of any kind", () => {
+  it("renders no OTHER finding's evidence", () => {
     for (const finding of demoReport.findings) {
+      if (finding.id === sample!.findingId) continue;
       for (const ev of finding.evidence) {
         if ("caption" in ev) expect(text).not.toContain(ev.caption);
         if (ev.kind === "document_excerpt") expect(text).not.toContain(ev.excerpt);
       }
     }
-    expect(html).not.toContain("<img");
+  });
+
+  it("loads exactly one image, and it is the sample's", () => {
+    expect(html.match(/<img/g)?.length).toBe(1);
+    expect(html).toContain(`/f/${demoTeaser.inspectionId}/${sample!.assetPath}`);
+
+    // No other asset is reachable from this page.
+    for (const asset of demoReport.assets) {
+      if (asset.path === sample!.assetPath) continue;
+      expect(html).not.toContain(`/${asset.path}`);
+    }
+  });
+
+  it("says out loud that the sample is one of many", () => {
+    expect(text).toContain(sample!.statement);
+    expect(sample!.statement).toMatch(/One of \d+ findings about this vehicle/);
   });
 
   it("renders no mechanic referral observation, only a count", () => {

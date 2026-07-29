@@ -1,64 +1,76 @@
-import { LOCKED_SYSTEM_STATEMENT, type Teaser } from "@tirekick/shared";
-import { severityColor, statusColor, statusLabel, titleCase } from "@/lib/report";
+import Link from "next/link";
+import { LOCKED_SYSTEM_STATEMENT, type SystemStatus, type Teaser } from "@tirekick/shared";
+import { EvidenceCrop } from "./EvidenceCrop";
+import { assetUrl, severityColor, statusColor, statusLabel, titleCase } from "@/lib/report";
 
 /**
  * The free result.
  *
- * Everything this renders was chosen server-side by `teaser.py`. There is
- * nothing hidden in this markup - no findings arrive and then get styled away -
- * because a paywall implemented in CSS is a paywall that lasts until someone
- * opens the network tab.
+ * Everything here was chosen server-side by `teaser.py`. There is nothing hidden
+ * in this markup - no findings arrive and get styled away - because a paywall
+ * implemented in CSS is a paywall that lasts until someone opens the network tab.
+ *
+ * ---------------------------------------------------------------------------
+ * ONE FINDING IS FREE, AND IT IS THE BEST ONE
+ * ---------------------------------------------------------------------------
+ *
+ * This page sold "every finding, with the photograph it came from and a box drawn
+ * on it" while rendering zero images. A stranger deciding whether to spend $25 on
+ * a visual evidence product could not see any visual evidence first, which asks
+ * them to take the entire thing on faith.
+ *
+ * So `teaser.sample` crosses the paywall in full - picture, box, confidence, and
+ * the sentence explaining why that confidence and not a higher one. The worst
+ * finding about the vehicle rather than the mildest, because showing the least of
+ * what was found in order to hold the best back is a sales tactic, and the
+ * coverage block above it already says how much of the car this could speak for.
  *
  * The ordering is deliberate and it is not the conversion-optimal one. Coverage
- * comes first, then what we could not assess, and only then the score and the
- * offer. A buyer should be able to decide this is not worth $25 for their
- * six-photo listing before they ever see a price.
+ * first, then what could not be assessed, then the sample, then the score, and
+ * only then the offer. A buyer should be able to decide this is not worth $25 for
+ * their six-photo listing before they ever see a price.
  */
 export function TeaserView({ teaser }: { teaser: Teaser }) {
+  const grouped = groupSystems(teaser);
+
   return (
-    <div className="wrap" style={{ paddingTop: 40, paddingBottom: 96 }}>
+    <div className="wrap" style={{ paddingTop: "var(--s-6)", paddingBottom: "var(--s-9)" }}>
       <header
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "baseline",
           flexWrap: "wrap",
-          gap: 12,
-          paddingBottom: 20,
-          borderBottom: "1px solid var(--tk-line)",
+          gap: "var(--s-3)",
+          paddingBottom: "var(--s-4)",
+          borderBottom: "1px solid var(--tk-rule)",
         }}
       >
-        <div style={{ fontSize: 22, letterSpacing: "0.22em", fontWeight: 700 }}>
-          TIREKICK
-        </div>
-        <div className="mono-label">free result / {teaser.inspectionId}</div>
+        <Link href="/" style={{ textDecoration: "none" }}>
+          <span style={{ fontWeight: 800, letterSpacing: "0.24em", fontSize: "var(--t-md)" }}>
+            TIREKICK
+          </span>
+        </Link>
+        <span className="label data">free result / {teaser.inspectionId}</span>
       </header>
 
       <div
-        className="prose"
-        style={{
-          marginTop: 24,
-          border: "1px solid var(--tk-locked)",
-          borderLeftWidth: 4,
-          background: "rgba(163,113,247,0.07)",
-          padding: "16px 18px",
-          fontSize: 14,
-          lineHeight: 1.6,
-        }}
+        className="panel panel-edge prose-sm"
+        style={{ marginTop: "var(--s-5)", borderLeftColor: "var(--tk-locked)" }}
       >
         {teaser.banner}{" "}
-        <a href="/accuracy">See how accurate TIREKICK actually is, including the misses.</a>
+        <Link href="/accuracy">
+          See how accurate TIREKICK actually is, including the misses.
+        </Link>
       </div>
 
       {teaser.containsSyntheticMedia && (
         <div
-          className="prose"
+          className="panel prose-sm"
           style={{
-            marginTop: 12,
-            border: "1px solid var(--tk-locked)",
-            padding: "12px 16px",
-            fontSize: 13,
+            marginTop: "var(--s-3)",
             color: "var(--tk-locked)",
+            borderColor: "var(--tk-locked)",
           }}
         >
           This is a demonstration built from synthetic media. Nothing here about
@@ -66,244 +78,386 @@ export function TeaserView({ teaser }: { teaser: Teaser }) {
         </div>
       )}
 
-      {teaser.vehicleSummary && (
-        <div style={{ marginTop: 28, fontSize: 26 }}>{teaser.vehicleSummary}</div>
-      )}
+      <h1 style={{ fontSize: "var(--t-xl)", marginTop: "var(--s-6)" }}>
+        {teaser.vehicleSummary}
+      </h1>
 
-      {/* Coverage first. Before the score, before the price. */}
+      {/* ------------------------------------------------------------------ */}
+      {/* coverage, before anything that looks like a conclusion             */}
+      {/* ------------------------------------------------------------------ */}
+
       <section className="section">
-        <div className="section-label">What your media covered</div>
-        <div className="panel">
-          <div style={{ display: "flex", gap: 24, flexWrap: "wrap", alignItems: "baseline" }}>
-            <div>
-              <div className="mono-label">Media coverage</div>
-              <div style={{ fontSize: 34, lineHeight: 1.2 }}>
-                {(teaser.coverage.score * 100).toFixed(0)}
-                <span className="muted" style={{ fontSize: 16 }}>
-                  %
-                </span>
-              </div>
-            </div>
-            <div style={{ flex: "1 1 320px" }}>
-              <div style={{ display: "flex", gap: 3, flexWrap: "wrap", marginBottom: 10 }}>
-                {teaser.coverage.requestedViews.map((v) => {
-                  const got = teaser.coverage.receivedViews.includes(v);
-                  return (
-                    <span
-                      key={v}
-                      title={titleCase(v)}
-                      style={{
-                        fontSize: 10,
-                        letterSpacing: "0.1em",
-                        padding: "3px 7px",
-                        border: `1px solid ${got ? "var(--tk-accent)" : "var(--tk-line)"}`,
-                        color: got ? "var(--tk-accent)" : "var(--tk-unknown)",
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      {v.replace(/_/g, " ")}
-                    </span>
-                  );
-                })}
-              </div>
-              <div className="prose muted" style={{ fontSize: 13 }}>
-                {teaser.coverage.statement}
-              </div>
-            </div>
-          </div>
+        <div className="section-label">
+          <span>What your media covered</span>
         </div>
+        <CoverageBars teaser={teaser} />
       </section>
 
-      {/* Never behind the paywall. */}
+      {/* ------------------------------------------------------------------ */}
+      {/* limits, before the hook                                            */}
+      {/* ------------------------------------------------------------------ */}
+
       <section className="section">
-        <div className="section-label">What this analysis could not assess</div>
-        <div className="panel">
-          <ul className="prose" style={{ margin: 0, paddingLeft: 20, fontSize: 13 }}>
-            {teaser.couldNotAssess.map((line, i) => (
-              <li key={i} style={{ marginBottom: 8 }}>
-                {line}
-              </li>
-            ))}
-          </ul>
+        <div className="section-label">
+          <span>What this analysis could not assess</span>
+        </div>
+        <ul
+          className="prose-sm"
+          style={{
+            margin: 0,
+            paddingLeft: 0,
+            listStyle: "none",
+            display: "grid",
+            gap: "var(--s-3)",
+          }}
+        >
+          {teaser.couldNotAssess.map((line, i) => (
+            <li
+              key={i}
+              style={{ borderLeft: "2px solid var(--tk-locked)", paddingLeft: "var(--s-3)" }}
+            >
+              {line}
+            </li>
+          ))}
+        </ul>
+        <p className="prose-sm dim" style={{ marginTop: "var(--s-4)" }}>
+          This list is free and always will be. Paying does not shorten it.
+        </p>
+      </section>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* the sample - one real finding, complete                            */}
+      {/* ------------------------------------------------------------------ */}
+
+      <section className="section">
+        <div className="section-label">
+          <span>One finding, in full, free</span>
+        </div>
+        {teaser.sample ? (
           <div
-            className="prose muted"
+            className="panel panel-edge"
             style={{
-              fontSize: 12,
-              marginTop: 16,
-              paddingTop: 12,
-              borderTop: "1px solid var(--tk-line)",
+              borderLeftColor: severityColor(teaser.sample.severity),
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(min(300px, 100%), 1fr))",
+              gap: "var(--s-5)",
+              alignItems: "start",
             }}
           >
-            This list is free and always will be. Paying does not shorten it.
+            <EvidenceCrop
+              src={assetUrl(teaser.inspectionId, teaser.sample.assetPath)}
+              box={teaser.sample.box}
+              color={severityColor(teaser.sample.severity)}
+              caption={teaser.sample.caption}
+              assetId={teaser.sample.assetId}
+              sourceWidth={teaser.sample.assetWidth}
+              sourceHeight={teaser.sample.assetHeight}
+              synthetic={teaser.sample.assetSynthetic}
+            />
+            <div>
+              <div style={{ display: "flex", gap: "var(--s-2)", alignItems: "center" }}>
+                <span
+                  className="chip chip-solid"
+                  style={{ background: severityColor(teaser.sample.severity) }}
+                >
+                  {teaser.sample.severity}
+                </span>
+                <span className="label">{titleCase(teaser.sample.type)}</span>
+                <span
+                  className="data"
+                  style={{
+                    marginLeft: "auto",
+                    color: severityColor(teaser.sample.severity),
+                  }}
+                >
+                  {teaser.sample.confidence.toFixed(2)}
+                </span>
+              </div>
+
+              <h2 style={{ fontSize: "var(--t-lg)", marginTop: "var(--s-3)" }}>
+                {teaser.sample.title}
+              </h2>
+              <p className="prose-sm" style={{ marginTop: "var(--s-3)" }}>
+                {teaser.sample.detail}
+              </p>
+              <p className="prose-sm dim" style={{ marginTop: "var(--s-3)" }}>
+                <strong style={{ fontWeight: 600 }}>Why this confidence:</strong>{" "}
+                {teaser.sample.confidenceBasis}
+              </p>
+              {/*
+                Prose, not a label. This is a two-line sentence, and the label
+                style - uppercase, 0.18em tracking - is for three-word section
+                headings. Set in it, the one sentence that tells a buyer how
+                much of the report they are not seeing was the hardest thing on
+                the page to read.
+              */}
+              <p
+                className="prose-sm"
+                style={{
+                  marginTop: "var(--s-4)",
+                  paddingTop: "var(--s-3)",
+                  borderTop: "1px solid var(--tk-rule)",
+                  color: "var(--tk-paper)",
+                }}
+              >
+                {teaser.sample.statement}
+              </p>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="panel prose-sm muted">
+            Nothing in this analysis cites a photograph, so there is no sample to
+            show. That is itself the result: the media provided did not support a
+            visual finding. The list above says what could not be assessed, and
+            why.
+          </div>
+        )}
       </section>
 
+      {/* ------------------------------------------------------------------ */}
+      {/* the count                                                          */}
+      {/* ------------------------------------------------------------------ */}
+
       <section className="section">
-        <div className="section-label">What we found</div>
+        <div className="section-label">
+          <span>What we found</span>
+        </div>
         <div className="panel">
-          <div style={{ display: "flex", gap: 32, flexWrap: "wrap" }}>
-            <div style={{ minWidth: 130 }}>
-              <div className="mono-label">Red-flag score</div>
-              <div style={{ fontSize: 46, lineHeight: 1.1, color: "var(--tk-sev-major)" }}>
+          <div className="split split-metric">
+            <div>
+              <div className="label">Red-flag score</div>
+              <div
+                className="data"
+                style={{
+                  fontSize: "var(--t-2xl)",
+                  lineHeight: 1.1,
+                  color: "var(--tk-sev-major)",
+                }}
+              >
                 {teaser.redFlagScore}
-                <span className="muted" style={{ fontSize: 18 }}>
+                <span className="dim" style={{ fontSize: "var(--t-md)" }}>
                   /100
                 </span>
               </div>
-              <div className="muted" style={{ fontSize: 11, maxWidth: 180 }}>
+              <p className="prose-sm dim" style={{ margin: "var(--s-2) 0 0" }}>
                 Severity and confidence of what was visible on this vehicle. Not a
                 grade.
-              </div>
+              </p>
             </div>
-            <div style={{ flex: "1 1 340px" }}>
-              <div style={{ fontSize: 18, marginBottom: 16 }}>{teaser.headline}</div>
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <div style={{ minWidth: 0 }}>
+              <p className="prose" style={{ margin: 0 }}>
+                {teaser.headline}
+              </p>
+              <div
+                style={{
+                  display: "flex",
+                  gap: "var(--s-2)",
+                  flexWrap: "wrap",
+                  marginTop: "var(--s-4)",
+                }}
+              >
                 {teaser.counts.map((c) => (
                   <span
                     key={c.severity}
-                    style={{
-                      fontSize: 11,
-                      letterSpacing: "0.1em",
-                      border: `1px solid ${severityColor(c.severity)}`,
-                      color: severityColor(c.severity),
-                      padding: "4px 9px",
-                      textTransform: "uppercase",
-                    }}
+                    className="chip"
+                    style={{ color: severityColor(c.severity) }}
                   >
                     {c.count} {c.severity}
                   </span>
                 ))}
-                {teaser.mechanicReferralCount > 0 && (
-                  <span
-                    style={{
-                      fontSize: 11,
-                      letterSpacing: "0.1em",
-                      border: "1px solid var(--tk-locked)",
-                      color: "var(--tk-locked)",
-                      padding: "4px 9px",
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    {teaser.mechanicReferralCount} for your mechanic
-                  </span>
-                )}
+                <span className="chip" style={{ color: "var(--tk-locked)" }}>
+                  {teaser.mechanicReferralCount} for your mechanic
+                </span>
               </div>
             </div>
           </div>
         </div>
       </section>
 
+      {/* ------------------------------------------------------------------ */}
+      {/* systems, grouped                                                   */}
+      {/* ------------------------------------------------------------------ */}
+
       <section className="section">
-        <div className="section-label">Systems</div>
-        <table>
-          <thead>
-            <tr>
-              <th style={{ width: "22%" }}>System</th>
-              <th style={{ width: "26%" }}>Status</th>
-              <th>What that means</th>
-            </tr>
-          </thead>
-          <tbody>
-            {teaser.systems.map((row) => {
-              const color = statusColor(row.status);
-              const locked = row.status === "locked_mechanic_required";
-              return (
-                <tr key={row.system}>
-                  <td style={{ textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                    {row.system}
-                  </td>
-                  <td>
-                    <span
-                      style={{
-                        fontSize: 10,
-                        letterSpacing: "0.12em",
-                        border: `1px solid ${color}`,
-                        color,
-                        padding: "2px 7px",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {statusLabel(row.status)}
-                    </span>
-                  </td>
-                  <td
-                    className="prose"
-                    style={{ fontSize: 13, color: locked ? "var(--tk-locked)" : undefined }}
-                  >
-                    {row.statement}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        <div className="prose muted" style={{ fontSize: 12, marginTop: 14 }}>
-          The four rows marked{" "}
-          {LOCKED_SYSTEM_STATEMENT.toLowerCase().replace(/\.$/, "")} are locked in
-          software. TIREKICK will not report on them at any confidence, on any
-          vehicle, ever - paid or not.
+        <div className="section-label">
+          <span>Systems</span>
         </div>
+        {/*
+          Grouped rather than tabulated. The teaser gives every non-locked row the
+          same generic sentence by design - the specific one is the product - so a
+          fourteen-row table printed "Something was found here. The full report
+          says what, where, and how sure." nine times down a column. Nine copies of
+          one sentence is not information, and it read as a paywall taunting the
+          reader rather than as a summary.
+        */}
+        <div style={{ display: "grid", gap: "var(--s-4)" }}>
+          {grouped.map((group) => (
+            <div
+              key={group.status}
+              className="panel panel-edge"
+              style={{ borderLeftColor: statusColor(group.status) }}
+            >
+              <div style={{ display: "flex", gap: "var(--s-3)", alignItems: "baseline" }}>
+                <span className="chip" style={{ color: statusColor(group.status) }}>
+                  {statusLabel(group.status)}
+                </span>
+                <span className="data dim">{group.systems.length}</span>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "var(--s-4)",
+                  margin: "var(--s-3) 0",
+                }}
+              >
+                {group.systems.map((s) => (
+                  <span key={s} className="label" style={{ color: "var(--tk-paper)" }}>
+                    {s}
+                  </span>
+                ))}
+              </div>
+              <p className="prose-sm muted" style={{ margin: 0 }}>
+                {group.statement}
+              </p>
+            </div>
+          ))}
+        </div>
+        <p className="prose-sm dim" style={{ marginTop: "var(--s-4)" }}>
+          The rows marked {LOCKED_SYSTEM_STATEMENT.toLowerCase().replace(/\.$/, "")}{" "}
+          are locked in software. TIREKICK will not report on them at any
+          confidence, on any vehicle, ever &mdash; paid or not.
+        </p>
       </section>
 
+      {/* ------------------------------------------------------------------ */}
+      {/* the offer, last                                                    */}
+      {/* ------------------------------------------------------------------ */}
+
       <section className="section">
-        <div className="section-label">The full report</div>
-        <div className="panel" style={{ borderLeft: "3px solid var(--tk-accent)" }}>
-          <div style={{ display: "flex", gap: 28, flexWrap: "wrap", alignItems: "baseline" }}>
-            <div style={{ fontSize: 38 }}>${teaser.priceUsd.toFixed(0)}</div>
-            <div className="muted" style={{ fontSize: 13 }}>
-              one report, no subscription
-            </div>
+        <div className="section-label">
+          <span>The full report</span>
+        </div>
+        <div className="panel panel-edge" style={{ borderLeftColor: "var(--tk-paper)" }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: "var(--s-3)" }}>
+            <span className="data" style={{ fontSize: "var(--t-2xl)" }}>
+              ${teaser.priceUsd.toFixed(0)}
+            </span>
+            <span className="label">one report, no subscription</span>
           </div>
 
-          <ul className="prose" style={{ margin: "18px 0 0", paddingLeft: 20, fontSize: 14 }}>
+          <ul className="prose-sm" style={{ margin: "var(--s-5) 0 0", paddingLeft: "var(--s-5)" }}>
             {teaser.unlocks.map((line, i) => (
-              <li key={i} style={{ marginBottom: 8 }}>
+              <li key={i} style={{ marginBottom: "var(--s-2)" }}>
                 {line}
               </li>
             ))}
           </ul>
 
-          {/* LAW 6. The honest number, generated from the eval gate, before the
-              button rather than after it. */}
           <div
-            className="prose"
+            className="panel"
             style={{
-              marginTop: 22,
-              padding: "14px 16px",
-              border: "1px solid var(--tk-sev-major)",
-              fontSize: 13,
-              lineHeight: 1.6,
+              marginTop: "var(--s-5)",
+              borderColor: "var(--tk-sev-major)",
+              background: "transparent",
             }}
           >
-            <div
-              className="mono-label"
-              style={{ color: "var(--tk-sev-major)", marginBottom: 8 }}
-            >
+            <div className="label" style={{ color: "var(--tk-sev-major)" }}>
               Before you pay, the accuracy position
             </div>
-            {teaser.accuracyStatement}{" "}
-            <a href="/accuracy">Read the accuracy page.</a>
+            <p className="prose-sm" style={{ margin: "var(--s-2) 0 0" }}>
+              {teaser.accuracyStatement}{" "}
+              <Link href="/accuracy">Read the accuracy page.</Link>
+            </p>
           </div>
 
-          <a
-            href={`/buy/${teaser.inspectionId}`}
-            style={{
-              display: "inline-block",
-              marginTop: 22,
-              padding: "13px 26px",
-              border: "1px solid var(--tk-accent)",
-              color: "var(--tk-accent)",
-              fontSize: 14,
-              letterSpacing: "0.12em",
-              textTransform: "uppercase",
-              textDecoration: "none",
-            }}
-          >
-            Continue to the full report
-          </a>
+          <div style={{ marginTop: "var(--s-5)" }}>
+            <Link href={`/buy/${teaser.inspectionId}`} className="btn btn-primary">
+              Continue to the full report
+            </Link>
+          </div>
         </div>
       </section>
     </div>
   );
+}
+
+/** Coverage with "missing" drawn as loudly as "arrived". */
+function CoverageBars({ teaser }: { teaser: Teaser }) {
+  const c = teaser.coverage;
+  const received = new Set(c.receivedViews);
+  return (
+    <div className="panel">
+      <div
+        style={{
+          display: "flex",
+          gap: "var(--s-5)",
+          flexWrap: "wrap",
+          alignItems: "baseline",
+        }}
+      >
+        <div>
+          <div className="label">Media coverage</div>
+          <div className="data" style={{ fontSize: "var(--t-2xl)", lineHeight: 1.1 }}>
+            {(c.score * 100).toFixed(0)}
+            <span className="dim" style={{ fontSize: "var(--t-md)" }}>
+              %
+            </span>
+          </div>
+        </div>
+        <div style={{ flex: "1 1 320px", minWidth: 0 }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(min(124px, 100%), 1fr))",
+              gap: "var(--s-3)",
+            }}
+          >
+            {c.requestedViews.map((v) => {
+              const got = received.has(v);
+              return (
+                <span
+                  key={v}
+                  className="label"
+                  style={{
+                    color: got ? "var(--tk-paper)" : "var(--tk-unknown)",
+                    borderBottom: `2px ${got ? "solid" : "dashed"} ${
+                      got ? "var(--tk-paper)" : "var(--tk-unknown)"
+                    }`,
+                    paddingBottom: 3,
+                    fontSize: "var(--t-2xs)",
+                  }}
+                >
+                  {v.replace(/_/g, " ")}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+      <p className="prose-sm muted" style={{ margin: "var(--s-4) 0 0" }}>
+        {c.statement}
+      </p>
+    </div>
+  );
+}
+
+const STATUS_ORDER: SystemStatus[] = [
+  "attention",
+  "locked_mechanic_required",
+  "cannot_determine",
+  "no_issues_visible",
+];
+
+function groupSystems(teaser: Teaser) {
+  const byStatus = new Map<SystemStatus, { systems: string[]; statement: string }>();
+  for (const row of teaser.systems) {
+    const entry = byStatus.get(row.status) ?? { systems: [], statement: row.statement };
+    entry.systems.push(titleCase(row.system));
+    byStatus.set(row.status, entry);
+  }
+  return STATUS_ORDER.filter((s) => byStatus.has(s)).map((status) => ({
+    status,
+    ...byStatus.get(status)!,
+  }));
 }

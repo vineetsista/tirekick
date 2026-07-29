@@ -620,3 +620,131 @@ not. It is `noindex`, because a shared report should not end up in a search inde
 attached to somebody's car. The print stylesheet uses a fixed `body::after`, which
 is what makes it a *running* footer rather than a footer, and hides the watermark
 on paper where it would be ink across the evidence.
+
+### D-044 - Exactly one finding crosses the paywall, and it is the best one
+**P8.** The free page sold "every finding, with the photograph it came from and a
+box drawn on it" and, for seven phases, rendered no photograph at all. A stranger
+deciding whether to spend $25 on a visual evidence product could not see a single
+piece of visual evidence first. That asks them to take the whole thing on faith,
+which is the opposite of what this product claims to be for.
+
+So `Teaser.sample` carries one finding in full - the picture, the box, the
+confidence, and the sentence explaining why that confidence and not a higher one.
+Not a blurred preview and not a cropped teaser of a teaser.
+
+It is the *worst-severity, best-evidenced* finding about the vehicle, not the
+mildest. Showing the least of what was found in order to hold the best back is a
+sales tactic, and the coverage block directly above it already states how much of
+the car this could speak for. Model-level records are excluded: a recall campaign
+is true of every car of that model year, so advertising this report with one
+would be advertising it with a fact about a car the buyer has never seen. Locked
+systems are excluded twice over - `apply_safety_law` has already converted them to
+referrals, and `_sample` skips them again, because the free page is the most-read
+surface in the product and a brake claim arriving there would be the worst
+available place for that clamp to have failed (LAW 2).
+
+The field is deliberately singular and deliberately named. `parseTeaser` still
+refuses any payload carrying `findings` or `assets`, unchanged and exactly as
+strict; the guard it replaces is not loosened but cut to shape. `test_teaser.py`
+deletes `sample` from the payload and holds everything remaining to the original
+standard, then separately asserts that every finding except the sampled one is
+absent from the whole free payload. A list here would be a paywall with a length
+knob on it, and the knob would be turned by whoever next wants the free page to
+convert better.
+
+### D-045 - An asset records its pixel dimensions, because a box is a fraction of them
+**P8.** Every `image_region` in a report is four numbers between 0 and 1. Nothing
+recorded what they were fractions *of*. The report hashed the exact bytes a claim
+was written against - so a golden test could prove the pixels had not changed -
+while never recording their shape, which meant a reader could not redraw the box
+or confirm it lands where the finding says it does. A citation you cannot check is
+a citation in form only.
+
+`Asset.width` and `Asset.height` are read from the image header on ingest.
+Failure is not an error: a corrupt file or a format Pillow cannot open yields
+`(None, None)`, and every consumer treats absent dimensions as "cannot crop to
+this" rather than guessing. `cropFor` returns null and the viewer shows the whole
+frame, because a crop that is approximately right is evidence that is
+approximately honest.
+
+### D-046 - The evidence is the picture; the coordinates stay as the citation
+**P8.** `Overlay.tsx` has carried the comment "evidence and claim are never more
+than one interaction apart (LAW 1)" since P2. On the rendered dossier the gallery
+sat at roughly 1,300px and the findings began at roughly 5,000px, on a page
+14,282px tall. What actually sat beside each claim was
+`photo_01 [0.08, 0.62, 0.34, 0.14]`. A buyer reading "corrosion visible along the
+driver-side rocker panel" could not see the corrosion without scrolling four
+thousand pixels and then finding the right thumbnail among thirteen.
+
+The comment described an intention and the layout did something else, and nothing
+failed, because a claim about layout written in a docstring is not a test.
+
+`crop.ts` computes the geometry in source pixels and returns percentages, so the
+cited region renders at a readable size with no canvas, no client JavaScript and
+no image processing - and lands exactly where the finding says it does. The
+magnification is stated on the frame, because a crop is a claim about scale as
+much as position and a 4x blow-up of a 60px region should not read as a clear
+photograph of a large defect. The coordinates are still printed: they are what
+makes the claim checkable against the hash. They are simply not the evidence any
+more. `ReportView.test.tsx` now asserts the adjacency instead of trusting the
+comment.
+
+### D-047 - The coverage map lights from the photograph, not from the finding's system
+**P8.** The signature visual is a plan view of the vehicle showing three states
+per region - flagged, photographed-and-nothing-visible, and never photographed -
+with the four locked systems drawn where they physically live. Every other
+inspection interface draws a car to decorate a column of green ticks. This product
+cannot produce one, and *where it looked* is the most honest thing it knows.
+
+Two things about it are decisions rather than drawing. First, a zone flags only
+when a finding's `image_region` evidence cites an asset whose `viewClass` is that
+zone. Keying it off the finding's `system` - the obvious implementation, and the
+first one - lit the front, the rear and both flanks for one corrosion finding on a
+rocker panel, because all four are `system: "exterior"`. The component reported
+damage on parts of the car nothing had been found on, which is the precise failure
+it exists to prevent.
+
+Second, the row of views with no place on the drawing is derived from
+`coverage.requestedViews` rather than from a list kept in the component. The
+hardcoded version was three entries long while the contract had fifteen view
+classes and the pipeline requested twelve. It agreed with the pipeline on the day
+it was written. A view added to `REQUESTED_VIEWS` later would have gone missing
+from the one component whose entire purpose is showing what was not covered.
+
+### D-048 - There is no brand hue
+**P8.** An accent green existed from P0 to P7 and was used for links, active
+states, the checkout button, and the `no_issues_visible` system status. The last
+of those is the problem: it painted "nothing adverse was visible in the
+photographs you sent" in the same colour every competitor uses for *pass*, which
+is the one thing LAW 2 says this product may never say. A hue whose most natural
+application is forbidden is a hue that will eventually be applied anyway.
+
+So it was removed rather than restricted. The only chroma on the page is the
+meaning ramp - four severities, plus locked and unknown, which sit off the ramp on
+purpose. A primary action is `--tk-paper` on `--tk-void`: the highest contrast
+available, earned by contrast rather than by colour. The base is warm rather than
+blue-black, because against a cool ground the severity ramp reads as neon, and a
+report about somebody's actual money should not look like a game.
+
+Removing a token is a change to every file that used it, and three of the four
+call sites were in files this phase never opened - including the checkout button,
+which rendered as near-black text on a transparent background on the one page
+where money changes hands. See D-049.
+
+### D-049 - A second copy of a definition gets a parity test, not a comment
+**P8.** This project has now found the same failure five times: a shape defined
+twice, kept in step by attention, drifting the moment attention moved. The enums
+(caught, P2), the laws (caught, P7), the landing page (caught, P6), and this
+phase: the `assets` table silently had nowhere to put the new dimensions, the
+stylesheet deleted a token four components still asked for, and every one of the
+fourteen colour values in BRAND.md was wrong.
+
+The rule from here: a duplicated definition ships with the test that compares the
+copies, in the same change. Three exist now - `column-parity.test.ts` (contract
+fields against Postgres columns), `tokens.test.ts` (every `var(--tk-*)` in the
+source against `globals.css`, and the BRAND.md colour table against both), and the
+existing `enum-parity.test.ts`. Each was written by first breaking the thing it
+checks and confirming it went red.
+
+A comment saying "mirrored in X" is not this. It is a note asking a future reader
+to do the check by hand, and the evidence is that they do not.

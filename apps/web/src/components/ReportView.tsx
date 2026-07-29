@@ -1,31 +1,46 @@
 import {
   LOCKED_SYSTEM_STATEMENT,
   SHARE_FOOTER,
-  type Finding,
+  type PriceCheck,
   type Report,
   type VehicleRecord,
+  type WalkaroundTrack,
 } from "@tirekick/shared";
 import { AudioTrackView } from "./AudioTrackView";
 import { ConfidenceBar } from "./ConfidenceBar";
+import { CoverageMap } from "./CoverageMap";
+import { FindingCard } from "./FindingCard";
 import { Overlay, annotationsFor } from "./Overlay";
+import { ReportNav } from "./ReportNav";
 import {
   assetUrl,
-  severityColor,
+  bySeverity,
+  partitionFindings,
   statusColor,
   statusLabel,
-  titleCase,
 } from "@/lib/report";
 
 function Section({
+  id,
   label,
+  note,
   children,
 }: {
+  id: string;
   label: string;
+  note?: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="section">
-      <div className="section-label">{label}</div>
+    <section className="section" id={id}>
+      <div className="section-label">
+        <span>{label}</span>
+        {note && (
+          <span className="dim" style={{ letterSpacing: "0.04em", textTransform: "none" }}>
+            {note}
+          </span>
+        )}
+      </div>
       {children}
     </section>
   );
@@ -35,66 +50,10 @@ function Section({
 function Banner({ text }: { text: string }) {
   return (
     <div
-      className="prose"
-      style={{
-        border: "1px solid var(--tk-locked)",
-        borderLeftWidth: 4,
-        background: "rgba(163,113,247,0.07)",
-        padding: "16px 18px",
-        fontSize: 14,
-        lineHeight: 1.6,
-      }}
+      className="panel panel-edge prose-sm"
+      style={{ borderLeftColor: "var(--tk-locked)" }}
     >
-      {text}{" "}
-      <a href="/accuracy">See how accurate TIREKICK actually is, including the misses.</a>
-    </div>
-  );
-}
-
-/**
- * Coverage renders BEFORE the verdict. LIABILITY section 9 - a report built on
- * six photos of the good side must say so next to the conclusion, or the
- * conclusion reads as more than it is.
- */
-function Coverage({ report }: { report: Report }) {
-  const c = report.coverage;
-  return (
-    <div className="panel">
-      <div style={{ display: "flex", gap: 24, flexWrap: "wrap", alignItems: "baseline" }}>
-        <div>
-          <div className="mono-label">Media coverage</div>
-          <div style={{ fontSize: 34, lineHeight: 1.2 }}>
-            {(c.score * 100).toFixed(0)}
-            <span className="muted" style={{ fontSize: 16 }}>%</span>
-          </div>
-        </div>
-        <div style={{ flex: "1 1 320px" }}>
-          <div style={{ display: "flex", gap: 3, flexWrap: "wrap", marginBottom: 10 }}>
-            {c.requestedViews.map((v) => {
-              const got = c.receivedViews.includes(v);
-              return (
-                <span
-                  key={v}
-                  title={titleCase(v)}
-                  style={{
-                    fontSize: 10,
-                    letterSpacing: "0.1em",
-                    padding: "3px 7px",
-                    border: `1px solid ${got ? "var(--tk-accent)" : "var(--tk-line)"}`,
-                    color: got ? "var(--tk-accent)" : "var(--tk-unknown)",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  {v.replace(/_/g, " ")}
-                </span>
-              );
-            })}
-          </div>
-          <div className="prose muted" style={{ fontSize: 13 }}>
-            {c.statement}
-          </div>
-        </div>
-      </div>
+      {text} <a href="/accuracy">See how accurate TIREKICK actually is, including the misses.</a>
     </div>
   );
 }
@@ -103,39 +62,62 @@ function Verdict({ report }: { report: Report }) {
   const v = report.verdict;
   return (
     <div className="panel">
-      <div style={{ display: "flex", gap: 28, flexWrap: "wrap" }}>
-        <div style={{ minWidth: 120 }}>
-          <div className="mono-label">Red-flag score</div>
-          <div style={{ fontSize: 46, lineHeight: 1.1, color: "var(--tk-sev-major)" }}>
+      <div className="split split-metric" style={{ gap: "var(--s-6)" }}>
+        <div>
+          <div className="label">Red-flag score</div>
+          <div
+            className="data"
+            style={{
+              fontSize: "var(--t-3xl)",
+              lineHeight: 1,
+              color: "var(--tk-sev-major)",
+            }}
+          >
             {v.redFlagScore}
-            <span className="muted" style={{ fontSize: 18 }}>/100</span>
+            <span className="dim" style={{ fontSize: "var(--t-lg)" }}>
+              /100
+            </span>
           </div>
-          <div className="muted" style={{ fontSize: 11, maxWidth: 180 }}>
+          <p className="prose-sm dim" style={{ margin: "var(--s-3) 0 0" }}>
             Severity and confidence of what was visible. Not a grade, and not a
             statement about the vehicle overall.
-          </div>
+          </p>
         </div>
-        <div style={{ flex: "1 1 380px" }}>
-          <div style={{ fontSize: 18, marginBottom: 12 }}>{v.headline}</div>
-          <div className="prose muted" style={{ fontSize: 13 }}>
+        <div style={{ minWidth: 0 }}>
+          <p className="prose" style={{ margin: 0, fontSize: "var(--t-lg)" }}>
+            {v.headline}
+          </p>
+          <p className="prose-sm muted" style={{ marginTop: "var(--s-4)" }}>
             {v.summary}
-          </div>
+          </p>
         </div>
       </div>
 
       <div
         style={{
-          marginTop: 24,
-          paddingTop: 20,
-          borderTop: "1px solid var(--tk-line)",
+          marginTop: "var(--s-5)",
+          paddingTop: "var(--s-5)",
+          borderTop: "1px solid var(--tk-rule)",
         }}
       >
-        <div className="mono-label" style={{ color: "var(--tk-locked)" }}>
+        <div className="label" style={{ color: "var(--tk-locked)" }}>
           What this analysis could not assess
         </div>
-        <ul className="prose" style={{ margin: "12px 0 0", paddingLeft: 20, fontSize: 13 }}>
+        <ul
+          className="prose-sm"
+          style={{
+            margin: "var(--s-3) 0 0",
+            paddingLeft: 0,
+            listStyle: "none",
+            display: "grid",
+            gap: "var(--s-3)",
+          }}
+        >
           {v.couldNotAssess.map((line, i) => (
-            <li key={i} style={{ marginBottom: 6 }}>
+            <li
+              key={i}
+              style={{ borderLeft: "2px solid var(--tk-locked)", paddingLeft: "var(--s-3)" }}
+            >
               {line}
             </li>
           ))}
@@ -145,122 +127,195 @@ function Verdict({ report }: { report: Report }) {
   );
 }
 
-function FindingCard({ finding }: { finding: Finding }) {
-  const color = severityColor(finding.severity);
+/**
+ * The walkaround, which the schema has carried since P7 and nothing rendered.
+ *
+ * `report.walkaround` reached the JSON with all of it - 28 frames sampled, 5
+ * analysed, 4 dropped blurred, 4 dropped duplicate - and the viewer dropped the
+ * lot on the floor. The only trace was one sentence buried in the
+ * `couldNotAssess` list. A buyer who uploaded a video had no way to find out what
+ * happened to it.
+ *
+ * The discards are the interesting half. "5 frames analysed" without "23
+ * discarded" invites the reader to assume the whole video was examined.
+ */
+function Walkaround({ track }: { track: WalkaroundTrack }) {
+  const rows: [string, number | string][] = [
+    ["Video length", `${track.durationSec.toFixed(1)}s`],
+    ["Frames sampled", track.framesSampled],
+    ["Frames analysed", track.framesAnalysed],
+    ["Dropped - too blurred", track.droppedBlurred],
+    ["Dropped - duplicate view", track.droppedDuplicate],
+    ["Dropped - over the cap", track.droppedOverCap],
+  ];
   return (
-    <div
-      id={finding.id}
-      className="panel"
-      style={{ borderLeft: `3px solid ${color}`, scrollMarginTop: 24 }}
-    >
+    <div className="panel">
       <div
         style={{
-          display: "flex",
-          justifyContent: "space-between",
-          gap: 16,
-          flexWrap: "wrap",
-          alignItems: "center",
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(130px, 100%), 1fr))",
+          gap: "var(--s-4)",
         }}
       >
-        <div>
-          <span
-            style={{
-              fontSize: 10,
-              letterSpacing: "0.14em",
-              background: color,
-              color: "#0a0c0e",
-              padding: "2px 7px",
-            }}
-          >
-            {finding.severity.toUpperCase()}
+        {rows.map(([label, value]) => (
+          <div key={label}>
+            <div className="label">{label}</div>
+            <div className="data" style={{ fontSize: "var(--t-lg)" }}>
+              {value}
+            </div>
+          </div>
+        ))}
+      </div>
+      <p className="prose-sm muted" style={{ marginTop: "var(--s-5)" }}>
+        {track.statement}
+      </p>
+      {track.frameTimesSec.length > 0 && (
+        <p className="prose-sm dim" style={{ marginTop: "var(--s-3)" }}>
+          Frames kept from{" "}
+          <span className="data">
+            {track.frameTimesSec.map((t) => `${t.toFixed(1)}s`).join(", ")}
           </span>
-          <span className="mono-label" style={{ marginLeft: 10 }}>
-            {finding.type.replace(/_/g, " ")} / {finding.engine}
+          . Each was then classified and analysed exactly as an uploaded
+          photograph would have been.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function PriceSection({ price }: { price: PriceCheck }) {
+  /*
+   * The fair range used to render in the brand accent, which was green, on every
+   * report regardless of the verdict. On this fixture the verdict is
+   * `above_range` - the seller is asking more than the comparables support - and
+   * the number was coloured as though that were good news.
+   *
+   * Colour follows the verdict now, and `in_range` is deliberately uncoloured.
+   * A price the comps support is not a win, it is the absence of a problem, and
+   * this interface does not congratulate anyone.
+   */
+  const verdictColor: Record<string, string> = {
+    above_range: "var(--tk-sev-major)",
+    below_range: "var(--tk-sev-info)",
+    in_range: "var(--tk-paper)",
+    cannot_determine: "var(--tk-unknown)",
+  };
+  const color = verdictColor[price.verdict] ?? "var(--tk-paper)";
+
+  return (
+    <div className="panel">
+      <div style={{ display: "flex", gap: "var(--s-7)", flexWrap: "wrap" }}>
+        <div>
+          <div className="label">Asking</div>
+          <div className="data" style={{ fontSize: "var(--t-xl)" }}>
+            ${price.askingPriceUsd.toLocaleString()}
+          </div>
+        </div>
+        <div>
+          <div className="label">Supported by these comps</div>
+          <div className="data" style={{ fontSize: "var(--t-xl)" }}>
+            ${Math.round(price.fairRangeUsd.low).toLocaleString()}&ndash;$
+            {Math.round(price.fairRangeUsd.high).toLocaleString()}
+          </div>
+        </div>
+        <div>
+          <div className="label">Verdict</div>
+          <span className="chip" style={{ color, fontSize: "var(--t-xs)" }}>
+            {price.verdict.replace(/_/g, " ")}
           </span>
         </div>
-        <ConfidenceBar value={finding.confidence} color={color} />
       </div>
 
-      <div style={{ fontSize: 16, margin: "14px 0 8px" }}>{finding.title}</div>
-      <div className="prose" style={{ fontSize: 13, marginBottom: 14 }}>
-        {finding.detail}
+      <p className="prose" style={{ marginTop: "var(--s-5)" }}>
+        {price.verdictStatement}
+      </p>
+
+      <div style={{ marginTop: "var(--s-6)" }}>
+        <div className="label">The comps behind this range</div>
+        <div className="table-scroll">
+          <table style={{ marginTop: "var(--s-2)" }}>
+            <thead>
+              <tr>
+                <th>Listing</th>
+                <th>Year / trim</th>
+                <th>Mileage</th>
+                <th>Asking</th>
+              </tr>
+            </thead>
+            <tbody>
+              {price.comps.map((c) => (
+                <tr key={c.id}>
+                  <td>
+                    <div className="prose-sm dim">{c.sourceNote}</div>
+                  </td>
+                  <td>
+                    {c.year} {c.trim ?? ""}
+                  </td>
+                  <td className="data">{c.mileage.toLocaleString()}</td>
+                  <td className="data">${c.askingPriceUsd.toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <div className="prose muted" style={{ fontSize: 12, marginBottom: 14 }}>
-        <strong style={{ fontWeight: 500 }}>Why this confidence:</strong>{" "}
-        {finding.confidenceBasis}
-      </div>
-
-      {/* LAW 1 - the evidence is rendered with the claim, never elsewhere. */}
-      <div style={{ borderTop: "1px solid var(--tk-line)", paddingTop: 12 }}>
-        <div className="mono-label">Evidence</div>
-        <ul style={{ margin: "8px 0 0", paddingLeft: 18, fontSize: 12 }}>
-          {finding.evidence.map((ev, i) => (
-            <li key={i} className="muted" style={{ marginBottom: 4 }}>
-              {ev.kind === "image_region" && (
-                <>
-                  <span style={{ color: "var(--tk-text)" }}>{ev.assetId}</span> - {ev.caption}{" "}
-                  <span style={{ color: "var(--tk-unknown)" }}>
-                    [{ev.box.x.toFixed(2)}, {ev.box.y.toFixed(2)}, {ev.box.w.toFixed(2)},{" "}
-                    {ev.box.h.toFixed(2)}]
-                  </span>
-                </>
-              )}
-              {ev.kind === "audio_segment" && (
-                <>
-                  <span style={{ color: "var(--tk-text)" }}>{ev.assetId}</span> -{" "}
-                  {ev.startSec.toFixed(1)}s to {ev.endSec.toFixed(1)}s - {ev.caption}
-                </>
-              )}
-              {ev.kind === "data_record" && (
-                <>
-                  <span style={{ color: "var(--tk-text)" }}>{ev.source}</span> /{" "}
-                  {ev.recordId} - {ev.caption}{" "}
-                  <span style={{ color: "var(--tk-unknown)" }}>({ev.retrievedAt})</span>
-                </>
-              )}
-              {ev.kind === "document_excerpt" && (
-                <>
-                  <span style={{ color: "var(--tk-text)" }}>{ev.assetId}</span> - &ldquo;
-                  {ev.excerpt}&rdquo;
-                </>
-              )}
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      {(finding.estimatedCostUsd || finding.sellerQuestion || finding.mechanicCheck) && (
-        <div
-          style={{
-            marginTop: 14,
-            paddingTop: 12,
-            borderTop: "1px solid var(--tk-line)",
-            fontSize: 12,
-          }}
-          className="prose"
-        >
-          {finding.estimatedCostUsd && (
-            <div style={{ marginBottom: 6 }}>
-              <span className="mono-label">Est. repair</span>{" "}
-              <span style={{ color }}>
-                ${finding.estimatedCostUsd.low.toLocaleString()} - $
-                {finding.estimatedCostUsd.high.toLocaleString()}
-              </span>
-            </div>
-          )}
-          {finding.sellerQuestion && (
-            <div style={{ marginBottom: 6 }}>
-              <span className="mono-label">Ask the seller</span> {finding.sellerQuestion}
-            </div>
-          )}
-          {finding.mechanicCheck && (
-            <div>
-              <span className="mono-label">Ask a mechanic</span> {finding.mechanicCheck}
-            </div>
-          )}
+      {price.excluded.length > 0 && (
+        <div style={{ marginTop: "var(--s-6)" }}>
+          <div className="label" style={{ color: "var(--tk-unknown)" }}>
+            Listings you gave us that were left out, and why
+          </div>
+          <div className="table-scroll">
+            <table style={{ marginTop: "var(--s-2)" }}>
+              <tbody>
+                {price.excluded.map((e) => (
+                  <tr key={e.compId}>
+                    <td className="data" style={{ whiteSpace: "nowrap" }}>
+                      {e.compId}
+                    </td>
+                    <td>
+                      <div className="prose-sm dim">{e.reason}</div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
+
+      {price.deductions.length > 0 && (
+        <div style={{ marginTop: "var(--s-6)" }}>
+          <div className="label">Deductions, each linked to a finding</div>
+          <div className="table-scroll">
+            <table style={{ marginTop: "var(--s-2)" }}>
+              <tbody>
+                {price.deductions.map((d) => (
+                  <tr key={d.findingId}>
+                    <td>
+                      <a href={`#${d.findingId}`}>{d.label}</a>
+                    </td>
+                    <td
+                      className="data"
+                      style={{ color: "var(--tk-sev-major)", whiteSpace: "nowrap" }}
+                    >
+                      &minus;${d.lowUsd.toLocaleString()} to &minus;$
+                      {d.highUsd.toLocaleString()}
+                    </td>
+                    <td>
+                      <div className="prose-sm dim">{d.basis}</div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      <p className="prose-sm dim" style={{ marginTop: "var(--s-5)" }}>
+        {price.normalizationNotes}
+      </p>
     </div>
   );
 }
@@ -287,502 +342,565 @@ function VehicleRecordSection({ vehicle }: { vehicle: VehicleRecord }) {
   ];
 
   return (
-    <Section label="Vehicle record">
-      <div className="panel">
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-            gap: 16,
-          }}
-        >
-          {fields.map(([label, value]) => (
-            <div key={label}>
-              <div className="mono-label">{label}</div>
-              <div>{value === null || value === "" ? "-" : value}</div>
-            </div>
-          ))}
-        </div>
-
-        <div className="prose muted" style={{ fontSize: 12, marginTop: 16 }}>
-          {vehicle.vinStatement}
-        </div>
-
-        {vehicle.decodeError && (
-          <div
-            className="prose"
-            style={{
-              marginTop: 12,
-              fontSize: 13,
-              color: "var(--tk-sev-major)",
-              border: "1px solid var(--tk-sev-major)",
-              padding: "10px 14px",
-            }}
-          >
-            {vehicle.decodeError}
+    <div className="panel">
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(140px, 100%), 1fr))",
+          gap: "var(--s-4)",
+        }}
+      >
+        {fields.map(([label, value]) => (
+          <div key={label}>
+            <div className="label">{label}</div>
+            <div className="data">{value === null || value === "" ? "—" : value}</div>
           </div>
-        )}
-
-        {/* The caveat leads the recall count, never trails it. */}
-        <div
-          style={{
-            marginTop: 20,
-            paddingTop: 16,
-            borderTop: "1px solid var(--tk-line)",
-          }}
-        >
-          <div className="mono-label" style={{ color: "var(--tk-locked)" }}>
-            Recalls - what this list is
-          </div>
-          <div
-            className="prose"
-            style={{ fontSize: 13, marginTop: 8, color: "var(--tk-locked)" }}
-          >
-            {vehicle.recallScope}
-          </div>
-        </div>
-
-        {vehicle.complaintSummary && (
-          <div style={{ marginTop: 20 }}>
-            <div className="mono-label">Owner complaints for this model</div>
-            <div style={{ display: "flex", gap: 24, flexWrap: "wrap", marginTop: 10 }}>
-              <div>
-                <div style={{ fontSize: 26 }}>
-                  {vehicle.complaintSummary.total.toLocaleString()}
-                </div>
-                <div className="muted" style={{ fontSize: 11 }}>
-                  complaints filed
-                </div>
-              </div>
-              <div style={{ flex: "1 1 320px" }}>
-                <table style={{ marginTop: 0 }}>
-                  <tbody>
-                    {vehicle.complaintSummary.topComponents.map((c) => (
-                      <tr key={c.component}>
-                        <td style={{ fontSize: 12 }}>{c.component}</td>
-                        <td
-                          className="muted"
-                          style={{ fontSize: 12, textAlign: "right", width: 70 }}
-                        >
-                          {c.count.toLocaleString()}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            <div className="prose muted" style={{ fontSize: 12, marginTop: 12 }}>
-              {vehicle.complaintSummary.scope}
-            </div>
-          </div>
-        )}
-
-        {/* LAW 1 - every lookup behind this section, with when and from where. */}
-        {vehicle.sources.length > 0 && (
-          <div
-            style={{
-              marginTop: 20,
-              paddingTop: 16,
-              borderTop: "1px solid var(--tk-line)",
-            }}
-          >
-            <div className="mono-label">Sources</div>
-            <ul style={{ margin: "10px 0 0", paddingLeft: 18, fontSize: 12 }}>
-              {vehicle.sources.map((s) => (
-                <li key={s.url + s.retrievedAt} className="muted" style={{ marginBottom: 8 }}>
-                  <span style={{ color: "var(--tk-text)" }}>{s.source}</span>{" "}
-                  <span style={{ color: "var(--tk-unknown)" }}>
-                    (retrieved {s.retrievedAt})
-                  </span>
-                  <div style={{ marginTop: 2 }}>{s.statement}</div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+        ))}
       </div>
-    </Section>
+
+      <p className="prose-sm dim" style={{ marginTop: "var(--s-5)" }}>
+        {vehicle.vinStatement}
+      </p>
+
+      {vehicle.decodeError && (
+        <div
+          className="panel prose-sm"
+          style={{
+            marginTop: "var(--s-3)",
+            color: "var(--tk-sev-major)",
+            borderColor: "var(--tk-sev-major)",
+            background: "transparent",
+          }}
+        >
+          {vehicle.decodeError}
+        </div>
+      )}
+
+      {/* The caveat leads the recall count, never trails it. */}
+      <div
+        style={{
+          marginTop: "var(--s-5)",
+          paddingTop: "var(--s-4)",
+          borderTop: "1px solid var(--tk-rule)",
+        }}
+      >
+        <div className="label" style={{ color: "var(--tk-locked)" }}>
+          Recalls &mdash; what this list is
+        </div>
+        <p className="prose-sm" style={{ marginTop: "var(--s-2)", color: "var(--tk-locked)" }}>
+          {vehicle.recallScope}
+        </p>
+      </div>
+
+      {vehicle.complaintSummary && (
+        <div style={{ marginTop: "var(--s-5)" }}>
+          <div className="label">Owner complaints for this model</div>
+          <div
+            style={{
+              display: "flex",
+              gap: "var(--s-6)",
+              flexWrap: "wrap",
+              marginTop: "var(--s-3)",
+            }}
+          >
+            <div>
+              <div className="data" style={{ fontSize: "var(--t-xl)" }}>
+                {vehicle.complaintSummary.total.toLocaleString()}
+              </div>
+              <div className="label">complaints filed</div>
+            </div>
+            <div style={{ flex: "1 1 320px", minWidth: 0 }}>
+              <ComplaintBars components={vehicle.complaintSummary.topComponents} />
+            </div>
+          </div>
+          <p className="prose-sm dim" style={{ marginTop: "var(--s-4)" }}>
+            {vehicle.complaintSummary.scope}
+          </p>
+        </div>
+      )}
+
+      {/* LAW 1 - every lookup behind this section, with when and from where. */}
+      {vehicle.sources.length > 0 && (
+        <div
+          style={{
+            marginTop: "var(--s-5)",
+            paddingTop: "var(--s-4)",
+            borderTop: "1px solid var(--tk-rule)",
+          }}
+        >
+          <div className="label">Sources</div>
+          <ul style={{ margin: "var(--s-3) 0 0", paddingLeft: "var(--s-5)" }}>
+            {vehicle.sources.map((s) => (
+              <li key={s.url + s.retrievedAt} className="prose-sm dim" style={{ marginBottom: "var(--s-2)" }}>
+                <span style={{ color: "var(--tk-paper)" }}>{s.source}</span>{" "}
+                <span className="data" style={{ color: "var(--tk-pencil)" }}>
+                  (retrieved {s.retrievedAt})
+                </span>
+                <div>{s.statement}</div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Complaint counts as bars. A column of numbers hides the shape of the data. */
+function ComplaintBars({
+  components,
+}: {
+  components: { component: string; count: number }[];
+}) {
+  const max = Math.max(1, ...components.map((c) => c.count));
+  return (
+    <div style={{ display: "grid", gap: "var(--s-2)" }}>
+      {components.map((c) => (
+        <div key={c.component} style={{ display: "grid", gap: 3 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: "var(--s-3)",
+              fontSize: "var(--t-sm)",
+            }}
+          >
+            <span>{c.component}</span>
+            <span className="data dim">{c.count.toLocaleString()}</span>
+          </div>
+          <div style={{ height: 4, background: "var(--tk-rule)" }}>
+            <div
+              style={{
+                width: `${(c.count / max) * 100}%`,
+                height: "100%",
+                background: "var(--tk-graphite)",
+              }}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 
 export function ReportView({ report }: { report: Report }) {
   const photos = report.assets.filter((a) => a.kind === "photo");
+  const assets = new Map(report.assets.map((a) => [a.id, a]));
+  const { vehicle: vehicleFindings, model: modelFindings } = partitionFindings(
+    report.findings,
+  );
+  const frameIds = new Set(report.walkaround?.frameAssetIds ?? []);
+
+  const sections = [
+    { id: "coverage", label: "Coverage" },
+    { id: "verdict", label: "Verdict" },
+    { id: "findings", label: "Findings", count: vehicleFindings.length },
+    ...(modelFindings.length ? [{ id: "recalls", label: "Recalls", count: modelFindings.length }] : []),
+    ...(report.mechanicReferrals.length
+      ? [{ id: "mechanic", label: "For your mechanic", count: report.mechanicReferrals.length }]
+      : []),
+    { id: "gallery", label: "Media", count: photos.length },
+    { id: "systems", label: "Systems" },
+    ...(report.audio ? [{ id: "audio", label: "Audio" }] : []),
+    ...(report.vehicle ? [{ id: "record", label: "Vehicle record" }] : []),
+    ...(report.price ? [{ id: "price", label: "Price" }] : []),
+    ...(report.sellerQuestions.length
+      ? [{ id: "questions", label: "Questions", count: report.sellerQuestions.length }]
+      : []),
+    ...(report.negotiationScript.length ? [{ id: "script", label: "Script" }] : []),
+  ];
 
   return (
-    <div className="wrap" style={{ paddingTop: 40, paddingBottom: 96 }}>
-      <header
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "baseline",
-          flexWrap: "wrap",
-          gap: 12,
-          paddingBottom: 20,
-          borderBottom: "1px solid var(--tk-line)",
-        }}
-      >
-        <div style={{ fontSize: 22, letterSpacing: "0.22em", fontWeight: 700 }}>
-          TIREKICK
-        </div>
-        <div className="mono-label">
-          {report.reportId} / {report.generatedAt} / mode: {report.mode}
-        </div>
-      </header>
+    <>
+      <ReportNav sections={sections} />
 
-      <div style={{ marginTop: 24 }}>
-        <Banner text={report.banner} />
-      </div>
-
-      {report.containsSyntheticMedia && (
-        <div
-          className="prose"
+      <div className="wrap" style={{ paddingTop: "var(--s-6)", paddingBottom: "var(--s-9)" }}>
+        <header
           style={{
-            marginTop: 12,
-            border: "1px solid var(--tk-locked)",
-            padding: "12px 16px",
-            fontSize: 13,
-            color: "var(--tk-locked)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "baseline",
+            flexWrap: "wrap",
+            gap: "var(--s-3)",
+            paddingBottom: "var(--s-4)",
+            borderBottom: "1px solid var(--tk-rule)",
           }}
         >
-          This report was generated from synthetic fixture media. The images are
-          drawings, not photographs, and no statement here about condition
-          describes a real vehicle. The federal records below are real: the VIN
-          carries genuine manufacturer codes with an invented serial, so it
-          decodes to a real model and identifies nobody&rsquo;s car.
+          <h1 style={{ fontSize: "var(--t-xl)" }}>
+            {report.vehicle
+              ? [report.vehicle.decoded.year, report.vehicle.decoded.make, report.vehicle.decoded.model]
+                  .filter(Boolean)
+                  .join(" ")
+              : "Inspection report"}
+          </h1>
+          <span className="label data">
+            {report.reportId} / {report.generatedAt} / mode: {report.mode}
+          </span>
+        </header>
+
+        <div style={{ marginTop: "var(--s-5)" }}>
+          <Banner text={report.banner} />
         </div>
-      )}
 
-      {/* Coverage before conclusions. */}
-      <Section label="Coverage">
-        <Coverage report={report} />
-      </Section>
+        {report.containsSyntheticMedia && (
+          <div
+            className="panel prose-sm"
+            style={{
+              marginTop: "var(--s-3)",
+              borderColor: "var(--tk-locked)",
+              color: "var(--tk-locked)",
+            }}
+          >
+            This report was generated from synthetic fixture media. The images are
+            drawings, not photographs, and no statement here about condition
+            describes a real vehicle. The federal records below are real: the VIN
+            carries genuine manufacturer codes with an invented serial, so it
+            decodes to a real model and identifies nobody&rsquo;s car.
+          </div>
+        )}
 
-      <Section label="Verdict">
-        <Verdict report={report} />
-      </Section>
+        {/* Coverage before conclusions. LIABILITY section 9. */}
+        <Section id="coverage" label="What was looked at">
+          <CoverageMap report={report} />
+        </Section>
 
-      <Section label="Evidence gallery">
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
-            gap: 20,
-          }}
+        <Section id="verdict" label="Verdict">
+          <Verdict report={report} />
+        </Section>
+
+        {/* ---------------------------------------------------------------- */}
+        {/* findings about THIS CAR                                          */}
+        {/* ---------------------------------------------------------------- */}
+
+        <Section
+          id="findings"
+          label={`Findings about this vehicle (${vehicleFindings.length})`}
+          note="worst first"
         >
-          {photos.map((asset) => {
-            const annotations = annotationsFor(
-              asset.id,
-              report.findings,
-              report.mechanicReferrals,
-            );
-            return (
-              <div key={asset.id}>
-                <Overlay
-                  src={assetUrl(report.inspectionId, asset.path)}
-                  alt={`${asset.viewClass ?? "unclassified"} - ${asset.id}`}
-                  annotations={annotations}
-                  synthetic={asset.synthetic}
+          {vehicleFindings.length > 0 ? (
+            <div style={{ display: "grid", gap: "var(--s-4)" }}>
+              {bySeverity(vehicleFindings).map((f) => (
+                <FindingCard
+                  key={f.id}
+                  finding={f}
+                  assets={assets}
+                  inspectionId={report.inspectionId}
                 />
+              ))}
+            </div>
+          ) : (
+            <div className="panel prose-sm muted">
+              Nothing adverse was visible in the media provided. That is a
+              statement about the photographs and not a clearance &mdash; read the
+              coverage map above for what was never looked at.
+            </div>
+          )}
+        </Section>
+
+        {/* ---------------------------------------------------------------- */}
+        {/* records about the MODEL, kept apart                              */}
+        {/* ---------------------------------------------------------------- */}
+
+        {modelFindings.length > 0 && (
+          <Section
+            id="recalls"
+            label={`On record for this model (${modelFindings.length})`}
+            note="not about this specific car"
+          >
+            {/*
+              These used to sit in one undifferentiated list with the findings
+              above, five recall campaigns wearing the same MAJOR badge as the
+              corrosion on the rocker panel. A buyer scrolling that saw seven
+              serious problems with the car in front of them. There are two.
+
+              The verdict paragraph already says so - "Separately, 5 recall
+              campaign(s) are on record for this model year - free to fix" - and
+              the scoring engine already excludes them from the red-flag score for
+              exactly this reason (D-021). The layout was the only part of the
+              system still conflating them.
+            */}
+            <div
+              className="panel panel-edge prose-sm"
+              style={{ borderLeftColor: "var(--tk-locked)", marginBottom: "var(--s-4)" }}
+            >
+              These describe the model and year, not the car you are looking at.
+              They are not counted in the red-flag score. Recall work is free at a
+              dealer, and a dealer will tell you by VIN whether it was done on this
+              specific vehicle &mdash; which is something no public database
+              publishes and this report cannot know.
+            </div>
+            <div style={{ display: "grid", gap: "var(--s-4)" }}>
+              {bySeverity(modelFindings).map((f) => (
+                <FindingCard
+                  key={f.id}
+                  finding={f}
+                  assets={assets}
+                  inspectionId={report.inspectionId}
+                />
+              ))}
+            </div>
+          </Section>
+        )}
+
+        {report.mechanicReferrals.length > 0 && (
+          <Section
+            id="mechanic"
+            label={`For your mechanic (${report.mechanicReferrals.length})`}
+            note="locked systems - observation only, no severity, no confidence"
+          >
+            <div style={{ display: "grid", gap: "var(--s-3)" }}>
+              {report.mechanicReferrals.map((r) => (
                 <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: 10,
-                    marginTop: 8,
-                    fontSize: 11,
-                  }}
+                  key={r.id}
+                  id={r.id}
+                  className="panel panel-edge"
+                  style={{ borderLeftColor: "var(--tk-locked)" }}
                 >
-                  <span className="mono-label">
-                    {asset.id} / {asset.viewClass ?? "unknown"}
-                  </span>
-                  <span className="muted">
-                    {annotations.length === 0
-                      ? "nothing flagged on this image"
-                      : `${annotations.length} region${annotations.length > 1 ? "s" : ""} flagged`}
-                  </span>
+                  <div className="label" style={{ color: "var(--tk-locked)" }}>
+                    {r.system}
+                  </div>
+                  <p className="prose" style={{ margin: "var(--s-2) 0 var(--s-3)" }}>
+                    {r.observation}
+                  </p>
+                  <p className="prose-sm muted" style={{ margin: 0 }}>
+                    {r.ask}
+                  </p>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      </Section>
+              ))}
+            </div>
+          </Section>
+        )}
 
-      <Section label={`Findings (${report.findings.length})`}>
-        <div style={{ display: "grid", gap: 16 }}>
-          {report.findings.map((f) => (
-            <FindingCard key={f.id} finding={f} />
-          ))}
-        </div>
-      </Section>
+        {report.walkaround && (
+          <Section id="walkaround" label="Walkaround video" note="what was kept, and what was thrown away">
+            <Walkaround track={report.walkaround} />
+          </Section>
+        )}
 
-      <Section label="Systems">
-        <table>
-          <thead>
-            <tr>
-              <th style={{ width: "18%" }}>System</th>
-              <th style={{ width: "22%" }}>Status</th>
-              <th>Statement</th>
-            </tr>
-          </thead>
-          <tbody>
-            {report.systems.map((row) => {
-              const color = statusColor(row.status);
-              const locked = row.status === "locked_mechanic_required";
+        {/* ---------------------------------------------------------------- */}
+        {/* every frame, with anchors the findings link back to              */}
+        {/* ---------------------------------------------------------------- */}
+
+        <Section
+          id="gallery"
+          label={`All media (${photos.length})`}
+          note="every image, whether anything was found on it or not"
+        >
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(min(300px, 100%), 1fr))",
+              gap: "var(--s-5)",
+            }}
+          >
+            {photos.map((asset) => {
+              const annotations = annotationsFor(
+                asset.id,
+                report.findings,
+                report.mechanicReferrals,
+              );
+              const fromVideo = frameIds.has(asset.id);
               return (
-                <tr key={row.system}>
-                  <td style={{ textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                    {row.system}
-                  </td>
-                  <td>
-                    <span
-                      style={{
-                        fontSize: 10,
-                        letterSpacing: "0.12em",
-                        border: `1px solid ${color}`,
-                        color,
-                        padding: "2px 7px",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {statusLabel(row.status)}
-                    </span>
-                  </td>
-                  <td
-                    className="prose"
-                    style={{ fontSize: 13, color: locked ? "var(--tk-locked)" : undefined }}
+                <div key={asset.id} id={`asset-${asset.id}`} className="section">
+                  <Overlay
+                    src={assetUrl(report.inspectionId, asset.path)}
+                    alt={`${asset.viewClass ?? "unclassified"} - ${asset.id}`}
+                    annotations={annotations}
+                    synthetic={asset.synthetic}
+                  />
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: "var(--s-3)",
+                      marginTop: "var(--s-2)",
+                      fontSize: "var(--t-xs)",
+                    }}
                   >
-                    {row.statement}
-                    {row.confidence !== null && (
-                      <span style={{ marginLeft: 12, display: "inline-block" }}>
-                        <ConfidenceBar value={row.confidence} color={color} label="MAX" />
-                      </span>
-                    )}
-                  </td>
-                </tr>
+                    <span className="label">
+                      <span className="data">{asset.id}</span>
+                      {fromVideo && (
+                        <span className="dim" style={{ marginLeft: 6 }}>
+                          from video
+                        </span>
+                      )}
+                    </span>
+                    <span className="dim">
+                      {asset.viewClass === null || asset.viewClass === "unknown"
+                        ? "view not identified"
+                        : annotations.length === 0
+                          ? "nothing flagged here"
+                          : `${annotations.length} region${annotations.length > 1 ? "s" : ""} flagged`}
+                    </span>
+                  </div>
+                </div>
               );
             })}
-          </tbody>
-        </table>
-        <div className="prose muted" style={{ fontSize: 12, marginTop: 14 }}>
-          The four rows marked {LOCKED_SYSTEM_STATEMENT.toLowerCase().replace(/\.$/, "")}{" "}
-          are locked in software. TIREKICK will not report on them at any confidence,
-          on any vehicle, ever.
-        </div>
-      </Section>
-
-      {report.mechanicReferrals.length > 0 && (
-        <Section label="For your mechanic">
-          <div style={{ display: "grid", gap: 12 }}>
-            {report.mechanicReferrals.map((r) => (
-              <div
-                key={r.id}
-                id={r.id}
-                className="panel"
-                style={{ borderLeft: "3px solid var(--tk-locked)", scrollMarginTop: 24 }}
-              >
-                <div className="mono-label" style={{ color: "var(--tk-locked)" }}>
-                  {r.system}
-                </div>
-                <div style={{ margin: "8px 0 10px", fontSize: 15 }}>{r.observation}</div>
-                <div className="prose muted" style={{ fontSize: 13 }}>
-                  {r.ask}
-                </div>
-              </div>
-            ))}
           </div>
         </Section>
-      )}
 
-      {report.audio && (
-        <Section label="Engine audio">
-          <AudioTrackView track={report.audio} inspectionId={report.inspectionId} />
-        </Section>
-      )}
-
-      {report.vehicle && <VehicleRecordSection vehicle={report.vehicle} />}
-
-      {report.price && (
-        <Section label="Price check">
-          <div className="panel">
-            <div style={{ display: "flex", gap: 32, flexWrap: "wrap", alignItems: "baseline" }}>
-              <div>
-                <div className="mono-label">Asking</div>
-                <div style={{ fontSize: 30 }}>
-                  ${report.price.askingPriceUsd.toLocaleString()}
-                </div>
-              </div>
-              <div>
-                <div className="mono-label">Supported by these comps</div>
-                <div style={{ fontSize: 30, color: "var(--tk-accent)" }}>
-                  ${Math.round(report.price.fairRangeUsd.low).toLocaleString()} - $
-                  {Math.round(report.price.fairRangeUsd.high).toLocaleString()}
-                </div>
-              </div>
-            </div>
-            <div className="prose" style={{ fontSize: 14, marginTop: 16 }}>
-              {report.price.verdictStatement}
-            </div>
-
-            <div style={{ marginTop: 20 }}>
-              <div className="mono-label">The comps behind this range</div>
-              <table style={{ marginTop: 8 }}>
-                <thead>
-                  <tr>
-                    <th>Listing</th>
-                    <th>Year / trim</th>
-                    <th>Mileage</th>
-                    <th>Asking</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {report.price.comps.map((c) => (
-                    <tr key={c.id}>
-                      <td className="muted" style={{ fontSize: 12 }}>
-                        {c.sourceNote}
+        <Section id="systems" label="Systems">
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th style={{ width: "16%" }}>System</th>
+                  <th style={{ width: "20%" }}>Status</th>
+                  <th>Statement</th>
+                </tr>
+              </thead>
+              <tbody>
+                {report.systems.map((row) => {
+                  const color = statusColor(row.status);
+                  const locked = row.status === "locked_mechanic_required";
+                  return (
+                    <tr key={row.system}>
+                      <td className="label" style={{ color: "var(--tk-paper)" }}>
+                        {row.system}
                       </td>
                       <td>
-                        {c.year} {c.trim ?? ""}
+                        <span className="chip" style={{ color }}>
+                          {statusLabel(row.status)}
+                        </span>
                       </td>
-                      <td>{c.mileage.toLocaleString()}</td>
-                      <td>${c.askingPriceUsd.toLocaleString()}</td>
+                      <td style={{ color: locked ? "var(--tk-locked)" : undefined }}>
+                        {/*
+                          The measure lives on this div, not on the <td>. A
+                          max-width on a table cell is a hint the auto table
+                          algorithm is free to ignore, and it did: this column
+                          set the longest sentences in the report at 102
+                          characters a line while claiming to be capped at 64.
+                        */}
+                        <div className="prose-sm">
+                          {row.statement}
+                          {row.confidence !== null && (
+                            <span style={{ marginLeft: "var(--s-3)", display: "inline-block" }}>
+                              <ConfidenceBar value={row.confidence} color={color} label="MAX" />
+                            </span>
+                          )}
+                        </div>
+                      </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <p className="prose-sm dim" style={{ marginTop: "var(--s-4)" }}>
+            The four rows marked{" "}
+            {LOCKED_SYSTEM_STATEMENT.toLowerCase().replace(/\.$/, "")} are locked in
+            software. TIREKICK will not report on them at any confidence, on any
+            vehicle, ever.
+          </p>
+        </Section>
 
-            {report.price.excluded.length > 0 && (
-              <div style={{ marginTop: 20 }}>
-                <div className="mono-label" style={{ color: "var(--tk-unknown)" }}>
-                  Listings you gave us that were left out, and why
+        {report.audio && (
+          <Section id="audio" label="Engine audio">
+            <AudioTrackView track={report.audio} inspectionId={report.inspectionId} />
+          </Section>
+        )}
+
+        {report.vehicle && (
+          <Section id="record" label="Vehicle record">
+            <VehicleRecordSection vehicle={report.vehicle} />
+          </Section>
+        )}
+
+        {report.price && (
+          <Section id="price" label="Price check">
+            <PriceSection price={report.price} />
+          </Section>
+        )}
+
+        {report.sellerQuestions.length > 0 && (
+          <Section
+            id="questions"
+            label={`Questions for the seller (${report.sellerQuestions.length})`}
+          >
+            <ol
+              className="prose-sm"
+              style={{ paddingLeft: "var(--s-5)", display: "grid", gap: "var(--s-2)" }}
+            >
+              {report.sellerQuestions.map((q, i) => (
+                <li key={i}>{q}</li>
+              ))}
+            </ol>
+          </Section>
+        )}
+
+        {report.negotiationScript.length > 0 && (
+          <Section id="script" label="Negotiation script">
+            <div style={{ display: "grid", gap: "var(--s-3)" }}>
+              {report.negotiationScript.map((beat, i) => (
+                <div key={i} className="panel">
+                  <div className="label">{beat.beat}</div>
+                  <p className="prose" style={{ margin: "var(--s-2) 0 0" }}>
+                    &ldquo;{beat.say}&rdquo;
+                  </p>
                 </div>
-                <table style={{ marginTop: 8 }}>
-                  <tbody>
-                    {report.price.excluded.map((e) => (
-                      <tr key={e.compId}>
-                        <td style={{ whiteSpace: "nowrap" }}>{e.compId}</td>
-                        <td className="muted prose" style={{ fontSize: 12 }}>
-                          {e.reason}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            {report.price.deductions.length > 0 && (
-              <div style={{ marginTop: 20 }}>
-                <div className="mono-label">Deductions, each linked to a finding</div>
-                <table style={{ marginTop: 8 }}>
-                  <tbody>
-                    {report.price.deductions.map((d) => (
-                      <tr key={d.findingId}>
-                        <td>
-                          <a href={`#${d.findingId}`}>{d.label}</a>
-                        </td>
-                        <td style={{ color: "var(--tk-sev-major)", whiteSpace: "nowrap" }}>
-                          -${d.lowUsd.toLocaleString()} to -${d.highUsd.toLocaleString()}
-                        </td>
-                        <td className="muted prose" style={{ fontSize: 12 }}>
-                          {d.basis}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            <div className="prose muted" style={{ fontSize: 12, marginTop: 18 }}>
-              {report.price.normalizationNotes}
+              ))}
             </div>
+          </Section>
+        )}
+
+        {/* LAW 5. Internal-facing in P0; see DECISIONS.md D-012. */}
+        <Section id="run" label="Run metadata">
+          <div className="table-scroll">
+            <table>
+              <tbody>
+                <tr>
+                  <td className="label">Mode</td>
+                  <td className="data">{report.cost.mode}</td>
+                </tr>
+                <tr>
+                  <td className="label">Images analyzed</td>
+                  <td className="data">{report.cost.imagesAnalyzed}</td>
+                </tr>
+                <tr>
+                  <td className="label">Tokens</td>
+                  <td className="data">
+                    {report.cost.inputTokens.toLocaleString()} in /{" "}
+                    {report.cost.outputTokens.toLocaleString()} out
+                  </td>
+                </tr>
+                <tr>
+                  <td className="label">Audio processed</td>
+                  <td className="data">{report.cost.audioSecondsProcessed.toFixed(1)}s</td>
+                </tr>
+                <tr>
+                  <td className="label">Cost to produce</td>
+                  <td className="data">${report.cost.usdTotal.toFixed(4)}</td>
+                </tr>
+                <tr>
+                  <td className="label">Note</td>
+                  <td>
+                    <div className="prose-sm dim">{report.cost.note}</div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </Section>
-      )}
 
-      <Section label="Questions for the seller">
-        <ol className="prose" style={{ paddingLeft: 22, fontSize: 14 }}>
-          {report.sellerQuestions.map((q, i) => (
-            <li key={i} style={{ marginBottom: 8 }}>
-              {q}
-            </li>
-          ))}
-        </ol>
-      </Section>
-
-      <Section label="Negotiation script">
-        <div style={{ display: "grid", gap: 12 }}>
-          {report.negotiationScript.map((beat, i) => (
-            <div key={i} className="panel">
-              <div className="mono-label">{beat.beat}</div>
-              <div className="prose" style={{ marginTop: 8, fontSize: 14 }}>
-                &ldquo;{beat.say}&rdquo;
-              </div>
-            </div>
-          ))}
-        </div>
-      </Section>
-
-      {/* LAW 5. Internal-facing in P0; see DECISIONS.md D-012. */}
-      <Section label="Run metadata">
-        <table>
-          <tbody>
-            <tr>
-              <td className="mono-label">Mode</td>
-              <td>{report.cost.mode}</td>
-            </tr>
-            <tr>
-              <td className="mono-label">Images analyzed</td>
-              <td>{report.cost.imagesAnalyzed}</td>
-            </tr>
-            <tr>
-              <td className="mono-label">Tokens</td>
-              <td>
-                {report.cost.inputTokens.toLocaleString()} in /{" "}
-                {report.cost.outputTokens.toLocaleString()} out
-              </td>
-            </tr>
-            <tr>
-              <td className="mono-label">Audio processed</td>
-              <td>{report.cost.audioSecondsProcessed.toFixed(1)}s</td>
-            </tr>
-            <tr>
-              <td className="mono-label">Cost to produce</td>
-              <td style={{ color: "var(--tk-accent)" }}>
-                ${report.cost.usdTotal.toFixed(4)}
-              </td>
-            </tr>
-            <tr>
-              <td className="mono-label">Note</td>
-              <td className="prose muted" style={{ fontSize: 12 }}>
-                {report.cost.note}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </Section>
-
-      <footer
-        style={{
-          marginTop: 72,
-          paddingTop: 20,
-          borderTop: "1px solid var(--tk-line)",
-          display: "flex",
-          justifyContent: "space-between",
-          gap: 16,
-          flexWrap: "wrap",
-          fontSize: 11,
-        }}
-      >
-        <span className="mono-label">{SHARE_FOOTER}</span>
-        <span className="muted prose" style={{ maxWidth: 620 }}>
-          Automated analysis of buyer-supplied media. Not an inspection. Have an
-          independent mechanic examine any vehicle before you buy it.{" "}
-          <a href="/accuracy">Accuracy and known limits</a>.
-        </span>
-      </footer>
-    </div>
+        <footer
+          style={{
+            marginTop: "var(--s-9)",
+            paddingTop: "var(--s-5)",
+            borderTop: "1px solid var(--tk-rule)",
+            display: "flex",
+            justifyContent: "space-between",
+            gap: "var(--s-4)",
+            flexWrap: "wrap",
+          }}
+        >
+          <span className="label">{SHARE_FOOTER}</span>
+          <span className="prose-sm dim" style={{ maxWidth: "62ch" }}>
+            Automated analysis of buyer-supplied media. Not an inspection. Have an
+            independent mechanic examine any vehicle before you buy it.{" "}
+            <a href="/accuracy">Accuracy and known limits</a>.
+          </span>
+        </footer>
+      </div>
+    </>
   );
 }

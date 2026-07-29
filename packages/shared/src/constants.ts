@@ -18,6 +18,18 @@ export const LOCKED_SYSTEMS = [
   "steering",
 ] as const;
 
+/**
+ * Finding types that describe the model year rather than the car in front of you.
+ *
+ * Mirrored in tirekick_engines/dossier.py::MODEL_LEVEL_TYPES, where they are
+ * already excluded from the red-flag score (D-021) and from the teaser sample
+ * (D-044) for the same reason: a recall campaign is true of every car of that
+ * model, so counting it against this one overstates what was found.
+ *
+ * The viewer needs the same list to keep them out of the vehicle findings column.
+ */
+export const MODEL_LEVEL_TYPES = ["open_recall", "complaint_pattern"] as const;
+
 /** The exact sentence rendered for every locked system. Not paraphrased anywhere. */
 export const LOCKED_SYSTEM_STATEMENT =
   "Not remotely verifiable - independent mechanic required.";

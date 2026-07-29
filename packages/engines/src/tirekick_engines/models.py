@@ -182,6 +182,17 @@ class Asset(Base):
     duration_sec: float | None = Field(default=None, ge=0.0)
     synthetic: bool = False
 
+    #: Pixel dimensions of the decoded image, when it is one.
+    #:
+    #: Every image_region evidence box in this report is expressed as fractions
+    #: of these two numbers. Without them a cited box is not checkable: the
+    #: report would be hashing the pixels a claim was written against while
+    #: never recording their shape, so a reader could not redraw the box or
+    #: confirm it lands where the finding says it does. It is also what lets the
+    #: viewer crop to a region exactly rather than approximately.
+    width: int | None = Field(default=None, gt=0)
+    height: int | None = Field(default=None, gt=0)
+
 
 # --------------------------------------------------------------------------- #
 # findings - LAW 1 + LAW 2                                                     #
@@ -641,6 +652,56 @@ class TeaserSystemRow(Base):
         return self
 
 
+class TeaserSample(Base):
+    """One complete finding, given away.
+
+    ---------------------------------------------------------------------------
+    WHY A FREE REPORT SHOWS A PAID FINDING
+    ---------------------------------------------------------------------------
+
+    The teaser sells "every finding, with the photograph it came from and a box
+    drawn on it" and, for seven phases, rendered no photograph at all. A stranger
+    deciding whether to spend $25 on a visual evidence product could not see a
+    single piece of visual evidence first. That asks them to take the whole thing
+    on faith, which is the opposite of what the product claims to be for.
+
+    So exactly one finding crosses the paywall, in full: the picture, the box, the
+    confidence, and the sentence explaining why that confidence and not a higher
+    one. Not a blurred preview and not a cropped teaser of a teaser - the real
+    thing, so what is being bought is unambiguous.
+
+    It is a deliberately separate field rather than a `findings` list of length
+    one. `parseTeaser` refuses any payload carrying `findings` or `assets`,
+    because the failure it guards against is a refactor quietly routing a full
+    report down the free path. That guard stays exactly as strict; this is a
+    disclosure with its own name, which is auditable in a way that a loosened
+    guard would not be.
+    """
+
+    finding_id: str = Field(min_length=1)
+    type: FindingType
+    system: SystemKey
+    severity: Severity
+    confidence: Confidence
+    confidence_basis: str = Field(min_length=1)
+    title: str = Field(min_length=1)
+    detail: str = Field(min_length=1)
+
+    #: The photograph, and where on it. Paths are relative to the media root, the
+    #: same as an Asset - the viewer resolves them identically.
+    asset_id: str = Field(min_length=1)
+    asset_path: str = Field(min_length=1)
+    asset_width: int | None = Field(default=None, gt=0)
+    asset_height: int | None = Field(default=None, gt=0)
+    asset_synthetic: bool = False
+    box: BoundingBox
+    caption: str = Field(min_length=1)
+
+    #: "One of 9 findings about this vehicle." Rendered next to the sample so it
+    #: never reads as the whole result.
+    statement: str = Field(min_length=1)
+
+
 class Teaser(Base):
     """What a buyer sees before paying. A smaller object, not a hidden one."""
 
@@ -661,6 +722,10 @@ class Teaser(Base):
     counts: list[SeverityCount] = Field(default_factory=list)
     mechanic_referral_count: int = Field(ge=0)
     systems: list[TeaserSystemRow] = Field(default_factory=list)
+    #: One complete finding, free. None when no finding cites a photograph -
+    #: an upload with no vision responses, or a report built entirely from
+    #: federal records. The viewer says so rather than showing an empty frame.
+    sample: TeaserSample | None = None
     #: Never behind the paywall. Charging someone to discover that we cannot
     #: assess their brakes would be indefensible.
     could_not_assess: list[str] = Field(min_length=1)

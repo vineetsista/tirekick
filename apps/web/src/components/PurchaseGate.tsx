@@ -126,7 +126,7 @@ export function PurchaseGate({ teaser }: { teaser: Teaser }) {
                 alignItems: "flex-start",
                 cursor: "pointer",
                 borderLeft: `3px solid ${
-                  ticked[item.id] ? "var(--tk-accent)" : "var(--tk-line)"
+                  ticked[item.id] ? "var(--tk-paper)" : "var(--tk-rule)"
                 }`,
               }}
             >
@@ -137,7 +137,7 @@ export function PurchaseGate({ teaser }: { teaser: Teaser }) {
                 onChange={(e) =>
                   setTicked((prev) => ({ ...prev, [item.id]: e.target.checked }))
                 }
-                style={{ marginTop: 3, width: 17, height: 17, accentColor: "var(--tk-accent)" }}
+                style={{ marginTop: 3, width: 17, height: 17, accentColor: "var(--tk-paper)" }}
               />
               <span className="prose" style={{ fontSize: 14, lineHeight: 1.6 }}>
                 {item.text}
@@ -162,8 +162,8 @@ export function PurchaseGate({ teaser }: { teaser: Teaser }) {
             style={{
               display: "inline-block",
               padding: "15px 30px",
-              background: "var(--tk-accent)",
-              color: "#0a0c0e",
+              background: "var(--tk-paper)",
+              color: "var(--tk-void)",
               fontSize: 15,
               letterSpacing: "0.12em",
               textTransform: "uppercase",

@@ -133,6 +133,29 @@
       "statement": "Something was found here. The full report says what, where, and how sure."
     }
   ],
+  "sample": {
+    "findingId": "vf_lamp_01",
+    "type": "dash_warning_light",
+    "system": "electrical",
+    "severity": "major",
+    "confidence": 0.83,
+    "confidenceBasis": "The lamp shape and position are clearly legible. The reading is about the photograph, not about the vehicle's condition.",
+    "title": "Check-engine lamp illuminated in the instrument cluster",
+    "detail": "A check-engine lamp is illuminated in the cluster in this photograph. What triggered it cannot be determined without reading the fault codes with a scan tool.",
+    "assetId": "photo_05",
+    "assetPath": "photo_05.jpg",
+    "assetWidth": 1600,
+    "assetHeight": 1200,
+    "assetSynthetic": true,
+    "box": {
+      "x": 0.62,
+      "y": 0.3,
+      "w": 0.1,
+      "h": 0.12
+    },
+    "caption": "Illuminated lamp in the instrument cluster",
+    "statement": "One of 8 findings about this vehicle, shown in full. The other 7 are in the paid report, each with its own photograph and box."
+  },
   "couldNotAssess": [
     "Brakes - not remotely verifiable, independent mechanic required.",
     "Airbags and restraints - not remotely verifiable, independent mechanic required.",

@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import Home from "@/app/page";
-import { demoReport, demoTeaser } from "@/lib/report";
+import { demoReport, demoTeaser, headlineFinding } from "@/lib/report";
 
 /**
  * A copy audit of the public page, against the product it is describing.
@@ -51,9 +51,56 @@ describe("the landing page does not claim what the report refuses to", () => {
     }
   });
 
+  it("describes the walkaround as the frame selection it is", () => {
+    /**
+     * This assertion used to be `expect(text).not.toMatch(/walkaround video/i)`,
+     * because in P6 the page advertised a feature that did not exist.
+     *
+     * P7 built it. The ban then became the P6 failure inverted: a guard
+     * suppressing a true claim, holding the page a phase behind the product in
+     * the safe direction. Both directions are drift.
+     *
+     * So the rule is not "never mention video", it is "never imply the video was
+     * watched". A walkaround is sampled - sharpest frame per bucket, duplicates
+     * and blurs discarded, capped at twelve - and the page has to say so.
+     */
+    expect(text).toContain("It samples frames");
+    expect(text).toContain("how many it dropped and why");
+    expect(text).not.toMatch(/watches the (whole )?video|full video analysis/i);
+  });
+
   it("does not advertise features that do not exist", () => {
-    // Walkaround video was on the P0 page and has never been built.
-    expect(text).not.toMatch(/walkaround video|video analysis/i);
+    for (const phrase of [
+      "title search",
+      "market value guarantee",
+      "vehicle history report",
+      "accident history",
+      "service records",
+    ]) {
+      expect(text.toLowerCase()).not.toContain(phrase);
+    }
+  });
+
+  it("shows the buyer an actual finding rather than describing one", () => {
+    /**
+     * The page rendered zero images for seven phases while selling "each finding
+     * boxed on the photograph it came from". Worse than a design flaw: it asked a
+     * stranger to take a visual evidence product entirely on faith.
+     *
+     * The hero renders headlineFinding(demoReport) through the same component the
+     * paid report uses, so the page cannot show a finding the engine did not
+     * produce - which also makes copy drift structurally harder than the wording
+     * assertions above can manage on their own.
+     */
+    const finding = headlineFinding(demoReport);
+    expect(finding, "the fixture has no image-evidenced finding to show").not.toBeNull();
+    expect(text).toContain(finding!.title);
+    expect(text).toContain(finding!.confidenceBasis);
+    expect(html).toContain(`/f/${demoReport.inspectionId}/`);
+  });
+
+  it("says the hero is real output and not a mock-up", () => {
+    expect(text).toContain("That is not a mock-up");
   });
 
   it("never says the report can clear a car", () => {

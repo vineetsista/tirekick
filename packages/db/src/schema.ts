@@ -128,6 +128,16 @@ export const assets = pgTable(
     viewConfidence: doublePrecision("view_confidence"),
     durationSec: doublePrecision("duration_sec"),
     synthetic: boolean("synthetic").notNull().default(false),
+    /**
+     * Pixel dimensions, nullable for audio, documents and unreadable images.
+     *
+     * Every `image_region` box stored against this asset is a fraction of these
+     * two numbers. Persisting the box without them would store a claim that can
+     * no longer be checked - the row would say a defect occupies 34% of a
+     * photograph whose shape nothing recorded.
+     */
+    width: integer("width"),
+    height: integer("height"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

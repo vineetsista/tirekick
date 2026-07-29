@@ -203,7 +203,9 @@
       "viewClass": "exterior_side_left",
       "viewConfidence": 0.94,
       "durationSec": null,
-      "synthetic": true
+      "synthetic": true,
+      "width": 1600,
+      "height": 1200
     },
     {
       "id": "photo_02",
@@ -214,7 +216,9 @@
       "viewClass": "exterior_front",
       "viewConfidence": 0.91,
       "durationSec": null,
-      "synthetic": true
+      "synthetic": true,
+      "width": 1600,
+      "height": 1200
     },
     {
       "id": "photo_03",
@@ -225,7 +229,9 @@
       "viewClass": "exterior_rear",
       "viewConfidence": 0.89,
       "durationSec": null,
-      "synthetic": true
+      "synthetic": true,
+      "width": 1600,
+      "height": 1200
     },
     {
       "id": "photo_04",
@@ -236,7 +242,9 @@
       "viewClass": "interior_front",
       "viewConfidence": 0.88,
       "durationSec": null,
-      "synthetic": true
+      "synthetic": true,
+      "width": 1600,
+      "height": 1200
     },
     {
       "id": "photo_05",
@@ -247,7 +255,9 @@
       "viewClass": "dash",
       "viewConfidence": 0.86,
       "durationSec": null,
-      "synthetic": true
+      "synthetic": true,
+      "width": 1600,
+      "height": 1200
     },
     {
       "id": "photo_06",
@@ -258,7 +268,9 @@
       "viewClass": "odometer",
       "viewConfidence": 0.92,
       "durationSec": null,
-      "synthetic": true
+      "synthetic": true,
+      "width": 1600,
+      "height": 1200
     },
     {
       "id": "photo_07",
@@ -269,7 +281,9 @@
       "viewClass": "tire",
       "viewConfidence": 0.9,
       "durationSec": null,
-      "synthetic": true
+      "synthetic": true,
+      "width": 1600,
+      "height": 1200
     },
     {
       "id": "photo_08",
@@ -280,7 +294,9 @@
       "viewClass": "engine_bay",
       "viewConfidence": 0.87,
       "durationSec": null,
-      "synthetic": true
+      "synthetic": true,
+      "width": 1600,
+      "height": 1200
     },
     {
       "id": "video_01",
@@ -291,7 +307,9 @@
       "viewClass": null,
       "viewConfidence": null,
       "durationSec": 14.0,
-      "synthetic": true
+      "synthetic": true,
+      "width": null,
+      "height": null
     },
     {
       "id": "audio_01",
@@ -302,7 +320,9 @@
       "viewClass": null,
       "viewConfidence": null,
       "durationSec": 22.0,
-      "synthetic": true
+      "synthetic": true,
+      "width": null,
+      "height": null
     },
     {
       "id": "history_01",
@@ -313,7 +333,9 @@
       "viewClass": null,
       "viewConfidence": null,
       "durationSec": null,
-      "synthetic": true
+      "synthetic": true,
+      "width": null,
+      "height": null
     },
     {
       "id": "video_01_f01",
@@ -324,7 +346,9 @@
       "viewClass": "exterior_three_quarter",
       "viewConfidence": 0.81,
       "durationSec": null,
-      "synthetic": true
+      "synthetic": true,
+      "width": 640,
+      "height": 400
     },
     {
       "id": "video_01_f02",
@@ -335,7 +359,9 @@
       "viewClass": "exterior_side_right",
       "viewConfidence": 0.86,
       "durationSec": null,
-      "synthetic": true
+      "synthetic": true,
+      "width": 640,
+      "height": 400
     },
     {
       "id": "video_01_f03",
@@ -346,7 +372,9 @@
       "viewClass": "exterior_side_right",
       "viewConfidence": 0.74,
       "durationSec": null,
-      "synthetic": true
+      "synthetic": true,
+      "width": 640,
+      "height": 400
     },
     {
       "id": "video_01_f04",
@@ -357,7 +385,9 @@
       "viewClass": "exterior_rear",
       "viewConfidence": 0.79,
       "durationSec": null,
-      "synthetic": true
+      "synthetic": true,
+      "width": 640,
+      "height": 400
     },
     {
       "id": "video_01_f05",
@@ -368,7 +398,9 @@
       "viewClass": "unknown",
       "viewConfidence": 0.42,
       "durationSec": null,
-      "synthetic": true
+      "synthetic": true,
+      "width": 640,
+      "height": 400
     }
   ],
   "coverage": {

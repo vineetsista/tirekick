@@ -134,7 +134,7 @@ export function AudioTrackView({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(140px, 100%), 1fr))",
           gap: 16,
           marginTop: 20,
           paddingTop: 16,

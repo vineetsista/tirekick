@@ -126,6 +126,15 @@ export const assetSchema = z.object({
   durationSec: z.number().nonnegative().nullable(),
   /** True for generated fixture media. Surfaced in the report. See LAW 1. */
   synthetic: z.boolean(),
+  /**
+   * Pixel dimensions of the decoded image, when it is one.
+   *
+   * Every `image_region` box in this report is a fraction of these. Without
+   * them a cited box cannot be checked - the report would hash the pixels a
+   * claim was written against without recording their shape.
+   */
+  width: z.number().int().positive().nullable().default(null),
+  height: z.number().int().positive().nullable().default(null),
 });
 export type Asset = z.infer<typeof assetSchema>;
 
@@ -600,6 +609,36 @@ export const teaserSystemRowSchema = z.object({
  * CSS. Nothing omitted here was ever serialised, which is the only version of a
  * paywall that survives someone opening the network tab.
  */
+/**
+ * One complete finding, given away.
+ *
+ * A deliberately separate field rather than a `findings` array of length one.
+ * `parseTeaser` refuses any payload carrying `findings` or `assets` - the failure
+ * it guards against is a refactor quietly routing a full report down the free
+ * path - and that guard stays exactly as strict. This is a disclosure with its
+ * own name, which is auditable in a way that a loosened guard would not be.
+ */
+export const teaserSampleSchema = z.object({
+  findingId: z.string().min(1),
+  type: findingTypeSchema,
+  system: systemKeySchema,
+  severity: severitySchema,
+  confidence: confidenceSchema,
+  confidenceBasis: z.string().min(1),
+  title: z.string().min(1),
+  detail: z.string().min(1),
+  assetId: z.string().min(1),
+  assetPath: z.string().min(1),
+  assetWidth: z.number().int().positive().nullable().default(null),
+  assetHeight: z.number().int().positive().nullable().default(null),
+  assetSynthetic: z.boolean().default(false),
+  box: boundingBoxSchema,
+  caption: z.string().min(1),
+  /** "One of 9 findings about this vehicle." Never reads as the whole result. */
+  statement: z.string().min(1),
+});
+export type TeaserSample = z.infer<typeof teaserSampleSchema>;
+
 export const teaserSchema = z.object({
   schemaVersion: z.literal(SCHEMA_VERSION),
   reportId: z.string().min(1),
@@ -617,6 +656,11 @@ export const teaserSchema = z.object({
   counts: z.array(severityCountSchema),
   mechanicReferralCount: z.number().int().nonnegative(),
   systems: z.array(teaserSystemRowSchema),
+  /**
+   * One complete finding, free. Null when nothing cites a photograph - an upload
+   * with no vision responses, or a report built entirely from federal records.
+   */
+  sample: teaserSampleSchema.nullable().default(null),
   /** Never behind the paywall. */
   couldNotAssess: z.array(z.string()).min(1),
   hasAudio: z.boolean(),

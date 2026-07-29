@@ -264,9 +264,82 @@ describe("evidence and confidence (LAW 1)", () => {
     }
   });
 
-  it("renders the evidence section for each finding", () => {
-    const evidenceHeadings = html.match(/>Evidence</g) ?? [];
-    expect(evidenceHeadings).toHaveLength(demoReport.findings.length);
+  /**
+   * The test the layout comment used to stand in for.
+   *
+   * `Overlay.tsx` has claimed since P2 that "evidence and claim are never more
+   * than one interaction apart (LAW 1)". On the rendered dossier the gallery sat
+   * at roughly 1,300px and the findings began at roughly 5,000px, and what sat
+   * beside each claim was `photo_01 [0.08, 0.62, 0.34, 0.14]`. The comment was
+   * true as an intention and false as a description, and nothing failed, because
+   * a claim about layout written in a docstring is not a test.
+   *
+   * So this asserts adjacency as a measured property of the markup rather than
+   * trusting any comment - including the ones written this phase.
+   */
+  it("puts the cited photograph inside the finding that cites it", () => {
+    const cited = demoReport.findings.filter((f) =>
+      f.evidence.some((e) => e.kind === "image_region"),
+    );
+    expect(cited.length).toBeGreaterThan(0);
+
+    for (const finding of cited) {
+      const start = html.indexOf(`id="${finding.id}"`);
+      expect(start, `${finding.id} does not render`).toBeGreaterThan(-1);
+
+      // The finding's own markup, bounded by wherever the next one begins.
+      const nextStarts = demoReport.findings
+        .map((f) => html.indexOf(`id="${f.id}"`))
+        .filter((i) => i > start);
+      const end = nextStarts.length ? Math.min(...nextStarts) : html.length;
+      const article = html.slice(start, end);
+
+      for (const e of finding.evidence) {
+        if (e.kind !== "image_region") continue;
+        const asset = demoReport.assets.find((a) => a.id === e.assetId);
+        expect(asset, `${e.assetId} is cited but absent`).toBeDefined();
+        expect(
+          article,
+          `${finding.id} cites ${e.assetId} without showing it`,
+        ).toContain(`/f/${demoReport.inspectionId}/${asset!.path}`);
+      }
+    }
+  });
+
+  it("keeps the coordinates as well as the picture", () => {
+    // The numbers are what makes a claim checkable against the asset hash. The
+    // crop replaced them as the *evidence*, not as the citation.
+    for (const finding of demoReport.findings) {
+      for (const e of finding.evidence) {
+        if (e.kind !== "image_region") continue;
+        expect(text).toContain(
+          `${e.assetId} [${e.box.x.toFixed(2)}, ${e.box.y.toFixed(2)}, ` +
+            `${e.box.w.toFixed(2)}, ${e.box.h.toFixed(2)}]`,
+        );
+      }
+    }
+  });
+
+  it("renders an evidence list for every finding whose evidence is not an image", () => {
+    const withOther = demoReport.findings.filter((f) =>
+      f.evidence.some((e) => e.kind !== "image_region"),
+    );
+    expect(withOther.length).toBeGreaterThan(0);
+    expect(html.match(/>Evidence</g) ?? []).toHaveLength(withOther.length);
+  });
+
+  it("shows a crop only for an asset whose dimensions were recorded", () => {
+    // cropFor returns null without them and the component falls back to the
+    // whole frame. Silently cropping to a guessed region would be evidence that
+    // is approximately honest.
+    for (const finding of demoReport.findings) {
+      for (const e of finding.evidence) {
+        if (e.kind !== "image_region") continue;
+        const asset = demoReport.assets.find((a) => a.id === e.assetId)!;
+        expect(asset.width, `${asset.id} has no width`).toBeTruthy();
+        expect(asset.height, `${asset.id} has no height`).toBeTruthy();
+      }
+    }
   });
 });
 

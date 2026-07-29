@@ -1,107 +1,446 @@
 /*
- * TIREKICK brand tokens. Values come from docs/BRAND.md - change them there first.
+ * TIREKICK design system.
  *
- * Fonts are a system monospace stack rather than a hosted webfont. JetBrains Mono
- * is the intended face and is used when a viewer has it; wiring up self-hosted
- * font files is part of the P4 design pass. A CDN font would fail a network-less
- * build and is not worth that in P0.
+ * ---------------------------------------------------------------------------
+ * THE RULE THAT GENERATES EVERY OTHER RULE
+ * ---------------------------------------------------------------------------
+ *
+ * Colour is evidence. If something on this page carries chroma, it is making a
+ * claim, withholding one, or marking a thing as unexamined. Nothing is coloured
+ * to look good.
+ *
+ * That is not an aesthetic preference, it follows from what the product is. Every
+ * other vehicle-inspection interface is a wall of green ticks. TIREKICK cannot
+ * produce a green tick - LAW 2 forbids clearing brakes, restraints, structure or
+ * steering at any confidence, and `docs/ACCURACY.md` reports that 0 of 16 finding
+ * types have been measured. A UI that rewards the reader with green is a UI
+ * telling a comfortable lie the engine underneath refuses to tell.
+ *
+ * So: THE INTERFACE NEVER TURNS GREEN. "No issues visible" renders in plain
+ * paper white, because it is a statement about the photographs and not a pass.
+ * The earlier palette was near-black plus acid green (#38e1b0), which is both the
+ * most common machine-generated dark theme there is and semantically backwards
+ * for this product.
+ *
+ * ---------------------------------------------------------------------------
+ * THREE TYPEFACES, THREE KINDS OF TRUTH
+ * ---------------------------------------------------------------------------
+ *
+ *   Archivo        chrome    - labels, navigation, headings, table headers.
+ *                              Industrial grotesque. The apparatus.
+ *   Newsreader     prose     - anything a human wrote for a human to read.
+ *                              A serif, because this is a dossier and not a
+ *                              dashboard, and a serif asks to be read slowly.
+ *   JetBrains Mono machine   - VINs, box coordinates, confidences, timestamps,
+ *                              IDs, costs. Values a machine produced.
+ *
+ * The reader can tell which of the three they are looking at without being told,
+ * which is the point. A confidence of 0.72 and a sentence explaining it are
+ * different kinds of statement and should not wear the same clothes.
+ *
+ * Self-hosted variable woff2, committed to the repository. No CDN, no build-time
+ * network fetch - the same deliberate-artifact pattern used for the federal
+ * records and the audio cache. See docs/BRAND.md.
  */
 
+/* --------------------------------------------------------------------- */
+/* faces                                                                  */
+/* --------------------------------------------------------------------- */
+
+@font-face {
+  font-family: "Archivo";
+  src: url("/fonts/archivo.woff2") format("woff2-variations");
+  font-weight: 500 800;
+  font-display: swap;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Newsreader";
+  src: url("/fonts/newsreader.woff2") format("woff2-variations");
+  font-weight: 400 600;
+  font-display: swap;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/fonts/jetbrainsmono.woff2") format("woff2-variations");
+  font-weight: 400 700;
+  font-display: swap;
+  font-style: normal;
+}
+
+/* --------------------------------------------------------------------- */
+/* tokens                                                                 */
+/* --------------------------------------------------------------------- */
+
 :root {
-  --tk-bg: #0a0c0e;
-  --tk-panel: #101418;
-  --tk-line: #1e252c;
-  --tk-text: #e6edf3;
-  --tk-muted: #8b98a5;
-  --tk-accent: #38e1b0;
+  /* Ground. Warm near-black - a workshop under a sodium lamp, not a terminal.
+     The warmth is what stops the severity ramp reading as neon. */
+  --tk-void: #0b0a09;
+  --tk-shell: #15120f;
+  --tk-shell-2: #1c1815;
+  --tk-rule: #2b2621;
+  --tk-rule-bright: #453d35;
 
-  --tk-sev-info: #5b9dd9;
-  --tk-sev-minor: #e3b341;
-  --tk-sev-major: #f0883e;
-  --tk-sev-critical: #f85149;
+  /* Text. Warm off-white, like paper under that lamp. */
+  --tk-paper: #f4efe6;
+  --tk-graphite: #a8a094;
+  --tk-pencil: #8b8377;
 
-  /* Deliberately off the severity ramp - a locked row is a different kind of
-     statement, not a point on the good-bad axis. See DECISIONS.md D-007. */
-  --tk-locked: #a371f7;
+  /* ------------------------------------------------------------------- */
+  /* The meaning ramp. THE ONLY CHROMA ON THE PAGE.                       */
+  /* ------------------------------------------------------------------- */
 
-  /* Legible, not faded. "Cannot determine" is a first-class output. */
-  --tk-unknown: #6e7681;
+  --tk-sev-info: #6ba8d8;
+  --tk-sev-minor: #e8b33d;
+  --tk-sev-major: #ef8b3f;
+  --tk-sev-critical: #f2554c;
 
-  --tk-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", "Menlo", "Consolas",
-    "Liberation Mono", monospace;
-  --tk-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Off the severity ramp on purpose. A locked system is not a point on the
+     good-bad axis, it is a refusal to be on that axis at all (D-007). */
+  --tk-locked: #b08bf5;
+
+  /* Not examined. Legible, never faded - "cannot determine" is a first-class
+     output of this product, not a gap in it. Raised from #6e7681, which failed
+     WCAG AA at 4.03:1 against the panel while carrying exactly the content the
+     project claims to take most seriously. */
+  --tk-unknown: #9a9186;
+
+  /* ------------------------------------------------------------------- */
+  /* Legacy aliases. Being retired as components migrate.                 */
+  /* --tk-accent no longer exists: there is no brand hue, by design.      */
+  /* ------------------------------------------------------------------- */
+  --tk-bg: var(--tk-void);
+  --tk-panel: var(--tk-shell);
+  --tk-line: var(--tk-rule);
+  --tk-text: var(--tk-paper);
+  --tk-muted: var(--tk-graphite);
+
+  /* faces */
+  --tk-display: "Archivo", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    sans-serif;
+  --tk-prose: "Newsreader", ui-serif, Georgia, "Times New Roman", serif;
+  --tk-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", "Menlo",
+    "Consolas", monospace;
+
+  /* Type scale. Fluid where the jump matters, fixed where alignment does. */
+  --t-2xs: 10px;
+  --t-xs: 11px;
+  --t-sm: 13px;
+  --t-base: 15px;
+  --t-md: 17px;
+  --t-lg: clamp(19px, 1.1rem + 0.5vw, 22px);
+  --t-xl: clamp(24px, 1.3rem + 1.4vw, 32px);
+  --t-2xl: clamp(30px, 1.5rem + 3vw, 46px);
+  --t-3xl: clamp(38px, 1.6rem + 5vw, 68px);
+
+  /* Space. A 4px grid; named so a gap has a reason. */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+  --s-9: 96px;
+
+  --tk-nav-h: 52px;
 }
 
 * {
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+  /* Anything with an id is a jump target; keep it clear of the sticky nav. */
+  scroll-padding-top: calc(var(--tk-nav-h) + var(--s-4));
+}
+
 html,
 body {
   margin: 0;
   padding: 0;
-  background: var(--tk-bg);
-  color: var(--tk-text);
+  background: var(--tk-void);
+  color: var(--tk-paper);
+  font-family: var(--tk-display);
+  font-size: var(--t-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* --------------------------------------------------------------------- */
+/* the three registers                                                    */
+/* --------------------------------------------------------------------- */
+
+/* Human language. Everything a person is meant to read as a sentence. */
+/*
+ * Prose has a measure.
+ *
+ * The content column is 1240px, and prose set across all of it ran to 150-159
+ * characters a line on a laptop. Typographic practice puts comfortable reading
+ * at 45-75 characters and treats ~90 as the point where the eye starts losing
+ * the line return - the reader reaches the right edge and has to hunt for where
+ * the next line begins. Measured on the built page, the worst offenders were the
+ * `could not assess` list at 152 and a mechanic referral at 134: the two blocks
+ * carrying the most consequential sentences this product produces, set at the
+ * width hardest to read them at.
+ *
+ * `ch` is the width of a "0", which is wider than the average glyph in a
+ * proportional serif, so 62ch measures out at roughly 72-78 real characters.
+ * These numbers were checked against the rendered page rather than assumed.
+ *
+ * This caps; it never stretches. Prose already inside a narrow grid column is
+ * untouched.
+ */
+.prose {
+  font-family: var(--tk-prose);
+  font-size: var(--t-md);
+  line-height: 1.62;
+  letter-spacing: 0.004em;
+  max-width: 62ch;
+}
+
+.prose-sm {
+  font-family: var(--tk-prose);
+  font-size: var(--t-base);
+  line-height: 1.58;
+  max-width: 64ch;
+}
+
+/*
+ * A list is prose whose measure is set on the <ul>, so the cap has to reach the
+ * items or it does nothing - the ul is full width and every li fills it.
+ */
+.prose > li,
+.prose-sm > li {
+  max-width: 100%;
+}
+
+/* Machine values. Tabular so columns of numbers line up. */
+.data {
   font-family: var(--tk-mono);
   font-variant-numeric: tabular-nums;
-  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "ss01";
+  /* VINs, sha256 prefixes and coordinate lists are single long tokens. */
+  overflow-wrap: break-word;
 }
 
-body {
-  font-size: 14px;
-  line-height: 1.55;
-}
-
-a {
-  color: var(--tk-accent);
-  text-decoration: none;
-  border-bottom: 1px solid rgba(56, 225, 176, 0.35);
-}
-
-a:hover {
-  border-bottom-color: var(--tk-accent);
-}
-
-.prose {
-  font-family: var(--tk-sans);
-}
-
-.wrap {
-  max-width: 1180px;
-  margin: 0 auto;
-  padding: 0 24px;
-}
-
-/* Section header: a rule and an uppercase label. No icons. */
-.section {
-  margin: 56px 0 0;
-}
-
-.section-label {
-  font-size: 11px;
-  letter-spacing: 0.18em;
+/* Chrome. A label, an eyebrow, a column head. */
+.label {
+  font-family: var(--tk-display);
+  font-size: var(--t-xs);
+  font-weight: 600;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--tk-muted);
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--tk-line);
-  margin-bottom: 24px;
+  color: var(--tk-graphite);
 }
 
-.panel {
-  background: var(--tk-panel);
-  border: 1px solid var(--tk-line);
-  padding: 20px;
+/* Retired name, still referenced by components mid-migration. */
+.mono-label {
+  font-family: var(--tk-display);
+  font-size: var(--t-xs);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--tk-graphite);
 }
 
 .muted {
-  color: var(--tk-muted);
+  color: var(--tk-graphite);
 }
 
-.mono-label {
-  font-size: 11px;
-  letter-spacing: 0.16em;
+.dim {
+  color: var(--tk-pencil);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--tk-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.12;
+  margin: 0;
+  /*
+   * Report copy is not prose we wrote. A finding title can be
+   * "Recall 25V422000: POWER TRAIN:AUTOMATIC TRANSMISSION", straight from a
+   * federal record, and that colon-joined run is one unbreakable word to a line
+   * breaker. At 320px it pushed the heading 40px past the panel and gave the
+   * whole document a horizontal scrollbar. `break-word` only breaks a token that
+   * cannot fit on a line of its own, so ordinary titles are untouched.
+   */
+  overflow-wrap: break-word;
+}
+
+/* --------------------------------------------------------------------- */
+/* links and controls                                                     */
+/* --------------------------------------------------------------------- */
+
+/*
+ * No brand hue on links. An underline is enough signal, and it leaves the
+ * severity ramp as the only coloured thing on the page.
+ */
+a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--tk-rule-bright);
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  transition: text-decoration-color 120ms ease;
+}
+
+a:hover {
+  text-decoration-color: var(--tk-paper);
+}
+
+/*
+ * Visible keyboard focus. There was none - a keyboard user got the browser
+ * default ring on a near-black ground, which on the annotated-image boxes was
+ * effectively invisible.
+ */
+:focus-visible {
+  outline: 2px solid var(--tk-paper);
+  outline-offset: 2px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-family: var(--tk-display);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--tk-muted);
+  text-decoration: none;
+  padding: var(--s-3) var(--s-5);
+  border: 1px solid var(--tk-rule-bright);
+  background: transparent;
+  color: var(--tk-paper);
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease;
+}
+
+.btn:hover {
+  border-color: var(--tk-paper);
+  background: var(--tk-shell-2);
+  text-decoration: none;
+}
+
+.btn-primary {
+  border-color: var(--tk-paper);
+  background: var(--tk-paper);
+  color: var(--tk-void);
+}
+
+.btn-primary:hover {
+  background: #fff;
+  border-color: #fff;
+}
+
+.btn:disabled,
+.btn[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* --------------------------------------------------------------------- */
+/* structure                                                              */
+/* --------------------------------------------------------------------- */
+
+.wrap {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 var(--s-5);
+}
+
+.wrap-narrow {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 0 var(--s-5);
+}
+
+.section {
+  margin-top: var(--s-8);
+  scroll-margin-top: calc(var(--tk-nav-h) + var(--s-4));
+}
+
+.section-label {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  font-family: var(--tk-display);
+  font-size: var(--t-xs);
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--tk-graphite);
+  padding-bottom: var(--s-3);
+  border-bottom: 1px solid var(--tk-rule);
+  margin-bottom: var(--s-5);
+}
+
+.panel {
+  background: var(--tk-shell);
+  border: 1px solid var(--tk-rule);
+  padding: var(--s-5);
+}
+
+/* A panel that is making a claim carries the claim's colour on one edge. */
+.panel-edge {
+  border-left-width: 3px;
+}
+
+/* --------------------------------------------------------------------- */
+/* Splits that collapse instead of overflowing                            */
+/* --------------------------------------------------------------------- */
+/*
+ * Three layouts were written as inline `minmax(240px, 340px) 1fr` grids. A grid
+ * track with a fixed minimum does not wrap - when the container is narrower than
+ * the minimums plus the gap, the row simply becomes wider than its parent, and
+ * the whole document acquires a horizontal scrollbar. On a 390px phone the
+ * report ran 76px wide and the teaser 47px, which is the width of a thumb.
+ *
+ * These live here rather than inline because the fix is a media query and a
+ * React style attribute cannot hold one. Below the breakpoint each is a single
+ * column, which is what a phone wants anyway: the picture above the claim rather
+ * than a 90px column beside it.
+ *
+ * `min-width: 0` on the children is the other half. A grid item's default
+ * `min-width: auto` refuses to shrink below its content, so one long unbroken
+ * token - a VIN, a URL, a monospaced coordinate list - would push the track wide
+ * and reintroduce exactly the overflow the breakpoint just removed.
+ */
+.split {
+  display: grid;
+  gap: var(--s-5);
+  align-items: start;
+}
+
+.split > * {
+  min-width: 0;
+}
+
+/* A figure beside the text it supports: evidence crop, spectrogram. */
+@media (min-width: 700px) {
+  .split-figure {
+    grid-template-columns: minmax(240px, 340px) 1fr;
+  }
+}
+
+/* A single large number beside the sentence that qualifies it. */
+@media (min-width: 620px) {
+  .split-metric {
+    grid-template-columns: minmax(150px, 200px) 1fr;
+  }
 }
 
 table {
@@ -112,31 +451,93 @@ table {
 th,
 td {
   text-align: left;
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--tk-line);
+  padding: var(--s-3) var(--s-4);
+  border-bottom: 1px solid var(--tk-rule);
   vertical-align: top;
 }
 
 th {
-  font-size: 11px;
+  font-family: var(--tk-display);
+  font-size: var(--t-xs);
+  font-weight: 600;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--tk-muted);
-  font-weight: 400;
+  color: var(--tk-graphite);
 }
 
-@media (max-width: 720px) {
-  .wrap {
-    padding: 0 16px;
+/* A wide table on a narrow screen scrolls inside its own box rather than
+   pushing the page sideways. */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* --------------------------------------------------------------------- */
+/* status chips - the only place chroma is applied by class               */
+/* --------------------------------------------------------------------- */
+
+.chip {
+  display: inline-block;
+  font-family: var(--tk-display);
+  font-size: var(--t-2xs);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  white-space: nowrap;
+  border: 1px solid currentColor;
+}
+
+.chip-solid {
+  border-color: transparent;
+  color: var(--tk-void);
+}
+
+/* --------------------------------------------------------------------- */
+/* motion                                                                 */
+/* --------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
   }
-  body {
-    font-size: 13px;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
   }
 }
 
-/* ------------------------------------------------------------------ */
-/* print - LIABILITY section 4, row seven                              */
-/* ------------------------------------------------------------------ */
+/* --------------------------------------------------------------------- */
+/* responsive                                                             */
+/* --------------------------------------------------------------------- */
+
+@media (max-width: 900px) {
+  :root {
+    --s-8: 48px;
+    --s-9: 64px;
+  }
+}
+
+@media (max-width: 620px) {
+  .wrap,
+  .wrap-narrow {
+    padding: 0 var(--s-4);
+  }
+  .panel {
+    padding: var(--s-4);
+  }
+  th,
+  td {
+    padding: var(--s-3);
+  }
+}
+
+/* --------------------------------------------------------------------- */
+/* print - LIABILITY section 4, row seven                                 */
+/* --------------------------------------------------------------------- */
 
 /*
  * A printed report gets handed to a seller across a bonnet, so the disclaimer
@@ -149,20 +550,29 @@ th {
  */
 @media print {
   :root {
-    --tk-bg: #ffffff;
-    --tk-text: #101418;
-    --tk-muted: #444c54;
-    --tk-line: #c8ced4;
-    --tk-unknown: #5c646c;
+    --tk-void: #ffffff;
+    --tk-shell: #ffffff;
+    --tk-shell-2: #f4f2ef;
+    --tk-paper: #15120f;
+    --tk-graphite: #47423c;
+    --tk-pencil: #5c564e;
+    --tk-rule: #c9c3ba;
+    --tk-rule-bright: #a49c92;
+    --tk-unknown: #5c564e;
   }
 
   body {
     background: #fff;
-    color: #101418;
+    color: #15120f;
+    font-size: 10pt;
   }
 
-  /* Ink, and a watermark that would obscure the evidence on paper. */
   .share-watermark {
+    display: none !important;
+  }
+
+  /* On-screen navigation is meaningless on paper. */
+  .no-print {
     display: none !important;
   }
 
@@ -171,12 +581,10 @@ th {
     text-decoration: underline;
   }
 
-  /* Print the destination of a link - a printed page cannot be clicked, and the
-     accuracy page is the one link a reader most needs to be able to reach. */
   a[href^="/"]::after {
     content: " (tirekick.app" attr(href) ")";
-    font-size: 9pt;
-    color: #5c646c;
+    font-size: 8pt;
+    color: #5c564e;
   }
 
   .panel,
@@ -186,11 +594,6 @@ th {
     break-inside: avoid;
   }
 
-  .section {
-    break-before: auto;
-  }
-
-  /* The running footer. Repeats on every sheet. */
   body::after {
     position: fixed;
     bottom: 0;
@@ -200,8 +603,8 @@ th {
     font-size: 8pt;
     line-height: 1.35;
     padding: 6pt 0;
-    border-top: 1px solid #c8ced4;
-    color: #444c54;
+    border-top: 1px solid #c9c3ba;
+    color: #47423c;
     background: #fff;
   }
 

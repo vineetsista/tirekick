@@ -154,6 +154,40 @@
   box-sizing: border-box;
 }
 
+/*
+ * Nothing in a report is a word this project chose.
+ *
+ * Finding titles, component strings, document excerpts and vehicle fields all
+ * arrive from a federal record, a buyer's paperwork, or a vision model, and any
+ * of them can be one token with no break opportunity in it:
+ *
+ *   POWERTRAIN:AUTOMATIC_TRANSMISSION:CONTROL_MODULE:SOFTWARE_CALIBRATION_UPDATE
+ *
+ * A line breaker has nowhere to break that, so the containing block grows to fit
+ * it and the whole document acquires a horizontal scrollbar. Laid out against a
+ * report full of them, the page ran 1,128px past a 320px viewport - and 579px
+ * past a 1440px one, which is the part worth noticing: this is not a small-screen
+ * problem, it is a content problem that a wide screen only hides.
+ *
+ * `overflow-wrap` is inherited, so declaring it here covers every descendant
+ * including the ones nobody has written yet.
+ *
+ * `anywhere` rather than `break-word`, and the difference is the whole fix.
+ * Both break a long token onto the next line. Only `anywhere` also shrinks the
+ * element's *min-content* width. A flex or grid item defaults to
+ * `min-width: auto`, meaning it refuses to be narrower than its min-content -
+ * so with `break-word` the vehicle heading still forced its flex row 366px past
+ * a 320px viewport while dutifully wrapping the text inside it. The token broke
+ * and the box did not shrink.
+ *
+ * Neither value breaks a word that fits, so ordinary prose is untouched either
+ * way. The stress fixture is what told these two apart; by inspection they look
+ * interchangeable.
+ */
+body {
+  overflow-wrap: anywhere;
+}
+
 html {
   scroll-behavior: smooth;
   /* Anything with an id is a jump target; keep it clear of the sticky nav. */
@@ -226,8 +260,6 @@ body {
   font-family: var(--tk-mono);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "ss01";
-  /* VINs, sha256 prefixes and coordinate lists are single long tokens. */
-  overflow-wrap: break-word;
 }
 
 /* Chrome. A label, an eyebrow, a column head. */
@@ -267,15 +299,6 @@ h4 {
   letter-spacing: -0.02em;
   line-height: 1.12;
   margin: 0;
-  /*
-   * Report copy is not prose we wrote. A finding title can be
-   * "Recall 25V422000: POWER TRAIN:AUTOMATIC TRANSMISSION", straight from a
-   * federal record, and that colon-joined run is one unbreakable word to a line
-   * breaker. At 320px it pushed the heading 40px past the panel and gave the
-   * whole document a horizontal scrollbar. `break-word` only breaks a token that
-   * cannot fit on a line of its own, so ordinary titles are untouched.
-   */
-  overflow-wrap: break-word;
 }
 
 /* --------------------------------------------------------------------- */

@@ -9,6 +9,7 @@ import { ReportView } from "@/components/ReportView";
 import { TeaserView } from "@/components/TeaserView";
 import Home from "@/app/page";
 import { demoReport, demoTeaser } from "@/lib/report";
+import { stressReports, stressTeasers } from "@/lib/stress";
 
 /**
  * The gate that opens a browser.
@@ -73,10 +74,36 @@ const MAX_CHARS_PER_LINE = 92;
 const AA_NORMAL = 4.5;
 const AA_LARGE = 3.0;
 
+/**
+ * The pages, plus the same components fed reports designed to break them.
+ *
+ * The checks below are general; for one commit the input was not. Everything ran
+ * against `demo-01` - eight findings, short titles, every optional section
+ * populated - which is the one report guaranteed not to surprise the layout,
+ * because the layout was built while looking at it.
+ *
+ * `stress.ts` derives forty-finding reports, 900-character details, federal
+ * component strings with no break opportunity in them, an empty-handed report
+ * with no findings at all, assets whose dimensions could not be read, and
+ * seven-figure prices - each passed back through `parseReport`, so every one is
+ * something the pipeline could legally emit rather than arbitrary JSON.
+ */
 const PAGES: [string, string][] = [
   ["report", renderToStaticMarkup(createElement(ReportView, { report: demoReport }))],
   ["teaser", renderToStaticMarkup(createElement(TeaserView, { teaser: demoTeaser }))],
   ["landing", renderToStaticMarkup(createElement(Home))],
+  ...stressReports(demoReport).map(
+    (c): [string, string] => [
+      `report/${c.name}`,
+      renderToStaticMarkup(createElement(ReportView, { report: c.value })),
+    ],
+  ),
+  ...stressTeasers(demoTeaser).map(
+    (c): [string, string] => [
+      `teaser/${c.name}`,
+      renderToStaticMarkup(createElement(TeaserView, { teaser: c.value })),
+    ],
+  ),
   // The checkout page's pay button only exists after three checkboxes are ticked
   // and Stripe is configured, so it never appears in static markup. Its styling
   // is a class for exactly that reason; this puts the class on a page so the
@@ -272,7 +299,11 @@ describe("laid out in a real browser", () => {
   it("gives the primary action a real hit target", async () => {
     // 44x44 is the WCAG 2.5.5 target size. A button that takes money should not
     // be the thing a buyer has to aim at.
-    await load(PAGES[3]![1], 390);
+    // By name. Looking it up by index broke the moment stress pages were
+    // inserted ahead of it, and the test went red pointing at the wrong page.
+    const primary = PAGES.find(([name]) => name === "primary-action");
+    expect(primary, "the primary-action harness page is missing").toBeDefined();
+    await load(primary![1], 390);
     const box = await page.locator(".btn-primary").boundingBox();
     expect(box).not.toBeNull();
     expect(box!.height).toBeGreaterThanOrEqual(44);

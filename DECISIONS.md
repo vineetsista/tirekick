@@ -795,3 +795,41 @@ on a phone is the one that should not need aiming at.
 Each of the three checks was verified by reintroducing the defect it was written
 for and confirming it went red - the overflow check reproduced the original 76px
 at 390px exactly.
+
+### D-051 - The layout gate is fed reports designed to break it
+**P8.** D-050 built a gate whose checks were general and whose input was not. It
+ran against `demo-01`: eight findings, short titles, every optional section
+populated - the one report guaranteed not to surprise the layout, because the
+layout was built while looking at it. The phase report listed that as a known
+limit, which is a way of writing a bug down instead of fixing it.
+
+`stress.ts` derives six adversarial reports and two adversarial teasers from the
+real fixture: forty findings, 900-character details, federal component strings
+with no break opportunity in them, an empty-handed report with no findings at
+all, assets whose dimensions could not be read, and seven-figure prices. Each is
+passed back through `parseReport`, which runs the zod contract *and*
+`assertLaws`, so a case cannot drift into something the pipeline could never
+emit. That constraint is the difference between "the layout survives arbitrary
+JSON", which is not a claim worth making, and "the layout survives every report
+this pipeline can produce".
+
+**It found a defect on the first run, and the defect was severe.** A report whose
+titles are real NHTSA component strings ran **1,128px past a 320px viewport, and
+579px past a 1440px one**. Not a small-screen problem - a content problem that a
+wide screen was hiding. Nothing in the product chooses those words: they arrive
+from a federal record, a buyer's paperwork, or a vision model.
+
+The fix is one inherited declaration, and which one matters:
+
+    body { overflow-wrap: anywhere; }
+
+`break-word` was the obvious choice and was wrong. Both values break a long token
+onto the next line, but only `anywhere` also shrinks the element's *min-content*
+width - and a flex or grid item defaults to `min-width: auto`, so it refuses to
+be narrower than its min-content. With `break-word` the vehicle heading wrapped
+its text correctly while still forcing its flex row 366px past a 320px viewport.
+The token broke; the box did not shrink.
+
+By inspection those two values look interchangeable. Only laying the page out
+against content nastier than the fixture told them apart, which is the argument
+for this decision in a sentence.

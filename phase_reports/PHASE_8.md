@@ -1,6 +1,6 @@
 # PHASE 8 - THE EVIDENCE
 
-Branch: `main` | 469 tests | 50 decisions logged
+Branch: `main` | 517 tests | 51 decisions logged
 Gates: 9/9 green.
 
 P7 ended by saying there was no P8 to define and that the next phase was the
@@ -90,8 +90,8 @@ contradicted the paragraph directly above it.
 
 ## 3. What the phase found on the way
 
-This is the part worth reading. Six real defects, four of them in code this phase
-had no intention of touching.
+This is the part worth reading. Nine real defects, five of them in code this
+phase had no intention of touching.
 
 **The pay button was invisible.** The redesign deleted `--tk-accent` on the
 grounds that the product has no brand hue - `globals.css` says so, in a comment,
@@ -134,6 +134,19 @@ token to a line breaker and pushed its heading 40px past the panel.
 **`FindingCard`'s docstring claimed a test that did not exist.** It said
 "`ReportView.test.tsx` now asserts the ordering instead of trusting the comment."
 It did not. The same sin, committed inside the change that was fixing it.
+
+**Unbreakable tokens broke the page at every width.** Found the moment the
+layout gate was pointed at reports designed to break it (D-051) rather than at
+`demo-01`. A report whose titles are real NHTSA component strings -
+`POWERTRAIN:AUTOMATIC_TRANSMISSION:CONTROL_MODULE:...` - ran **1,128px past a
+320px viewport and 579px past a 1440px one**. Not a small-screen bug; a content
+bug that a wide screen was hiding. Nothing in this product chooses those words.
+
+The fix was one inherited declaration, and the first version of it was wrong:
+`overflow-wrap: break-word` wrapped the text correctly and still let a flex item
+force its row 366px wide, because `break-word` does not shrink min-content width
+and a flex item defaults to `min-width: auto`. `anywhere` does. The two look
+interchangeable by inspection; only laying out nastier content told them apart.
 
 **Prose was set at 150-159 characters a line.** Measured on the built page at
 1440px. Comfortable reading is 45-75 characters; about 90 is where the eye stops
@@ -199,9 +212,9 @@ code for them.
 | | |
 |---|---|
 | Phases | 8 |
-| Tests | 469 |
+| Tests | 517 |
 | Gates | 9/9 green |
-| Decisions logged | 50 |
+| Decisions logged | 51 |
 | Finding types the engines can produce | 16 |
 | **Finding types with a measured accuracy** | **0** |
 | **Finding types enabled for a paid report** | **0** |
@@ -240,12 +253,12 @@ Newly named this phase, and not yet handled:
 - **`BOX_FILL = 0.55` and the 700px/620px layout breakpoints are judgement, not
   measurement.** They have been checked against one synthetic fixture at three
   viewport widths.
-- **The layout gate is one fixture wide.** `layout.test.ts` (D-050) lays the real
-  components out in chromium and measures overflow, line length and contrast at
-  four widths - but against `demo-01`, which is synthetic media and one vehicle.
-  A report with forty findings, a 900-character detail string, or a make with a
-  very long name has never been laid out by anything. The check is general; the
-  input is not, and the input is where the next overflow will come from.
+- **The stress cases are derived, not generated.** `stress.ts` (D-051) mutates
+  the real fixture into eight adversarial shapes and validates each through
+  `parseReport`. That covers the failure modes anyone thought to name. It is not
+  property-based: nothing searches the space of legal reports for a shape nobody
+  anticipated, and the two overflow bugs it found were both found because someone
+  guessed the right nasty input.
 
 The measurement phase is still the honest successor to this one, and it still
 needs a key and a car.

@@ -26,9 +26,17 @@
     "redact": "packages/engines/.venv/bin/python scripts/redact_media.py"
   },
   "devDependencies": {
-    "@types/node": "22.10.2",
+    "@types/node": "22.19.0",
     "prettier": "3.4.2",
-    "turbo": "2.3.3",
+    "turbo": "2.10.7",
     "typescript": "5.7.2"
+  },
+  "pnpm": {
+    "overrides": {
+      "postcss": "^8.5.23",
+      "sharp": "^0.35.0",
+      "vite": "^7.3.1",
+      "esbuild": "^0.25.0"
+    }
   }
 }

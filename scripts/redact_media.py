@@ -75,8 +75,9 @@ def cmd_init(directory: Path) -> int:
     records = redact.load(directory)
     added = 0
     for path in images(directory):
-        if path.stem not in records:
-            records[path.stem] = redact.AssetRedaction(asset=path.stem)
+        key = redact.asset_key(directory, path)
+        if key not in records:
+            records[key] = redact.AssetRedaction(asset=key)
             added += 1
     out = redact.save(directory, records)
     print(f"  {added} new record(s) -> {out}")
@@ -97,11 +98,15 @@ def cmd_propose(directory: Path) -> int:
 
     records = redact.load(directory)
     for path in images(directory):
+        key = redact.asset_key(directory, path)
         try:
             response = client.call(
                 engine="redact",
                 task="locate",
-                subject=path.stem,
+                # The subject becomes a cache filename, so the key's slashes
+                # are flattened - but it must still name one file, not a stem
+                # that two files could share.
+                subject=key.replace("/", "__"),
                 prompt=locate.text,
                 system=system.text,
                 schema=LOCATE_SCHEMA,
@@ -118,7 +123,7 @@ def cmd_propose(directory: Path) -> int:
             )
             for r in response.get("regions", [])
         ]
-        record = records.setdefault(path.stem, redact.AssetRedaction(asset=path.stem))
+        record = records.setdefault(key, redact.AssetRedaction(asset=key))
         record.regions = regions
         # Deliberately NOT set: reviewed_by. The model does not sign anything.
         record.reviewed_by = ""
@@ -137,27 +142,36 @@ def cmd_apply(directory: Path) -> int:
     records = redact.load(directory)
     paths = images(directory)
     try:
-        redact.assert_reviewed(paths, records)
+        redact.assert_reviewed(directory, paths, records)
     except redact.RedactionError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
     blurred = 0
     for path in paths:
-        record = records[path.stem]
-        if not record.regions:
-            continue
+        record = records[redact.asset_key(directory, path)]
+        # Every reviewed image is re-encoded, not just the ones with regions.
+        # The re-encode is what strips EXIF, and a photo with nothing to blur
+        # still carries the GPS coordinates of wherever it was taken.
         redact.redact_file(path, path, record.regions)
-        print(f"  {path.name}: {len(record.regions)} region(s) blurred, EXIF dropped")
-        blurred += 1
+        if record.regions:
+            print(
+                f"  {path.name}: {len(record.regions)} region(s) blurred, EXIF dropped"
+            )
+            blurred += 1
+        else:
+            print(f"  {path.name}: nothing to blur, EXIF dropped")
 
-    print(f"\n  {blurred} image(s) modified in place. This is not reversible.")
+    print(
+        f"\n  {len(paths)} image(s) re-encoded in place, {blurred} with regions "
+        f"blurred. This is not reversible."
+    )
     return 0
 
 
 def cmd_check(directory: Path) -> int:
     try:
-        redact.assert_reviewed(images(directory), redact.load(directory))
+        redact.assert_reviewed(directory, images(directory), redact.load(directory))
     except redact.RedactionError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1

@@ -52,6 +52,26 @@ BUCKET_SECONDS = 1.5
 #: is never resampled twice.
 FRAME_LONG_EDGE = 1568
 
+
+def scale_filter(long_edge: int = FRAME_LONG_EDGE) -> str:
+    """The ffmpeg scale filter that actually caps the long edge.
+
+    It read `scale='min(N,iw)':-2` - a ceiling on width and nothing at all on
+    height. Landscape footage obeyed it and portrait footage, which is how a
+    phone held normally records a walkaround, came out at full height: larger
+    files, a second resample in the vision path, and a frame that is not the
+    size this constant says it is.
+
+    `force_original_aspect_ratio=decrease` makes the pair a box to fit inside
+    rather than a size to stretch to, and `force_divisible_by=2` keeps both
+    axes even, which the encoder requires.
+    """
+    return (
+        f"scale='min(iw,{long_edge})':'min(ih,{long_edge})'"
+        f":force_original_aspect_ratio=decrease:force_divisible_by=2"
+    )
+
+
 #: Hamming distance between 64-bit perceptual hashes at or below which two frames
 #: are treated as the same view.
 #:
@@ -173,7 +193,7 @@ def extract_frames(path: Path, out_dir: Path, *, fps: float = SAMPLE_FPS) -> lis
             "-i",
             str(path),
             "-vf",
-            f"fps={fps},scale='min({FRAME_LONG_EDGE},iw)':-2",
+            f"fps={fps},{scale_filter()}",
             "-q:v",
             "3",
             str(out_dir / "raw_%04d.jpg"),

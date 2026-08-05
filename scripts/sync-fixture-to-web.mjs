@@ -9,10 +9,15 @@
  * schema change that the TypeScript side has not caught up with fails the web
  * build instead of failing in front of a buyer.
  *
- * Media goes to public/f/, which is gitignored - it is a copy, and fixtures/ is
- * the source of truth.
+ * Media is deliberately NOT copied anywhere. A file under apps/web/public/ is
+ * served by the framework before any route handler runs, which would mean the
+ * access check in app/f/[inspectionId]/[...path]/route.ts never executes for
+ * the demo - the one inspection every stranger loads first. The route serves
+ * demo media straight from fixtures/, the source of truth (P9, D-052). A
+ * leftover public/f/ from an older checkout would silently shadow the route,
+ * so this script removes it.
  */
-import { cp, mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -22,9 +27,8 @@ const fixture = "demo-01";
 
 const reportSrc = resolve(root, `fixtures/reports/${fixture}.report.json`);
 const teaserSrc = resolve(root, `fixtures/reports/${fixture}.teaser.json`);
-const mediaSrc = resolve(root, `fixtures/${fixture}/media`);
 const generatedDir = resolve(root, "apps/web/src/generated");
-const mediaDest = resolve(root, `apps/web/public/f/${fixture}`);
+const staleMediaCopy = resolve(root, "apps/web/public/f");
 
 if (!existsSync(reportSrc)) {
   console.error(
@@ -34,7 +38,7 @@ if (!existsSync(reportSrc)) {
 }
 
 await mkdir(generatedDir, { recursive: true });
-await mkdir(mediaDest, { recursive: true });
+await rm(staleMediaCopy, { recursive: true, force: true });
 
 await writeFile(
   resolve(generatedDir, `${fixture}.teaser.json`),
@@ -46,7 +50,6 @@ await writeFile(
   await readFile(reportSrc, "utf8"),
   "utf8",
 );
-await cp(mediaSrc, mediaDest, { recursive: true });
 
 /**
  * The accuracy page is generated from docs/ACCURACY.md rather than retyped.
@@ -64,5 +67,5 @@ await writeFile(
 );
 
 console.log(
-  `synced ${fixture}: report + accuracy -> src/generated, media -> public/f/${fixture}`,
+  `synced ${fixture}: report + accuracy -> src/generated; media stays in fixtures/, served by the /f route`,
 );

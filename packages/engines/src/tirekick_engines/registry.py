@@ -243,6 +243,36 @@ def enabled_types() -> set[str]:
     return {k for k, v in FINDING_TYPES.items() if v.enabled_for_paid}
 
 
+def withheld_types() -> dict[str, str]:
+    """Types that have been measured and failed, with the sentence saying so.
+
+    This is the half of LAW 4 that had no mechanism. `enabled_for_paid` was read
+    by the gate table and by the accuracy statement - by things that *describe*
+    the gate - and by nothing that enforces it, so a type measured at 0.60
+    against a 0.85 threshold would have printed "NO / below gate" in the console
+    while shipping in the paid dossier unchanged.
+
+    Unmeasured types are deliberately not in here. "We have not measured this"
+    and "we measured this and it failed" are different states, and D-032 settled
+    the first one: every unmeasured type ships with a generated sentence saying
+    none of them has cleared a threshold, on the teaser and above the payment
+    button. Filtering on unmeasured would empty every report the product can
+    currently produce while telling the buyer less than that sentence does.
+    A measured failure has no such defence - the number exists and it is bad.
+    See D-05x in DECISIONS.md.
+    """
+    out: dict[str, str] = {}
+    for key, spec in FINDING_TYPES.items():
+        if spec.measured_precision is None or spec.enabled_for_paid:
+            continue
+        out[key] = (
+            f"{spec.label} findings are withheld from this report. Measured "
+            f"precision {spec.measured_precision:.2f} on n={spec.n} against a "
+            f"{spec.precision_gate:.2f} threshold ({spec.status})."
+        )
+    return out
+
+
 def gate_status_table() -> str:
     """Rendered on every run so the gate is visible, not buried in a doc."""
     rows = ["  TYPE                      GATE  MEASURED     n  PAID  WHY"]

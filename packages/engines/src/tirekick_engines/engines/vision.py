@@ -288,8 +288,15 @@ def draft_findings(
                 # is honest; inventing a "nothing found" would not be - and it must
                 # not mark the system examined either.
                 continue
+            if "findings" not in response:
+                # A payload with no `findings` key is not "we looked and saw
+                # nothing" - it is a response we cannot read. Treating the two
+                # alike marked the system examined, which is the permission slip
+                # for a "no issues visible" row (see PASS_SYSTEMS above). A
+                # malformed answer licenses nothing.
+                continue
             examined.update(PASS_SYSTEMS.get(pass_name, ()))
-            for index, raw in enumerate(response.get("findings", []), start=1):
+            for index, raw in enumerate(response["findings"], start=1):
                 drafts.append(
                     DraftFinding(
                         id=raw.get("id") or f"vf_{pass_name}_{asset.id}_{index:02d}",
@@ -301,8 +308,26 @@ def draft_findings(
                         confidence=raw["confidence"],
                         confidence_basis=raw["confidence_basis"],
                         evidence=[_evidence_from(asset.id, e) for e in raw["evidence"]],
-                        # Never model-supplied. See the module docstring and D-024.
-                        estimated_cost_usd=raw.get("estimated_cost_usd"),
+                        # Never from a live model (D-024).
+                        #
+                        # D-024 left the cost band out of the tool schema on the
+                        # reasoning that "a field that is not in the schema
+                        # cannot be returned". JSON Schema permits extra
+                        # properties unless told otherwise, and no API promises
+                        # strict conformance, so a model volunteering
+                        # `estimated_cost_usd` had it read straight through into
+                        # a price deduction, the fair range, and the sentence
+                        # the buyer says to a seller's face. The premise was
+                        # false; this is the filter it assumed.
+                        #
+                        # Fixture responses keep theirs: those files are written
+                        # by this repository, their bands are declared invented
+                        # in fixtures/PROVENANCE.md, and they are what exercises
+                        # the deduction arithmetic. Nothing a live model says
+                        # gets that trust.
+                        estimated_cost_usd=(
+                            raw.get("estimated_cost_usd") if client.mode == "fixture" else None
+                        ),
                         seller_question=raw.get("seller_question"),
                         mechanic_check=raw.get("mechanic_check"),
                         engine="vision",

@@ -28,6 +28,7 @@ import base64
 import io
 import json
 import os
+import re
 import time
 from collections.abc import Sequence
 from dataclasses import dataclass, field
@@ -78,6 +79,26 @@ def _retryable_errors() -> tuple[type[BaseException], ...]:
     # RateLimitError subclasses APIStatusError; the 429 is separated by status
     # code in the handler rather than by type.
     return (anthropic.APIStatusError, anthropic.APIConnectionError)
+
+
+#: Characters permitted in a cache key component.
+#:
+#: The key becomes a filename, and `subject` is an asset id that arrives from a
+#: manifest - user input under LAW 3. An id of `../../../etc/whatever` made
+#: `_write_cache` mkdir and write attacker-named JSON anywhere the process
+#: could reach, and made fixture mode read from there. Every id the pipeline
+#: has ever produced passes this; nothing that escapes a directory does.
+_CACHE_KEY_OK = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+
+
+def _cache_key(engine: str, task: str, subject: str) -> str:
+    for part in (engine, task, subject):
+        if not _CACHE_KEY_OK.match(part) or ".." in part:
+            raise ValueError(
+                f"unusable cache-key component {part!r}: a cache key becomes a "
+                f"filename, so it may not contain separators or traversal"
+            )
+    return f"{engine}.{task}.{subject}"
 
 
 class FixtureMissing(RuntimeError):
@@ -204,7 +225,7 @@ class ModelClient:
         with engine and task, forms the cache key. Keys are readable filenames on
         purpose - a cached response should be reviewable in a diff.
         """
-        key = f"{engine}.{task}.{subject}"
+        key = _cache_key(engine, task, subject)
         if self.mode == "fixture":
             return self._from_cache(key, images=len(image_paths))
         return self._from_api(

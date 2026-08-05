@@ -21,9 +21,20 @@ from .models import Cost, RunMode
 # Keyed by model because the price and the model choice are one decision, not two.
 # A single global pair silently reprices the moment TIREKICK_MODEL changes, which
 # is exactly when the number matters most.
+# Checked against Anthropic's published per-MTok list prices on 2026-08-04.
+# A price table nobody re-checks is a cost projection that drifts away from the
+# bill: opus-5 sat here at $15/$75 for three phases, three times its actual
+# rate, and the note printed the wrong figure with no caveat because a wrong
+# number that IS in the table looks authoritative.
+#
+# Both the alias and the dated id are keyed where both exist. TIREKICK_MODEL is
+# documented with the alias, and keying only the dated id silently priced the
+# spelling we tell people to use at the fallback rate.
 MODEL_PRICES: dict[str, tuple[float, float]] = {
-    "claude-opus-5": (15.00, 75.00),
+    "claude-fable-5": (10.00, 50.00),
+    "claude-opus-5": (5.00, 25.00),
     "claude-sonnet-5": (3.00, 15.00),
+    "claude-haiku-4-5": (1.00, 5.00),
     "claude-haiku-4-5-20251001": (1.00, 5.00),
 }
 
@@ -126,8 +137,12 @@ class CostMeter:
             "the most expensive rate we know of - the figure is an upper bound, "
             "not a quote."
         )
+        # `_calls` is every line item, federal lookups included; calling the
+        # total "model calls" inflated the figure the unit economics are read
+        # off by however many free lookups the run happened to make.
+        model_calls = len(self._calls) - self.federal_lookups
         return (
-            f"Live mode on {self.model or 'an unnamed model'}: {len(self._calls)} "
+            f"Live mode on {self.model or 'an unnamed model'}: {model_calls} "
             f"model calls, {self.input_tokens} input and {self.output_tokens} output "
             f"tokens at ${price_in}/${price_out} per Mtok.{caveat}"
         )

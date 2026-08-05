@@ -45,11 +45,11 @@
   },
   "redFlagScore": 50,
   "headline": "2 finding(s) that are likely to cost money. Separately, 5 recall campaign(s) are on record for this model year - free to fix, and worth one phone call to a dealer.",
-  "findingCount": 14,
+  "findingCount": 8,
   "counts": [
     {
       "severity": "major",
-      "count": 7
+      "count": 2
     },
     {
       "severity": "minor",
@@ -57,7 +57,7 @@
     },
     {
       "severity": "info",
-      "count": 2
+      "count": 1
     }
   ],
   "mechanicReferralCount": 2,
@@ -79,8 +79,8 @@
     },
     {
       "system": "transmission",
-      "status": "attention",
-      "statement": "Something was found here. The full report says what, where, and how sure."
+      "status": "cannot_determine",
+      "statement": "Could not be determined from the media provided. The full report says why."
     },
     {
       "system": "brakes",
@@ -154,7 +154,7 @@
       "h": 0.12
     },
     "caption": "Illuminated lamp in the instrument cluster",
-    "statement": "One of 8 findings about this vehicle, shown in full. The other 7 are in the paid report, each with its own photograph and box."
+    "statement": "One of 8 findings about this vehicle, shown in full. The other 7 are in the paid report - 6 with a photograph and a box, the rest cited to a document or a record."
   },
   "couldNotAssess": [
     "Brakes - not remotely verifiable, independent mechanic required.",
@@ -173,8 +173,11 @@
   "unlocks": [
     "Every finding, with the photograph it came from and a box drawn on it",
     "Why we are as confident as we are, per finding, in plain words",
-    "The full vehicle record: recalls on record, owner complaint patterns, and what your own paperwork says",
+    "The full vehicle record: 5 recall campaign(s) on record, owner complaint patterns for this model year",
+    "What your own paperwork says, quoted, with the line it came from",
     "The engine audio spectrogram, with the sharp sounds marked",
+    "Every frame taken from your walkaround video, and what was discarded",
+    "The asking price against the comparable listings you provided, with the arithmetic shown",
     "Questions to ask the seller, written from what was actually found",
     "A negotiation script that never asks you to overstate anything"
   ],

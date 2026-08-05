@@ -150,3 +150,43 @@ def test_an_unreadable_file_raises_rather_than_returning_nothing(tmp_path: Path)
     broken.write_bytes(b"not a video")
     with pytest.raises(video.VideoUnavailable):
         video.probe_duration(broken)
+
+
+def test_portrait_frames_respect_the_long_edge(tmp_path: Path) -> None:
+    """A phone walkaround is portrait by default, so this is the common case.
+
+    The first filter capped only the width: a 1080x1920 clip extracted frames
+    at exactly 1080x1920, and every one of them paid the second resample in
+    the vision path that FRAME_LONG_EDGE exists to prevent.
+    """
+    import subprocess
+
+    from PIL import Image
+
+    clip = tmp_path / "portrait.mp4"
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-nostdin",
+            "-loglevel",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc=duration=1.5:size=1080x1920:rate=30",
+            "-pix_fmt",
+            "yuv420p",
+            str(clip),
+        ],
+        check=True,
+        capture_output=True,
+    )
+
+    extracted = video.extract_frames(clip, tmp_path / "out")
+    assert extracted, "the synthetic portrait clip produced no frames at all"
+    for frame in extracted:
+        with Image.open(frame) as image:
+            assert max(image.size) <= video.FRAME_LONG_EDGE, (
+                f"{frame.name} is {image.size} - long edge over "
+                f"{video.FRAME_LONG_EDGE}, so it will be resampled twice"
+            )

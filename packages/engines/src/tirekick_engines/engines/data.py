@@ -18,6 +18,7 @@ DECISIONS.md D-016.
 from __future__ import annotations
 
 import contextlib
+import re
 from typing import Any
 
 from .. import vin as vin_module
@@ -126,6 +127,33 @@ def _decoded_from(row: dict[str, Any]) -> DecodedVehicle:
     )
 
 
+#: NHTSA writes ReportReceivedDate day-first: "27/06/2019".
+_RECEIVED_DATE = re.compile(r"(\d{1,2})/(\d{1,2})/(\d{4})")
+
+
+def _recall_recency(recall: Recall) -> tuple[int, int, int, str]:
+    """Chronology for the newest-first sort, read from the record itself.
+
+    Campaign numbers look sortable and are not: they open with a two-digit
+    year, so descending string order ranks a 1999 campaign ('99V...') above
+    everything filed since 2000 - and the cars old enough to carry campaigns
+    on both sides of that boundary are exactly the ones this product sees.
+    The report-received date is the field that actually carries the
+    chronology. When a record arrives without one, the campaign year stands
+    in, widened around the century so the fallback cannot repeat the mistake.
+    """
+    match = _RECEIVED_DATE.fullmatch(recall.report_received_date)
+    if match:
+        day, month, year = (int(part) for part in match.groups())
+        return (year, month, day, recall.campaign_number)
+    prefix = recall.campaign_number[:2]
+    if prefix.isdigit():
+        two_digit = int(prefix)
+        year = 2000 + two_digit if two_digit < 50 else 1900 + two_digit
+        return (year, 0, 0, recall.campaign_number)
+    return (0, 0, 0, recall.campaign_number)
+
+
 def _recalls_from(payload: dict[str, Any]) -> list[Recall]:
     recalls: list[Recall] = []
     for entry in payload.get("results") or []:
@@ -147,8 +175,9 @@ def _recalls_from(payload: dict[str, Any]) -> list[Recall]:
                 park_outside=bool(entry.get("parkOutSide")),
             )
         )
-    # Newest first. NHTSA returns campaign order, which is not chronological.
-    recalls.sort(key=lambda r: r.campaign_number, reverse=True)
+    # Newest first. Neither the order NHTSA returns nor string order on the
+    # campaign numbers is chronological; _recall_recency says why.
+    recalls.sort(key=_recall_recency, reverse=True)
     return recalls
 
 
@@ -305,8 +334,29 @@ def lookup(raw_vin: str | None, sources: FederalSources) -> VehicleRecord | None
                     ),
                 )
             )
+            recall_scope = (
+                f"{len(recalls)} recall campaign(s) on record for the {label}. NHTSA "
+                f"publishes recalls by model, not by VIN, and does not publish whether "
+                f"a campaign was carried out on any individual vehicle. So this is a "
+                f"list of what could apply to this car - not a list of what is "
+                f"outstanding on it. A dealer can tell you, by VIN, in a phone call, "
+                f"and the work is free."
+            )
         except FederalRecordMissing:
-            pass
+            # A lookup that failed and a lookup that found nothing are
+            # different facts, and only one of them may say "0 recall
+            # campaign(s) on record". Counting an empty list here would put an
+            # affirmative safety claim in a paid report on the strength of a
+            # cache file that was never written. The gap is named instead, and
+            # with no citation appended, recall_findings() has nothing it is
+            # allowed to report (LAW 1).
+            recall_scope = (
+                f"The recall lookup for the {label} could not be completed, so "
+                f"this report carries no recall information - which is not the "
+                f"same as no recalls existing. A dealer can check this VIN "
+                f"against the federal recall database in a phone call, and any "
+                f"outstanding recall work is free."
+            )
 
         try:
             index_record = sources.complaint_model_index(make, year)
@@ -332,15 +382,6 @@ def lookup(raw_vin: str | None, sources: FederalSources) -> VehicleRecord | None
                 complaints = _merge_complaint_payloads(payloads, label, names)
         except FederalRecordMissing:
             pass
-
-        recall_scope = (
-            f"{len(recalls)} recall campaign(s) on record for the {label}. NHTSA "
-            f"publishes recalls by model, not by VIN, and does not publish whether "
-            f"a campaign was carried out on any individual vehicle. So this is a "
-            f"list of what could apply to this car - not a list of what is "
-            f"outstanding on it. A dealer can tell you, by VIN, in a phone call, "
-            f"and the work is free."
-        )
     else:
         recall_scope = (
             "No recall lookup was run. Recalls are looked up from the decoded make, "

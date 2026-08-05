@@ -157,15 +157,24 @@ BRAND_PATTERNS: tuple[BrandPattern, ...] = (
 #: Tokens that, on the same line as a match, mean the document is denying the
 #: brand rather than reporting it. "Salvage: None" is the common shape, and
 #: reporting it as a salvage indicator would be a false alarm on a clean car.
+#:
+#: The one negation lookalike is "No." as the abbreviation of "number". Real
+#: reports number their rows - "No. 3 - SALVAGE TITLE ISSUED" - and reading
+#: that "No." as a denial silently drops an asserted brand, the false negative
+#: ACCURACY.md names as the costliest error. "No" followed by a period and a
+#: number is the enumeration, never the denial, so the lookahead excludes it
+#: here and in _NEGATED_ASSERTION below. "Salvage? No." keeps its full stop
+#: and stays a denial: only the digit after the period marks an enumeration.
 _DENIAL = re.compile(
-    r"\b(no|none|not|never|nil|negative|clear|clean|zero|0)\b"
+    r"\b(no(?!\.\s*\d)|none|not|never|nil|negative|clear|clean|zero|0)\b"
     r"|\bno records? (found|reported)\b"
     r"|:\s*(n/?a|no|none)\b",
     re.IGNORECASE,
 )
 
-#: Tokens that mean the line is asserting the brand, and that outrank a stray
-#: "no" elsewhere on the same line ("No. 3 - SALVAGE TITLE ISSUED").
+#: Tokens that mean the line is asserting the brand. On a line that also
+#: carries a denial token, these demote the denial to ambiguous: both signals
+#: are present, and picking one would be a guess.
 _ASSERTION = re.compile(
     r"\b(issued|reported|declared|branded|recorded|applied|stamped|yes|true)\b",
     re.IGNORECASE,
@@ -178,7 +187,7 @@ _ASSERTION = re.compile(
 #: phrasing of good news reads as ambiguous - which is how the first version of
 #: this scanner put a salvage indicator on a clean fixture.
 _NEGATED_ASSERTION = re.compile(
-    r"\b(no|none|not|never|nil|zero)\b[^\n]{0,20}?"
+    r"\b(no(?!\.\s*\d)|none|not|never|nil|zero)\b[^\n]{0,20}?"
     r"\b(reported|recorded|found|issued|declared|branded|applied|stamped|"
     r"disclosed|indicated)\b",
     re.IGNORECASE,
@@ -262,18 +271,27 @@ def scan(assets: list[Asset], media_root: Path) -> list[BrandHit]:
 
 def title_brand_findings(assets: list[Asset], media_root: Path) -> list[DraftFinding]:
     """Turn asserted and ambiguous hits into drafts. Denied hits produce nothing."""
-    drafts: list[DraftFinding] = []
-    seen: set[str] = set()
-
+    # One finding per brand per document, however many lines mention it - and
+    # the strongest reading wins the finding. A document can hedge on line 3
+    # and assert outright on line 40; shipping the hedge because it came first
+    # would soften a salvage warning to minor at half confidence, and cite the
+    # muddier line as the evidence. Within a stance, the earliest line keeps
+    # the citation.
+    strongest: dict[str, BrandHit] = {}
+    order: list[str] = []
     for hit in scan(assets, media_root):
         if hit.stance == "denied":
             continue
-        # One finding per brand per document, however many lines mention it.
         dedupe_key = f"{hit.asset_id}:{hit.pattern.key}"
-        if dedupe_key in seen:
-            continue
-        seen.add(dedupe_key)
+        if dedupe_key not in strongest:
+            strongest[dedupe_key] = hit
+            order.append(dedupe_key)
+        elif strongest[dedupe_key].stance == "ambiguous" and hit.stance == "asserted":
+            strongest[dedupe_key] = hit
 
+    drafts: list[DraftFinding] = []
+    for dedupe_key in order:
+        hit = strongest[dedupe_key]
         ambiguous = hit.stance == "ambiguous"
         if ambiguous:
             detail = (

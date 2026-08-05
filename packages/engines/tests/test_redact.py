@@ -45,14 +45,14 @@ def test_an_image_with_no_record_is_refused(tmp_path: Path) -> None:
     file nobody remembered to list."""
     path = _plate_image(tmp_path / "photo_01.jpg")
     with pytest.raises(redact.RedactionError, match="no redaction record"):
-        redact.assert_reviewed([path], {})
+        redact.assert_reviewed(tmp_path, [path], {})
 
 
 def test_a_record_with_no_reviewer_is_refused(tmp_path: Path) -> None:
     path = _plate_image(tmp_path / "photo_01.jpg")
-    records = {"photo_01": redact.AssetRedaction(asset="photo_01", regions=[_region()])}
+    records = {"photo_01.jpg": redact.AssetRedaction(asset="photo_01.jpg", regions=[_region()])}
     with pytest.raises(redact.RedactionError, match="no reviewer name"):
-        redact.assert_reviewed([path], records)
+        redact.assert_reviewed(tmp_path, [path], records)
 
 
 def test_a_reviewer_who_decided_nothing_is_refused(tmp_path: Path) -> None:
@@ -62,42 +62,79 @@ def test_a_reviewer_who_decided_nothing_is_refused(tmp_path: Path) -> None:
     refuses it.
     """
     path = _plate_image(tmp_path / "photo_01.jpg")
-    records = {"photo_01": redact.AssetRedaction(asset="photo_01", reviewed_by="vineet")}
+    records = {
+        "photo_01.jpg": redact.AssetRedaction(asset="photo_01.jpg", reviewed_by="vineet")
+    }
     with pytest.raises(redact.RedactionError, match="Which is it"):
-        redact.assert_reviewed([path], records)
+        redact.assert_reviewed(tmp_path, [path], records)
 
 
 def test_an_explicit_nothing_to_redact_passes(tmp_path: Path) -> None:
     """A legitimate answer, and it has to be stated by a person."""
     path = _plate_image(tmp_path / "photo_01.jpg")
     records = {
-        "photo_01": redact.AssetRedaction(
-            asset="photo_01", reviewed_by="vineet", nothing_to_redact=True
+        "photo_01.jpg": redact.AssetRedaction(
+            asset="photo_01.jpg", reviewed_by="vineet", nothing_to_redact=True
         )
     }
-    redact.assert_reviewed([path], records)
+    redact.assert_reviewed(tmp_path, [path], records)
 
 
 def test_a_signed_record_with_regions_passes(tmp_path: Path) -> None:
     path = _plate_image(tmp_path / "photo_01.jpg")
     records = {
-        "photo_01": redact.AssetRedaction(
-            asset="photo_01", reviewed_by="vineet", regions=[_region()]
+        "photo_01.jpg": redact.AssetRedaction(
+            asset="photo_01.jpg", reviewed_by="vineet", regions=[_region()]
         )
     }
-    redact.assert_reviewed([path], records)
+    redact.assert_reviewed(tmp_path, [path], records)
 
 
 def test_one_unreviewed_image_fails_the_whole_directory(tmp_path: Path) -> None:
     first = _plate_image(tmp_path / "photo_01.jpg")
     second = _plate_image(tmp_path / "photo_02.jpg")
     records = {
+        "photo_01.jpg": redact.AssetRedaction(
+            asset="photo_01.jpg", reviewed_by="vineet", nothing_to_redact=True
+        )
+    }
+    with pytest.raises(redact.RedactionError, match="photo_02"):
+        redact.assert_reviewed(tmp_path, [first, second], records)
+
+
+def test_a_bare_stem_record_vouches_for_nothing(tmp_path: Path) -> None:
+    """Records are keyed by the full relative filename, extension included.
+
+    A record keyed 'photo_01' used to vouch for photo_01.jpg and photo_01.png
+    at once - one review silently covering a file nobody looked at. A bare-stem
+    key must now match nothing.
+    """
+    jpg = _plate_image(tmp_path / "photo_01.jpg")
+    png = _plate_image(tmp_path / "photo_01.png")
+    records = {
         "photo_01": redact.AssetRedaction(
             asset="photo_01", reviewed_by="vineet", nothing_to_redact=True
         )
     }
-    with pytest.raises(redact.RedactionError, match="photo_02"):
-        redact.assert_reviewed([first, second], records)
+    with pytest.raises(redact.RedactionError, match="no redaction record"):
+        redact.assert_reviewed(tmp_path, [jpg, png], records)
+
+
+def test_the_same_filename_in_two_folders_needs_two_records(tmp_path: Path) -> None:
+    """Cameras name everything IMG_0001.jpg, so two capture sessions collide on
+    filename alone. The key carries the subdirectory, and a review of one
+    session's file says nothing about the other's."""
+    (tmp_path / "session-a").mkdir()
+    (tmp_path / "session-b").mkdir()
+    first = _plate_image(tmp_path / "session-a" / "IMG_0001.jpg")
+    second = _plate_image(tmp_path / "session-b" / "IMG_0001.jpg")
+    records = {
+        "session-a/IMG_0001.jpg": redact.AssetRedaction(
+            asset="session-a/IMG_0001.jpg", reviewed_by="vineet", nothing_to_redact=True
+        )
+    }
+    with pytest.raises(redact.RedactionError, match="session-b/IMG_0001.jpg"):
+        redact.assert_reviewed(tmp_path, [first, second], records)
 
 
 # --------------------------------------------------------------------------- #
@@ -148,10 +185,56 @@ def test_the_padding_reaches_past_the_box(tmp_path: Path) -> None:
     assert np.abs(before[137:140, 120:280] - after[137:140, 120:280]).mean() > 0
 
 
+def test_boxes_land_where_the_reviewer_drew_them_on_a_rotated_photo(
+    tmp_path: Path,
+) -> None:
+    """Phone photos are stored sideways with an EXIF orientation tag, and every
+    viewer silently honours it. The reviewer draws their box on the image as
+    displayed, so the blur has to land in that frame - a box applied to the raw
+    sensor grid blurs a strip of nothing and ships the plate readable.
+    """
+    source = _plate_image(tmp_path / "photo_01.jpg")
+    # Re-save the plate image tagged Orientation=6: raw 400x200 landscape that
+    # every viewer rotates 90 degrees clockwise into a 200x400 portrait.
+    with Image.open(source) as raw:
+        exif = Image.Exif()
+        exif[0x0112] = 6
+        raw.save(source, exif=exif)
+
+    # The plate block sits at raw rows 140:180, cols 120:280. Rotated 90
+    # degrees clockwise it displays at rows 120:280, cols 20:60 of the 200x400
+    # portrait - and that is the frame the reviewer's box is drawn in.
+    region = redact.Region(
+        kind="plate",
+        box=BoundingBox(x=20 / 200, y=120 / 400, w=40 / 200, h=160 / 400),
+        note="rear plate, as displayed",
+    )
+    out = tmp_path / "redacted.jpg"
+    redact.redact_file(source, out, [region])
+
+    def stripe_detail(array: np.ndarray) -> float:
+        patch = array.astype(np.float32)[120:280, 20:60]
+        # The stripes run horizontally after rotation, so the detail that must
+        # die is the variation from row to row.
+        return float(np.abs(np.diff(patch, axis=0)).mean())
+
+    from PIL import ImageOps
+
+    with Image.open(source) as image:
+        displayed = np.asarray(ImageOps.exif_transpose(image).convert("L"))
+    with Image.open(out) as image:
+        # The output has no orientation tag left, so its pixels must already
+        # be the displayed frame: portrait, not raw landscape.
+        assert image.size == (200, 400)
+        after = np.asarray(image.convert("L"))
+
+    assert stripe_detail(after) < stripe_detail(displayed) / 8
+
+
 def test_redaction_survives_a_round_trip_through_the_record(tmp_path: Path) -> None:
     records = {
-        "photo_01": redact.AssetRedaction(
-            asset="photo_01",
+        "photo_01.jpg": redact.AssetRedaction(
+            asset="photo_01.jpg",
             reviewed_by="vineet",
             reviewed_at="2026-07-27T00:00:00Z",
             regions=[_region()],
@@ -160,10 +243,10 @@ def test_redaction_survives_a_round_trip_through_the_record(tmp_path: Path) -> N
     redact.save(tmp_path, records)
     loaded = redact.load(tmp_path)
 
-    assert loaded["photo_01"].reviewed_by == "vineet"
-    assert loaded["photo_01"].regions[0].kind == "plate"
-    assert loaded["photo_01"].regions[0].box.w == pytest.approx(160 / 400)
-    assert loaded["photo_01"].reviewed
+    assert loaded["photo_01.jpg"].reviewed_by == "vineet"
+    assert loaded["photo_01.jpg"].regions[0].kind == "plate"
+    assert loaded["photo_01.jpg"].regions[0].box.w == pytest.approx(160 / 400)
+    assert loaded["photo_01.jpg"].reviewed
 
 
 def test_an_empty_directory_loads_as_no_records(tmp_path: Path) -> None:

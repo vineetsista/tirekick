@@ -83,7 +83,7 @@ placed by moment, not by page:
 | Report, top of page, before the verdict | Persistent banner, same type size as the verdict | Remote analysis of buyer-supplied media. Not an inspection. Confidence is not certainty. |
 | Every safety-critical row | Inline, in the row itself | Not remotely verifiable - independent mechanic required. |
 | Every finding | Inline confidence bar + basis | The evidence and the confidence, adjacent to the claim. |
-| Share page / public link | Footer + watermark | Inspected by TIREKICK AI, plus the same "not an inspection" line. |
+| Share page / public link | Footer + watermark | Analyzed by TIREKICK AI, plus the same "not an inspection" line. |
 | PDF export | First page and running footer | Same as report banner; survives being printed and handed to a seller. |
 
 Design rule: **a disclaimer that a user can reach the verdict without reading has not

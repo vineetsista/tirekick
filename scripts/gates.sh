@@ -20,6 +20,15 @@ if [ ! -x "$PY/python" ]; then
   exit 1
 fi
 
+# CI installs ffmpeg explicitly and the audio/video suites need it. Without this
+# check, a machine with no ffmpeg prints ALL GATES GREEN with those suites
+# skipped - a green that does not mean what CI's green means, which is the one
+# thing this script promises not to do.
+if ! command -v ffmpeg >/dev/null 2>&1 || ! command -v ffprobe >/dev/null 2>&1; then
+  echo "ffmpeg/ffprobe missing - install ffmpeg (e.g. apt-get install ffmpeg)"
+  exit 1
+fi
+
 NAMES=()
 CODES=()
 
@@ -62,8 +71,12 @@ gate "ts:typecheck" pnpm run typecheck
 gate "ts:test"      pnpm run test
 gate "ts:build"     pnpm run build
 
-# --- The committed golden report must not have drifted silently ---------------
-gate "fixture:clean" git diff --exit-code -- fixtures/reports/demo-01.report.json
+# --- The committed golden artifacts must not have drifted silently ------------
+# The inspect:fixture gate regenerates the report AND the teaser, so both are
+# diffed. Watching only the report let a teaser.py change rewrite the committed
+# teaser in the working tree under a green run.
+gate "fixture:clean" git diff --exit-code -- \
+  fixtures/reports/demo-01.report.json fixtures/reports/demo-01.teaser.json
 
 echo ""
 echo "=============================================================="

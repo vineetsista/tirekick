@@ -835,23 +835,18 @@
     {
       "system": "engine",
       "status": "attention",
-      "statement": "Recall 23V858000: FUEL SYSTEM, GASOLINE:DELIVERY:FUEL PUMP (and 2 more)",
+      "statement": "Residue visible on engine bay surface",
       "findingIds": [
-        "vf_bay_01",
-        "recall_23V858000",
-        "recall_13V297000"
+        "vf_bay_01"
       ],
-      "confidence": 1.0
+      "confidence": 0.61
     },
     {
       "system": "transmission",
-      "status": "attention",
-      "statement": "Recall 25V422000: POWER TRAIN:DRIVELINE:DRIVESHAFT (and 1 more)",
-      "findingIds": [
-        "recall_25V422000",
-        "recall_20V769000"
-      ],
-      "confidence": 1.0
+      "status": "cannot_determine",
+      "statement": "Cannot be determined from photographs, video, or audio. Assessing transmission requires a test drive or a lift.",
+      "findingIds": [],
+      "confidence": null
     },
     {
       "system": "brakes",
@@ -886,12 +881,11 @@
     {
       "system": "electrical",
       "status": "attention",
-      "statement": "Check-engine lamp illuminated in the instrument cluster (and 1 more)",
+      "statement": "Check-engine lamp illuminated in the instrument cluster",
       "findingIds": [
-        "vf_lamp_01",
-        "recall_17V418000"
+        "vf_lamp_01"
       ],
-      "confidence": 1.0
+      "confidence": 0.83
     },
     {
       "system": "restraints",
@@ -924,10 +918,9 @@
     {
       "system": "documentation",
       "status": "attention",
-      "statement": "Hail damage reported in your documents (and 2 more)",
+      "statement": "Hail damage reported in your documents (and 1 more)",
       "findingIds": [
         "vf_odo_01",
-        "complaint_pattern_summary",
         "title_hail_history_01"
       ],
       "confidence": 1.0
@@ -1089,11 +1082,11 @@
     },
     {
       "beat": "Raise: Corrosion visible along driver-side rocker panel",
-      "say": "The analysis flagged corrosion visible along driver-side rocker panel. I'd want that looked at - a shop quoted that kind of work at roughly $600 to $900. Can we talk about the price with that in mind?"
+      "say": "The analysis flagged corrosion visible along driver-side rocker panel, and put a rough band of $600 to $900 on that kind of work - its own estimate, not a quote. I'd want a shop to price it properly. Can we talk about the price with that in mind?"
     },
     {
       "beat": "Raise: Front left tread appears low",
-      "say": "The analysis flagged front left tread appears low. I'd want that looked at - a shop quoted that kind of work at roughly $380 to $620. Can we talk about the price with that in mind?"
+      "say": "The analysis flagged front left tread appears low, and put a rough band of $380 to $620 on that kind of work - its own estimate, not a quote. I'd want a shop to price it properly. Can we talk about the price with that in mind?"
     },
     {
       "beat": "Anchor on the comps",

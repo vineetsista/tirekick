@@ -40,4 +40,14 @@ export const REPORT_BANNER =
   "certification, or a warranty. Confidence is not certainty. Have an independent " +
   "mechanic examine any vehicle before you buy it.";
 
-export const SHARE_FOOTER = "INSPECTED BY TIREKICK AI";
+/**
+ * The watermark on the most forwardable surfaces the product has: the share
+ * page, the paid report's footer, and the running footer of anything printed.
+ *
+ * The verb here was wrong for six phases: it named the physical act this
+ * product never performs, in the passive voice, stamped across a document
+ * whose own banner four inches up denies performing it. The copy scanner
+ * missed it because the banned phrase names an actor and this wording named
+ * nobody. A person does that with a car on a lift; this analyzed media.
+ */
+export const SHARE_FOOTER = "ANALYZED BY TIREKICK AI";

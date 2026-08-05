@@ -99,6 +99,7 @@ def load_frames(
 
     meter.record_video_seconds(float(payload.get("duration_sec") or 0.0))
 
+    kept_ids = {f.id for f in frames}
     track = WalkaroundTrack(
         asset_id=clip.id,
         duration_sec=float(payload.get("duration_sec") or 0.0),
@@ -108,7 +109,15 @@ def load_frames(
         dropped_duplicate=int(payload.get("dropped_duplicate") or 0),
         dropped_over_cap=int(payload.get("dropped_over_cap") or 0),
         frame_asset_ids=[f.id for f in frames],
-        frame_times_sec=[float(e["at_sec"]) for e in payload.get("frames", [])][: len(frames)],
+        # Paired with the frames that survived, not truncated to their count.
+        # `frames` drops any committed frame whose file is missing from disk;
+        # slicing the timestamps to the same length kept the FIRST n rather than
+        # the n that correspond, so one absent JPEG shifted every remaining
+        # frame's time - the report saying a view was recorded at 0.5s when it
+        # was recorded at 3.0s.
+        frame_times_sec=[
+            float(e["at_sec"]) for e in payload.get("frames", []) if e["id"] in kept_ids
+        ],
         statement=payload.get("statement", ""),
     )
     return frames, track

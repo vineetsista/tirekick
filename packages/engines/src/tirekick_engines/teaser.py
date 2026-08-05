@@ -110,9 +110,21 @@ def _system_rows(report: Report) -> list[TeaserSystemRow]:
     return rows
 
 
+def _vehicle_level(report: Report) -> list[Finding]:
+    return [f for f in report.findings if f.type not in MODEL_LEVEL_TYPES]
+
+
 def _counts(report: Report) -> list[SeverityCount]:
+    """Severity tally for this car, and only this car.
+
+    Counting the model-level records here put "7 major" on the teaser beside a
+    headline that said two - five of the seven being recall campaigns filed
+    against every car of the model year, free to remedy, and excluded from the
+    red-flag score printed in the same panel. The number a stranger reads first
+    has to be the number the sentence beside it is talking about.
+    """
     tally = {severity: 0 for severity in _SEVERITIES}
-    for finding in report.findings:
+    for finding in _vehicle_level(report):
         tally[finding.severity] += 1
     return [
         SeverityCount(severity=severity, count=tally[severity])  # type: ignore[arg-type]
@@ -178,14 +190,38 @@ def _sample(report: Report) -> TeaserSample | None:
     if asset is None:  # pragma: no cover - referential integrity forbids this
         return None
 
-    total = sum(1 for f in report.findings if f.type not in MODEL_LEVEL_TYPES)
-    statement = (
-        f"One of {total} findings about this vehicle, shown in full. "
-        f"The other {total - 1} are in the paid report, each with its own "
-        f"photograph and box."
-        if total > 1
-        else "The only finding about this vehicle, shown in full."
+    # "Each with its own photograph and box" is only true of the findings that
+    # have one. A title brand read out of paperwork carries a document excerpt
+    # and no photograph, and counting it here sold the buyer a picture that does
+    # not exist - the claim is checkable the moment they pay.
+    total = len(_vehicle_level(report))
+    pictured = sum(
+        1
+        for f in _vehicle_level(report)
+        if any(isinstance(e, ImageRegionEvidence) for e in f.evidence)
     )
+    others = total - 1
+    others_pictured = pictured - 1
+    if total <= 1:
+        statement = "The only finding about this vehicle, shown in full."
+    elif others_pictured == others:
+        statement = (
+            f"One of {total} findings about this vehicle, shown in full. "
+            f"The other {others} are in the paid report, each with its own "
+            f"photograph and box."
+        )
+    elif others_pictured:
+        statement = (
+            f"One of {total} findings about this vehicle, shown in full. The "
+            f"other {others} are in the paid report - {others_pictured} with a "
+            f"photograph and a box, the rest cited to a document or a record."
+        )
+    else:
+        statement = (
+            f"One of {total} findings about this vehicle, shown in full. The "
+            f"other {others} are in the paid report, cited to documents and "
+            f"records rather than photographs."
+        )
 
     return TeaserSample(
         finding_id=best.id,
@@ -207,6 +243,53 @@ def _sample(report: Report) -> TeaserSample | None:
     )
 
 
+def _unlocks(report: Report) -> list[str]:
+    """What THIS report contains, not what the product can contain.
+
+    The list used to be six fixed bullets, and it was rendered twice: on the
+    teaser and again above the payment button under "What you get". A buyer who
+    uploaded eight photographs and nothing else was sold an audio spectrogram, a
+    federal vehicle record and a readout of their own paperwork, paid $25, and
+    opened a report where none of those sections render at all. Meanwhile the
+    price comparison - a real paid section - was advertised nowhere.
+
+    So the list is derived. A bullet appears when the section behind it exists.
+    """
+    lines: list[str] = []
+    pictured = any(
+        isinstance(e, ImageRegionEvidence) for f in report.findings for e in f.evidence
+    )
+    if pictured:
+        lines.append("Every finding, with the photograph it came from and a box drawn on it")
+    else:
+        lines.append("Every finding in full, with the evidence each one is drawn from")
+    lines.append("Why we are as confident as we are, per finding, in plain words")
+
+    if report.vehicle is not None:
+        record_parts = []
+        if report.vehicle.recalls:
+            record_parts.append(f"{len(report.vehicle.recalls)} recall campaign(s) on record")
+        if any(f.type == "complaint_pattern" for f in report.findings):
+            record_parts.append("owner complaint patterns for this model year")
+        detail = ", ".join(record_parts) if record_parts else "what the VIN decodes to"
+        lines.append(f"The full vehicle record: {detail}")
+    if any(a.kind == "document" for a in report.assets):
+        lines.append("What your own paperwork says, quoted, with the line it came from")
+    if report.audio is not None:
+        lines.append("The engine audio spectrogram, with the sharp sounds marked")
+    if report.walkaround is not None:
+        lines.append("Every frame taken from your walkaround video, and what was discarded")
+    if report.price is not None:
+        lines.append(
+            "The asking price against the comparable listings you provided, "
+            "with the arithmetic shown"
+        )
+
+    lines.append("Questions to ask the seller, written from what was actually found")
+    lines.append("A negotiation script that never asks you to overstate anything")
+    return lines
+
+
 def build_teaser(report: Report, *, price_usd: float) -> Teaser:
     """Project a full report down to what may be shown for free."""
     coverage: Coverage = report.coverage
@@ -222,7 +305,7 @@ def build_teaser(report: Report, *, price_usd: float) -> Teaser:
         coverage=coverage,
         red_flag_score=report.verdict.red_flag_score,
         headline=report.verdict.headline,
-        finding_count=len(report.findings),
+        finding_count=len(_vehicle_level(report)),
         counts=_counts(report),
         mechanic_referral_count=len(report.mechanic_referrals),
         systems=_system_rows(report),
@@ -233,14 +316,6 @@ def build_teaser(report: Report, *, price_usd: float) -> Teaser:
         has_price_check=report.price is not None,
         accuracy_statement=accuracy_statement(),
         price_usd=price_usd,
-        unlocks=[
-            "Every finding, with the photograph it came from and a box drawn on it",
-            "Why we are as confident as we are, per finding, in plain words",
-            "The full vehicle record: recalls on record, owner complaint patterns, "
-            "and what your own paperwork says",
-            "The engine audio spectrogram, with the sharp sounds marked",
-            "Questions to ask the seller, written from what was actually found",
-            "A negotiation script that never asks you to overstate anything",
-        ],
+        unlocks=_unlocks(report),
         contains_synthetic_media=report.contains_synthetic_media,
     )

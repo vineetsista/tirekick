@@ -342,8 +342,21 @@ def build_price_check(
             f"listings support after the deductions above."
         )
 
+    # A fitted slope is only an adjustment if there is a mileage to adjust TO.
+    # Without one, `_normalized_prices` returns the listings as-listed, and
+    # printing "Mileage adjustment of $-0.123 per mile, fitted from..." told the
+    # buyer arithmetic had been performed on a number they never supplied.
+    mileage_note = (
+        fit.reason
+        if subject_mileage is not None
+        else (
+            "No mileage adjustment was applied: the seller's stated mileage for "
+            "this car was not provided, so there is nothing to adjust the "
+            "comparable listings toward. The range below is as-listed."
+        )
+    )
     notes = [
-        fit.reason,
+        mileage_note,
         f"Range built from {len(usable)} listing(s) you provided. It reflects those "
         f"listings and nothing else - not a market index, not an appraisal.",
         "Asking prices, not sale prices. What a car is listed at and what it sells "

@@ -21,17 +21,17 @@ from pathlib import Path
 #: (pattern, why it is banned, what to say instead)
 BANNED: tuple[tuple[str, str, str], ...] = (
     (
-        r"\bcertif(y|ied|ication)\b",
+        r"\bcertif(y|ies|ied|ying|ication|ications)\b",
         "We certify nothing. There is no TIREKICK pass.",
         "analysis / analyzed",
     ),
     (
-        r"\bguarantee(d|s)?\b",
+        r"\bguarantee(d|s|ing)?\b",
         "We guarantee no condition, ever.",
         "visible in the provided media",
     ),
     (
-        r"\bwarrant(y|ies|ed)\b",
+        r"\bwarrant(y|ies|ed|ing|s)\b",
         "We offer no warranty of condition or fitness.",
         "observed / not observed",
     ),
@@ -46,14 +46,19 @@ BANNED: tuple[tuple[str, str, str], ...] = (
         "no issues visible in the media provided",
     ),
     (
-        r"\bpass(ed|es) (inspection|the inspection)\b",
+        r"\bpass(ed|es) (\w+ ){0,2}inspection\b",
         "There is nothing to pass. We do not inspect.",
         "analysis complete",
     ),
     (
-        r"\bwe inspected\b",
+        r"\b(we|tirekick) inspect(s|ed|ing)?\b",
         "A person inspects. We analyze media.",
         "TIREKICK analyzed",
+    ),
+    (
+        r"\binspected by\b",
+        "Passive voice does not make it true. Nobody inspected anything.",
+        "analyzed by",
     ),
     (
         r"\bno problems found\b",
@@ -119,22 +124,46 @@ def _strip_sanctioned(text: str) -> str:
     return text
 
 
+#: What may sit between two words of a banned phrase without breaking it.
+#:
+#: The mirror of `_JOINER`. The sanctioned-disclaimer stripper has always been
+#: newline-tolerant, on the correct grounds that our own banner is written
+#: across several lines of source - and the ban was not, so the identical
+#: wrapping that the stripper anticipates was an escape hatch out of it:
+#: `"This car is safe to " + "drive"` scanned as two innocent lines. A phrase
+#: is what it says, not how it was typed, in both directions.
+_GAP = r"[\s\"'+\\`)(,]+"
+
+
+def _line_of(text: str, offset: int) -> int:
+    return text.count("\n", 0, offset) + 1
+
+
+def _relaxed(pattern: str) -> re.Pattern[str]:
+    """Let a banned pattern match across the whitespace and quotes of source."""
+    return re.compile(pattern.replace(" ", _GAP), re.IGNORECASE)
+
+
+_BANNED_RE: tuple[tuple[re.Pattern[str], str, str], ...] = tuple(
+    (_relaxed(pattern), why, instead) for pattern, why, instead in BANNED
+)
+
+
 def scan_text(text: str, *, path: str = "<text>") -> list[CopyViolation]:
     cleaned = _strip_sanctioned(text)
     violations: list[CopyViolation] = []
-    for lineno, line in enumerate(cleaned.splitlines(), start=1):
-        for pattern, why, instead in BANNED:
-            match = re.search(pattern, line, flags=re.IGNORECASE)
-            if match:
-                violations.append(
-                    CopyViolation(
-                        path=path,
-                        line=lineno,
-                        matched=match.group(0),
-                        why=why,
-                        instead=instead,
-                    )
+    for pattern, why, instead in _BANNED_RE:
+        for match in pattern.finditer(cleaned):
+            violations.append(
+                CopyViolation(
+                    path=path,
+                    line=_line_of(cleaned, match.start()),
+                    matched=" ".join(match.group(0).split()),
+                    why=why,
+                    instead=instead,
                 )
+            )
+    violations.sort(key=lambda v: v.line)
     return violations
 
 

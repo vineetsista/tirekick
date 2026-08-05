@@ -642,7 +642,9 @@ th {
     bottom: 0;
     left: 0;
     right: 0;
-    content: "INSPECTED BY TIREKICK AI - automated analysis of buyer-supplied media. Not an inspection, a certification, or a warranty. Have an independent mechanic examine any vehicle before you buy it.";
+    /* Kept in step with SHARE_FOOTER in packages/shared. A stylesheet cannot
+       import a constant, so a test compares the two strings instead. */
+    content: "ANALYZED BY TIREKICK AI - automated analysis of buyer-supplied media. This is not an inspection, a certification, or a warranty. Have an independent mechanic examine any vehicle before you buy it.";
     font-size: 8pt;
     line-height: 1.35;
     padding: 6pt 0;

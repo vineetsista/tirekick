@@ -13,6 +13,7 @@ from pathlib import Path
 
 import pytest
 
+from tirekick_engines.dossier import MODEL_LEVEL_TYPES
 from tirekick_engines.models import LOCKED_SYSTEM_STATEMENT, LOCKED_SYSTEMS
 from tirekick_engines.pipeline import run_inspection
 from tirekick_engines.registry import FINDING_TYPES
@@ -298,8 +299,18 @@ def test_a_teaser_row_cannot_paraphrase_the_locked_statement() -> None:
 
 
 def test_the_counts_are_the_hook_and_they_are_true(report, teaser) -> None:  # type: ignore[no-untyped-def]
-    assert teaser.finding_count == len(report.findings)
-    assert sum(c.count for c in teaser.counts) == len(report.findings)
+    """And they count this car, not its model year.
+
+    The tally used to include recall campaigns, so the teaser showed "7 major"
+    beside a headline saying two and a red-flag score that excludes them - three
+    numbers in one panel, disagreeing.
+    """
+    vehicle = [f for f in report.findings if f.type not in MODEL_LEVEL_TYPES]
+    assert vehicle, "the fixture must have vehicle-level findings for this to test anything"
+    assert len(vehicle) < len(report.findings), "and model-level ones, or the check is vacuous"
+
+    assert teaser.finding_count == len(vehicle)
+    assert sum(c.count for c in teaser.counts) == len(vehicle)
     assert teaser.mechanic_referral_count == len(report.mechanic_referrals)
     assert teaser.red_flag_score == report.verdict.red_flag_score
 

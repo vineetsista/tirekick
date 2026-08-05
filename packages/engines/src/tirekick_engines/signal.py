@@ -179,15 +179,33 @@ def _find_transients(
         # Local maximum only, so one onset produces one marker.
         if value < flux[index - 1] or value <= flux[index + 1]:
             continue
-        # Report where the sound is, not where its analysis window began.
-        # `flux[i]` is the rise from frame i to frame i+1, and frame i+1 spans
-        # samples [(i+1)*hop, (i+1)*hop + n_fft). Naming the frame's start put
-        # every marker ~80ms early - inaudible in isolation, and wrong on a
-        # timeline a buyer is going to scrub to.
-        centre = (index + 1) * hop + N_FFT / 2
+        # Report where the sound is, not where its analysis window began or is
+        # centred.
+        #
+        # `flux[index]` is the rise from frame `index` to frame `index+1`.
+        # Frame i spans [i*hop, i*hop + n_fft), so the samples frame index+1
+        # can see and frame index cannot are exactly
+        # [index*hop + n_fft, (index+1)*hop + n_fft) - one hop wide. A sound
+        # that appears in that difference happened in that hop, and nowhere
+        # else, so the honest estimate is its midpoint and the honest
+        # uncertainty is half a hop: 5.8ms at 22.05kHz.
+        #
+        # Naming the frame's start was ~80ms early. Naming the window centre,
+        # which replaced it, was 19-36ms early - always early, never late,
+        # because a 2048-sample window is 93ms long and its centre sits well
+        # before the edge the new sound arrived at.
+        #
+        # The peak of the flux is not the onset: a real transient has a rise
+        # time, so the largest frame-to-frame difference lands one or two
+        # frames after the sound began. Walking back to where the rise crossed
+        # the threshold finds the frame that first saw it.
+        first = index
+        while first > 0 and flux[first - 1] >= threshold and flux[first - 1] < flux[first]:
+            first -= 1
+        onset = first * hop + N_FFT + hop / 2
         found.append(
             Transient(
-                at_sec=round(centre / sample_rate, 3),
+                at_sec=round(onset / sample_rate, 3),
                 prominence=round((value - median) / spread, 2),
             )
         )

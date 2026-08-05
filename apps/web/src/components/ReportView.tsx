@@ -13,6 +13,7 @@ import { FindingCard } from "./FindingCard";
 import { Overlay, annotationsFor } from "./Overlay";
 import { ReportNav } from "./ReportNav";
 import {
+  assetById,
   assetUrl,
   bySeverity,
   partitionFindings,
@@ -796,7 +797,15 @@ export function ReportView({ report }: { report: Report }) {
 
         {report.audio && (
           <Section id="audio" label="Engine audio">
-            <AudioTrackView track={report.audio} inspectionId={report.inspectionId} />
+            <AudioTrackView
+              track={report.audio}
+              inspectionId={report.inspectionId}
+              // The clip's real filename, from the asset row the track cites.
+              // Deriving it as `${assetId}.wav` worked for the fixture by
+              // coincidence of naming; the media route serves what the report
+              // cites, so the citation is the only safe source of the path.
+              clipPath={assetById(report, report.audio.assetId)?.path ?? null}
+            />
           </Section>
         )}
 

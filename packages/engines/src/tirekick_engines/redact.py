@@ -54,6 +54,17 @@ class RedactionError(RuntimeError):
     """Redaction is missing, unreviewed, or malformed."""
 
 
+def asset_key(directory: Path, path: Path) -> str:
+    """The record key for an image: its path relative to the redaction
+    directory, extension and subdirectories included.
+
+    A bare stem is not enough. photo_01.jpg and photo_01.png, or the same
+    camera-default IMG_0001.jpg in two session folders, would share one record,
+    and a single signature must never vouch for two files.
+    """
+    return path.relative_to(directory).as_posix()
+
+
 @dataclass(frozen=True)
 class Region:
     kind: str
@@ -171,17 +182,30 @@ def apply_to_image(image: Any, regions: list[Region]) -> Any:
 
 
 def redact_file(source: Path, destination: Path, regions: list[Region]) -> None:
-    from PIL import Image
+    from PIL import Image, ImageOps
 
     with Image.open(source) as image:
-        result = apply_to_image(image, regions)
+        # The reviewer drew their boxes on the image as a viewer displays it,
+        # and every viewer honours the EXIF orientation tag while Image.open
+        # does not. Transpose the pixels first, so the coordinates mean what
+        # the reviewer saw - otherwise a box over a plate in a rotated phone
+        # photo blurs a strip of sky and the plate ships readable.
+        oriented = ImageOps.exif_transpose(image)
+        result = apply_to_image(oriented, regions)
     destination.parent.mkdir(parents=True, exist_ok=True)
     # Re-encode rather than copy: the original EXIF carries GPS coordinates of
-    # wherever the photograph was taken, which is somebody's driveway.
-    result.save(destination, format="JPEG", quality=92)
+    # wherever the photograph was taken, which is somebody's driveway. The
+    # orientation tag is discarded with the rest, which is safe precisely
+    # because the pixels above were already transposed to match it.
+    if destination.suffix.lower() == ".png":
+        result.save(destination, format="PNG")
+    else:
+        result.save(destination, format="JPEG", quality=92)
 
 
-def assert_reviewed(image_paths: list[Path], records: dict[str, AssetRedaction]) -> None:
+def assert_reviewed(
+    directory: Path, image_paths: list[Path], records: dict[str, AssetRedaction]
+) -> None:
     """Refuse to proceed unless every image has been signed off by a person.
 
     Fails on absence. An image with no record is unreviewed, which is not the same
@@ -190,18 +214,19 @@ def assert_reviewed(image_paths: list[Path], records: dict[str, AssetRedaction])
     """
     problems: list[str] = []
     for path in sorted(image_paths):
-        record = records.get(path.stem)
+        key = asset_key(directory, path)
+        record = records.get(key)
         if record is None:
             problems.append(
-                f"{path.name}: no redaction record. Every image needs one, even if "
+                f"{key}: no redaction record. Every image needs one, even if "
                 f"the answer is that there is nothing to redact."
             )
             continue
         if not record.reviewed_by:
-            problems.append(f"{path.name}: no reviewer name against it.")
+            problems.append(f"{key}: no reviewer name against it.")
         elif not record.reviewed:
             problems.append(
-                f"{path.name}: reviewed by {record.reviewed_by} but neither regions "
+                f"{key}: reviewed by {record.reviewed_by} but neither regions "
                 f"nor an explicit nothing_to_redact. Which is it?"
             )
     if problems:

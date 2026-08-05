@@ -13,9 +13,12 @@ from tirekick_engines.models import (
     LOCKED_SYSTEM_STATEMENT,
     LOCKED_SYSTEMS,
     BoundingBox,
+    CostBand,
     DraftFinding,
     Finding,
     ImageRegionEvidence,
+    PriceDeduction,
+    PriceRange,
     SystemRow,
 )
 from tirekick_engines.safety import apply_safety_law, is_locked, locked_system_rows
@@ -81,6 +84,46 @@ def test_truth_law_requires_a_stated_basis_for_confidence() -> None:
 def test_truth_law_rejects_confidence_outside_zero_to_one() -> None:
     with pytest.raises(ValidationError):
         _draft(confidence=1.4)
+
+
+def test_truth_law_rejects_a_box_past_the_image_edge() -> None:
+    """Each coordinate can be legal while the box is not. A region that runs off
+    the right of the photograph is a citation nobody can redraw."""
+    with pytest.raises(ValidationError, match="image edge"):
+        BoundingBox(x=0.8, y=0.1, w=0.3, h=0.2)
+    with pytest.raises(ValidationError, match="image edge"):
+        BoundingBox(x=0.1, y=0.9, w=0.2, h=0.5)
+
+
+def test_a_box_flush_with_the_edge_is_still_a_box() -> None:
+    BoundingBox(x=0.8, y=0.7, w=0.2, h=0.3)
+
+
+def test_truth_law_rejects_an_inverted_cost_band() -> None:
+    """'A shop quoted roughly $800 to $200' is not a range, it is a typo."""
+    with pytest.raises(ValidationError, match="inverted"):
+        CostBand(low=800, high=200)
+
+
+def test_truth_law_rejects_an_inverted_price_range() -> None:
+    with pytest.raises(ValidationError, match="inverted"):
+        PriceRange(low=9000, high=7000)
+
+
+def test_truth_law_rejects_an_inverted_price_deduction() -> None:
+    with pytest.raises(ValidationError, match="inverted"):
+        PriceDeduction(
+            finding_id="f1",
+            label="rust repair",
+            low_usd=620,
+            high_usd=380,
+            basis="a band with its ends swapped",
+        )
+
+
+def test_a_single_point_band_is_allowed() -> None:
+    CostBand(low=500, high=500)
+    PriceRange(low=500, high=500)
 
 
 # --------------------------------------------------------------------------- #

@@ -101,9 +101,16 @@ def _implied_rpm(
         )
 
     rpm = signal_module.implied_rpm(measured.dominant_hz, cylinders)
+    # A four-stroke fires once per cylinder every two revolutions, so the rate
+    # is cylinders/2 - which is not a whole number on a three- or five-cylinder
+    # engine. Integer division printed "fires 1 times per revolution" beside an
+    # rpm figure computed from 1.5, so the sentence and the number in it
+    # disagreed, in the one place the report shows its arithmetic.
+    firings = cylinders / 2
+    firing_text = f"{firings:g}"
     return round(rpm), (
         f"The loudest steady tone is {measured.dominant_hz:.1f}Hz. A four-stroke "
-        f"{cylinders}-cylinder engine fires {cylinders // 2} times per revolution, "
+        f"{cylinders}-cylinder engine fires {firing_text} times per revolution, "
         f"which puts this at about {round(rpm):,} rpm. That is arithmetic on the "
         f"recording, not a reading from the vehicle."
     )

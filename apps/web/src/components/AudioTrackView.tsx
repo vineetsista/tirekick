@@ -15,9 +15,17 @@ import { assetUrl } from "@/lib/report";
 export function AudioTrackView({
   track,
   inspectionId,
+  clipPath,
 }: {
   track: AudioTrack;
   inspectionId: string;
+  /**
+   * The clip's filename from the asset row the track cites, or null when the
+   * citation cannot be resolved - in which case no player is rendered, because
+   * a player pointed at a guessed URL is a broken control wearing a real one's
+   * clothes.
+   */
+  clipPath: string | null;
 }) {
   const spectrogram = track.spectrogramPath
     ? assetUrl(inspectionId, track.spectrogramPath)
@@ -115,17 +123,19 @@ export function AudioTrackView({
       )}
 
       {/* Let them hear it. The clip is the evidence; the picture is a view of it. */}
-      <audio
-        controls
-        preload="none"
-        src={assetUrl(inspectionId, `${track.assetId}.wav`)}
-        // colorScheme tells the browser to draw its native control dark.
-        // The alternative is rebuilding a media player, which is a lot of
-        // surface area for something the platform already does well.
-        style={{ width: "100%", marginTop: 16, colorScheme: "dark" }}
-      >
-        Your browser cannot play this audio clip.
-      </audio>
+      {clipPath && (
+        <audio
+          controls
+          preload="none"
+          src={assetUrl(inspectionId, clipPath)}
+          // colorScheme tells the browser to draw its native control dark.
+          // The alternative is rebuilding a media player, which is a lot of
+          // surface area for something the platform already does well.
+          style={{ width: "100%", marginTop: 16, colorScheme: "dark" }}
+        >
+          Your browser cannot play this audio clip.
+        </audio>
+      )}
 
       <div className="prose" style={{ fontSize: 13, marginTop: 18 }}>
         {track.transientStatement}

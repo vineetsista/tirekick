@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
+import { contentTypeFor } from "@/lib/media";
 import { renderToStaticMarkup } from "react-dom/server";
 import { chromium, type Browser, type Page } from "playwright";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -58,7 +59,30 @@ import { stressReports, stressTeasers } from "@/lib/stress";
 const here = dirname(fileURLToPath(import.meta.url));
 const srcRoot = resolve(here, "..");
 const publicDir = resolve(srcRoot, "../public");
+// Media comes from fixtures/, the same directory the /f route serves in the
+// app (P9, D-052) - there is no copy under public/ any more. Stress reports
+// mutate ids and fields but cite the fixture's real asset paths, so every id
+// maps to the one fixture media directory here.
+const fixtureMediaDir = resolve(srcRoot, "../../..", "fixtures/demo-01/media");
 const css = readFileSync(join(srcRoot, "app", "globals.css"), "utf8");
+
+/**
+ * A media request this interceptor cannot satisfy is a defect in the gate, not
+ * a shrug: an <img> that loads nothing measures zero, and every overflow number
+ * on that page becomes fiction while the test stays green. Collected here and
+ * asserted empty after the suite, so a miss fails loudly (D-050's rule applied
+ * to the gate's own plumbing).
+ */
+const unservedMedia = new Set<string>();
+
+/**
+ * A fictional origin, fully intercepted - no port is ever listened on. It
+ * exists so the document has a base URL that root-relative subresource URLs
+ * can resolve against, which about:blank does not provide.
+ */
+const ORIGIN = "http://tirekick.gate";
+const PAGE_PATH = "/__page__";
+let currentDocument = "";
 
 /** Widths that matter: small phone, common phone, tablet, laptop. */
 const WIDTHS = [320, 390, 768, 1440];
@@ -132,15 +156,43 @@ beforeAll(async () => {
   }
   page = await browser.newPage();
 
-  // Serve /f/** and /fonts/** off disk so images and faces are real.
+  // Serve the page, /f/**, and /fonts/** off disk so images and faces are real.
+  //
+  // The page is NAVIGATED to, on a fictional origin, rather than injected with
+  // setContent. This is load-bearing and was learned the hard way: setContent
+  // leaves the document on about:blank, where a root-relative URL like
+  // /f/demo-01/photo_01.jpg cannot resolve - no request fires, the image
+  // reports complete at 0x0, and @font-face never fetches. From D-050 until P9
+  // this gate measured every page with zero-size images and fallback system
+  // fonts while its own comment said the opposite. An origin makes the URLs
+  // resolvable; the interceptor below makes them real.
   await page.route("**/*", async (route) => {
     const url = new URL(route.request().url());
     if (url.protocol === "data:") return route.continue();
-    const file = join(publicDir, url.pathname);
-    if (url.pathname.startsWith("/f/") || url.pathname.startsWith("/fonts/")) {
+    if (url.pathname === PAGE_PATH) {
+      return route.fulfill({ contentType: "text/html", body: currentDocument });
+    }
+    if (url.pathname.startsWith("/f/")) {
+      // /f/<inspectionId>/<file> - the id is dropped, the file is the fixture's.
+      const rel = url.pathname.split("/").slice(3).join("/");
       try {
-        return await route.fulfill({ body: readFileSync(file) });
+        return await route.fulfill({
+          contentType: contentTypeFor(rel),
+          body: readFileSync(join(fixtureMediaDir, rel)),
+        });
       } catch {
+        unservedMedia.add(url.pathname);
+        return route.abort();
+      }
+    }
+    if (url.pathname.startsWith("/fonts/")) {
+      try {
+        return await route.fulfill({
+          contentType: "font/woff2",
+          body: readFileSync(join(publicDir, url.pathname)),
+        });
+      } catch {
+        unservedMedia.add(url.pathname);
         return route.abort();
       }
     }
@@ -150,15 +202,22 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await browser?.close();
+  if (unservedMedia.size > 0) {
+    throw new Error(
+      "The layout gate could not serve these paths, so every measurement on the " +
+        "pages that requested them was taken against missing images or fonts:\n  " +
+        [...unservedMedia].join("\n  "),
+    );
+  }
 });
 
 async function load(html: string, width: number) {
+  currentDocument = `<!doctype html><html><head><meta charset="utf-8">
+     <style>${css}</style></head><body>${html}</body></html>`;
   await page.setViewportSize({ width, height: 900 });
-  await page.setContent(
-    `<!doctype html><html><head><meta charset="utf-8">
-     <style>${css}</style></head><body>${html}</body></html>`,
-    { waitUntil: "load" },
-  );
+  // `load` waits for subresources, so images have their intrinsic sizes before
+  // anything is measured; fonts.ready then covers the faces.
+  await page.goto(`${ORIGIN}${PAGE_PATH}`, { waitUntil: "load" });
   await page.evaluate(() => document.fonts.ready);
 }
 

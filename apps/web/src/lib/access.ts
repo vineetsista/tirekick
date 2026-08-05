@@ -20,6 +20,31 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 
 export type GrantReason = "paid" | "owner" | "demo";
 
+/**
+ * What a grant opens.
+ *
+ * `report` is the paid dossier and every photograph it cites. `teaser` is the
+ * free projection and exactly one photograph - the sample finding's. The tiers
+ * exist because the person who uploaded the car has to see the teaser before
+ * they have paid for anything, and nothing about an upload is public: an
+ * unpaid stranger with the URL gets neither tier.
+ *
+ * - `paid` opens both. The buyer bought the report; the media in it is theirs
+ *   to read.
+ * - `demo` opens both. It is issued deliberately, by us, to show a specific
+ *   person a specific dossier - support, a partner - and is distinguishable
+ *   from `paid` so a giveaway is never mistaken for revenue.
+ * - `owner` opens the teaser only. It is issued to the uploader at upload
+ *   time. They already possess their own photographs; what they have not paid
+ *   for is the analysis, so the report tier stays shut.
+ */
+export type AccessTier = "teaser" | "report";
+
+const TIER_REASONS: Record<AccessTier, readonly GrantReason[]> = {
+  report: ["paid", "demo"],
+  teaser: ["paid", "demo", "owner"],
+};
+
 const SEPARATOR = ".";
 
 /**
@@ -89,11 +114,39 @@ export function isPubliclyReadable(inspectionId: string): boolean {
   return inspectionId === PUBLIC_DEMO_ID;
 }
 
-export function canReadReport(
+export function canRead(
   inspectionId: string,
+  tier: AccessTier,
   token: string | undefined,
 ): { allowed: boolean; reason: GrantReason | "public" | null } {
   if (isPubliclyReadable(inspectionId)) return { allowed: true, reason: "public" };
   const reason = verifyGrant(inspectionId, token);
-  return { allowed: reason !== null, reason };
+  if (reason === null) return { allowed: false, reason: null };
+  return { allowed: TIER_REASONS[tier].includes(reason), reason };
 }
+
+export function canReadReport(
+  inspectionId: string,
+  token: string | undefined,
+): { allowed: boolean; reason: GrantReason | "public" | null } {
+  return canRead(inspectionId, "report", token);
+}
+
+/**
+ * The cookie a grant travels in.
+ *
+ * A photograph is fetched by an `<img>` tag, which sends no headers we control
+ * and can carry no query string we would want cached in referrer logs - so the
+ * grant rides a cookie. One cookie per inspection, named for it, so holding a
+ * grant for one report attaches nothing to requests for another.
+ */
+export function grantCookieName(inspectionId: string): string {
+  return `tk_grant_${inspectionId}`;
+}
+
+/**
+ * How long a grant cookie lives: the media retention window itself
+ * (UNIT_ECONOMICS assumes 90-day retention). A cookie that outlives the files
+ * it opens would promise access to bytes that are gone.
+ */
+export const GRANT_COOKIE_MAX_AGE_SECONDS = 90 * 24 * 60 * 60;

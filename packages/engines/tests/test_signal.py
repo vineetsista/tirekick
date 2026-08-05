@@ -12,6 +12,7 @@ are unit tests of deterministic arithmetic, in the same family as the IoU tests.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import numpy as np
@@ -28,11 +29,32 @@ IMPULSE_TIMES = (5.0, 11.5, 17.25)
 #: The window is 93ms, so an onset cannot be located more precisely than this.
 TIMING_TOLERANCE_SEC = 0.05
 
-pytestmark = pytest.mark.skipif(not signal.ffmpeg_available(), reason="ffmpeg is not installed")
+
+def require_ffmpeg() -> None:
+    """Skip the decode tests without ffmpeg - except in CI, where that is red.
+
+    This used to be a module-wide skipif, which silently vanished every test in
+    the file, including the pure-arithmetic ones that never touch ffmpeg. Now
+    only the tests that decode the fixture clip depend on it, the skip names
+    itself in the summary, and in CI - which installs ffmpeg explicitly - its
+    absence fails, because a gate that quietly passes when it never ran is the
+    failure this project keeps finding. gates.sh preflights ffmpeg for the same
+    reason, so a local ALL GATES GREEN cannot mean less than CI's.
+    """
+    if signal.ffmpeg_available():
+        return
+    if os.environ.get("CI"):
+        pytest.fail(
+            "ffmpeg is missing in CI. ci.yml installs it explicitly; if this "
+            "fires, the install step was removed, and these tests must go red "
+            "rather than quietly not run."
+        )
+    pytest.skip("ffmpeg is not installed - install it to run the decode tests")
 
 
 @pytest.fixture(scope="module")
 def samples() -> np.ndarray:
+    require_ffmpeg()
     return signal.decode(CLIP)
 
 
@@ -79,6 +101,48 @@ def test_the_real_impulses_stand_clearly_above_the_noise(
     assert min(t.prominence for t in planted) > 20.0
     if others:
         assert max(t.prominence for t in others) < min(t.prominence for t in planted) / 3
+
+
+def _clip_with_clicks(
+    click_times: tuple[float, ...], *, click_amp: float, bg_amp: float, seed: int
+) -> np.ndarray:
+    """Twelve seconds of engine-like 30Hz hum with 2ms clicks at known instants."""
+    rng = np.random.default_rng(seed)
+    t = np.arange(int(12.0 * signal.TARGET_SAMPLE_RATE)) / signal.TARGET_SAMPLE_RATE
+    clip = bg_amp * np.sin(2 * np.pi * 30.0 * t)
+    clip += 0.005 * rng.standard_normal(t.size)
+    width = int(0.002 * signal.TARGET_SAMPLE_RATE)
+    for click in click_times:
+        start = int(click * signal.TARGET_SAMPLE_RATE)
+        clip[start : start + width] += click_amp
+    return clip.astype(np.float32)
+
+
+def test_onset_markers_hold_the_promised_twelve_milliseconds() -> None:
+    """The module header claims onset timing accurate to ~12ms. Hold it there.
+
+    The clicks are placed off the hop grid on purpose, and the check runs at
+    several signal-to-noise ratios. The window-centre formula this replaces put
+    every marker 19-36ms early - always early, never late - which is exactly
+    the wrong-on-a-buyer's-timeline failure its own comment warned about.
+    """
+    clicks = (5.0, 8.003)
+    for click_amp, bg_amp, seed in [
+        (0.8, 0.2, 0),
+        (0.3, 0.2, 1),
+        (0.8, 0.05, 2),
+        (0.8, 0.5, 3),
+    ]:
+        clip = _clip_with_clicks(clicks, click_amp=click_amp, bg_amp=bg_amp, seed=seed)
+        measured = signal.features(clip)
+        assert measured.transients, f"no transients at amp={click_amp} bg={bg_amp}"
+        for truth in clicks:
+            nearest = min(measured.transients, key=lambda t: abs(t.at_sec - truth))
+            error_ms = (nearest.at_sec - truth) * 1000
+            assert abs(error_ms) <= 12.0, (
+                f"click at {truth}s marked at {nearest.at_sec}s "
+                f"({error_ms:+.1f}ms) with amp={click_amp} bg={bg_amp}"
+            )
 
 
 def test_the_firing_fundamental_is_recovered(measured: signal.AudioFeatures) -> None:

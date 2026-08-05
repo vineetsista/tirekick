@@ -32,18 +32,37 @@ const REPO_ROOT = resolve(process.cwd(), "../..");
 const PYTHON = resolve(REPO_ROOT, "packages/engines/.venv/bin/python");
 
 export interface NewInspection {
-  vin?: string;
-  askingPriceUsd?: number;
-  sellerStatedMileage?: number;
-  listingYear?: number;
-  listingMake?: string;
-  listingModel?: string;
-  buyerNotes?: string;
+  vin?: string | undefined;
+  askingPriceUsd?: number | undefined;
+  sellerStatedMileage?: number | undefined;
+  listingYear?: number | undefined;
+  listingMake?: string | undefined;
+  listingModel?: string | undefined;
+  buyerNotes?: string | undefined;
   files: { name: string; kind: "photo" | "video" | "audio" | "document"; bytes: Buffer }[];
 }
 
 export function inspectionDir(id: string): string {
   return join(WORKSPACE, id);
+}
+
+/**
+ * An uploaded filename is attacker-controlled text that is about to become a
+ * filesystem path. `photo.jpg` stays `photo.jpg`; `../../report.json` becomes
+ * `report.json` inside media/ rather than a write outside it; a name that
+ * sanitizes to nothing is refused rather than guessed at.
+ *
+ * The character set is the one every asset the pipeline has ever emitted
+ * already uses, so this constrains uploads to the shapes the rest of the
+ * system - the media route's allowlist included - is tested against.
+ */
+export function sanitizeUploadName(name: string): string {
+  const base = name.split(/[/\\]/).pop() ?? "";
+  const cleaned = base.replace(/[^A-Za-z0-9._-]/g, "_").replace(/^\.+/, "");
+  if (!cleaned || !/[A-Za-z0-9]/.test(cleaned)) {
+    throw new Error(`Unusable upload filename: ${JSON.stringify(name)}`);
+  }
+  return cleaned;
 }
 
 /** Write an inspection to disk in the layout the engines already expect. */
@@ -54,12 +73,20 @@ export async function createInspection(input: NewInspection): Promise<string> {
   await mkdir(join(dir, "cached"), { recursive: true });
 
   const assets = [];
+  const used = new Set<string>();
   for (const file of input.files) {
-    await writeFile(join(dir, "media", file.name), file.bytes);
+    const cleaned = sanitizeUploadName(file.name);
+    // Two uploads named photo.jpg must not silently become one file.
+    let name = cleaned;
+    for (let n = 2; used.has(name); n++) {
+      name = cleaned.replace(/(\.[^.]+)?$/, (ext) => `_${n}${ext}`);
+    }
+    used.add(name);
+    await writeFile(join(dir, "media", name), file.bytes);
     assets.push({
-      id: file.name.replace(/\.[^.]+$/, ""),
+      id: name.replace(/\.[^.]+$/, ""),
       kind: file.kind,
-      file: file.name,
+      file: name,
     });
   }
 

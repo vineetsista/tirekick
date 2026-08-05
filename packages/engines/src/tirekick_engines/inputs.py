@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -83,7 +83,12 @@ def image_size(path: Path) -> tuple[int | None, int | None]:
     try:
         with Image.open(path) as image:
             return int(image.width), int(image.height)
-    except (UnidentifiedImageError, OSError, ValueError):
+    except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError):
+        # DecompressionBombError is a Pillow exception that inherits from
+        # Exception directly, so it walked straight past the clause above and
+        # killed a pipeline this function's docstring promises it cannot kill.
+        # An image too large to open safely has no dimensions we can record,
+        # which is precisely the state D-045 already handles.
         return None, None
 
 
@@ -96,8 +101,25 @@ def materialize_assets(inspection: InspectionInput, media_root: Path) -> list[As
     image is only checkable against an image of known size.
     """
     assets: list[Asset] = []
+    root = media_root.resolve()
     for item in inspection.assets:
-        path = media_root / item.file
+        # A manifest is a file, and a file is input. `media_root / item.file`
+        # keeps nothing of the root when `item.file` is absolute, and climbs out
+        # of it when it contains `..` - so a manifest could name `../report.json`
+        # and have it hashed, sized, and later served as an asset. Nothing else
+        # in the chain checks this: the web media route validates what it is
+        # asked for, not what the pipeline decided to call an asset.
+        if PurePosixPath(item.file).is_absolute() or Path(item.file).is_absolute():
+            raise ValueError(
+                f"asset {item.id!r} declares an absolute path ({item.file!r}). "
+                f"Asset paths are relative to the inspection's media directory."
+            )
+        path = (media_root / item.file).resolve()
+        if path != root and root not in path.parents:
+            raise ValueError(
+                f"asset {item.id!r} resolves outside the media root: {item.file!r} "
+                f"-> {path}. An asset lives inside the inspection it belongs to."
+            )
         if not path.is_file():
             raise FileNotFoundError(f"asset {item.id!r} missing at {path}")
         width, height = image_size(path) if item.kind == "photo" else (None, None)

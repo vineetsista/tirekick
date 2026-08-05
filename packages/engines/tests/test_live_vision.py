@@ -202,13 +202,34 @@ def test_the_schema_still_permits_a_locked_system(tmp_path: Path) -> None:
     assert "structure" in systems
 
 
-def test_a_client_error_is_not_retried(tmp_path: Path) -> None:
+class _FakeStatusError(Exception):
+    """Stands in for anthropic.APIStatusError, which CI cannot import.
+
+    The retry policy is money-spending behaviour, so it has to be pinned in the
+    environment gates.sh calls authoritative - and that environment installs no
+    `anthropic` on purpose (LAW 7). An earlier version of these tests used the
+    real SDK class behind an importorskip, which meant they ran on exactly one
+    laptop and never in CI: the gate that quietly passes because it never ran.
+    `_send` separates a 429 from the other 4xx by `status_code`, and that is the
+    behaviour under test; the wiring of the real exception types lives in
+    `_retryable_errors`, three lines that fail loudly in live mode if the SDK
+    renames them.
+    """
+
+    def __init__(self, message: str, status_code: int) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+
+
+def test_a_client_error_is_not_retried(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Retrying a 400 spends money slower without changing the outcome."""
-    anthropic = pytest.importorskip("anthropic")
-    error = anthropic.APIStatusError("bad request", response=_FakeResponse(400), body=None)
+    monkeypatch.setattr(
+        "tirekick_engines.client._retryable_errors", lambda: (_FakeStatusError,)
+    )
+    error = _FakeStatusError("bad request", status_code=400)
     client, fake, _ = _client(tmp_path, {"findings": []}, raise_first=error)
 
-    with pytest.raises(anthropic.APIStatusError):
+    with pytest.raises(_FakeStatusError):
         client.call(
             engine="vision",
             task="rust",
@@ -220,9 +241,11 @@ def test_a_client_error_is_not_retried(tmp_path: Path) -> None:
 
 
 def test_a_rate_limit_is_retried(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    anthropic = pytest.importorskip("anthropic")
+    monkeypatch.setattr(
+        "tirekick_engines.client._retryable_errors", lambda: (_FakeStatusError,)
+    )
     monkeypatch.setattr("tirekick_engines.client.time.sleep", lambda _: None)
-    error = anthropic.APIStatusError("slow down", response=_FakeResponse(429), body=None)
+    error = _FakeStatusError("slow down", status_code=429)
     client, fake, _ = _client(tmp_path, {"findings": []}, raise_first=error)
 
     result = client.call(
@@ -240,6 +263,39 @@ def test_live_mode_refuses_a_call_with_no_schema(tmp_path: Path) -> None:
     client, _, _ = _client(tmp_path, {})
     with pytest.raises(LiveModeUnavailable, match="no output schema"):
         client.call(engine="vision", task="rust", subject="photo_01", prompt="x")
+
+
+def test_a_manifest_id_cannot_steer_the_live_cache_path(tmp_path: Path) -> None:
+    """The cache key becomes a filename. An asset id carrying `../` would make
+    _write_cache mkdir and write attacker-named JSON anywhere the process can -
+    the manifest is user input (LAW 3), so the id dies at the boundary."""
+    client, fake, _ = _client(tmp_path, {"findings": []})
+    with pytest.raises(ValueError, match="cache-key"):
+        client.call(
+            engine="vision",
+            task="rust",
+            subject="../../evil",
+            prompt="x",
+            schema=vision.findings_schema("rust"),
+        )
+    assert fake.calls == [], "the request must die before anything is sent"
+    assert list(tmp_path.iterdir()) == [], "nothing may be written outside cache_dir"
+
+
+def test_fixture_mode_rejects_the_same_id_before_touching_disk(tmp_path: Path) -> None:
+    """Fixture mode is the read side of the same hole: a crafted id would load
+    any readable *.json on disk and present it as this asset's model output -
+    un-provenanced findings with no citation trail (LAW 1)."""
+    meter = CostMeter(mode="fixture")
+    client = ModelClient(mode="fixture", cache_dir=tmp_path, meter=meter)
+    with pytest.raises(ValueError, match="cache-key"):
+        client.call(
+            engine="vision",
+            task="classify",
+            subject="../../../other-inspection/cached/vision.classify_view.a1",
+            prompt="x",
+        )
+    assert meter.images_analyzed == 0, "a rejected call is not counted as work"
 
 
 def test_images_are_downscaled_to_the_documented_limit() -> None:
@@ -271,15 +327,6 @@ def test_images_are_downscaled_to_the_documented_limit() -> None:
 def test_image_tokens_follow_the_published_formula() -> None:
     assert image_tokens(1000, 750) == 1000
     assert image_tokens(1568, 1568) == round(1568 * 1568 / 750)
-
-
-class _FakeResponse:
-    """Minimal stand-in for an httpx response inside an APIStatusError."""
-
-    def __init__(self, status_code: int) -> None:
-        self.status_code = status_code
-        self.headers: dict[str, str] = {}
-        self.request = None
 
 
 def test_the_live_path_does_not_need_the_sdk_to_be_importable(

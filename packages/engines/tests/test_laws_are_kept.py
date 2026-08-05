@@ -19,9 +19,7 @@ is the failure that actually happened.
 
 from __future__ import annotations
 
-import os
 import re
-from functools import cache
 from pathlib import Path
 
 import pytest
@@ -31,8 +29,12 @@ LAWS = REPO_ROOT / "docs" / "LAWS.md"
 
 #: Paths named in prose that the laws depend on. Matches things that look like a
 #: repo path with an extension - deliberately crude, because a clever matcher
-#: that silently skipped a line would reintroduce exactly this bug.
-_PATH_PATTERN = re.compile(r"`([A-Za-z0-9_./-]+\.(?:py|ts|tsx|md|sh|json))`")
+#: that silently skipped a line would reintroduce exactly this bug. A path may
+#: carry a `::test_name` qualifier (the file half is what has to exist) or a
+#: bracketed Next.js route segment; the first version of this pattern allowed
+#: neither, so the two laws that name `test_laws.py::...` - the truth law and
+#: the safety law - were the two laws this test never looked at.
+_PATH_PATTERN = re.compile(r"`([A-Za-z0-9_./\[\]-]+\.(?:py|ts|tsx|md|sh|json))(?:::[^`]+)?`")
 
 
 def _named_paths() -> set[str]:
@@ -40,37 +42,19 @@ def _named_paths() -> set[str]:
     return set(_PATH_PATTERN.findall(text))
 
 
-#: Directories that hold installed dependencies rather than this project. Pruned
-#: rather than filtered: `.venv` alone is tens of thousands of files, and walking
-#: it once per named path is what made this the second-slowest test in the suite.
-_PRUNED = {".venv", "node_modules", ".next", ".git", "__pycache__", ".turbo"}
-
-
-@cache
-def _repo_index() -> dict[str, Path]:
-    """Every source file in the repository, by basename, walked once."""
-    index: dict[str, Path] = {}
-    for directory, subdirs, files in os.walk(REPO_ROOT):
-        subdirs[:] = [d for d in subdirs if d not in _PRUNED]
-        for name in files:
-            index.setdefault(name, Path(directory) / name)
-    return index
-
-
-def _resolve(name: str) -> Path | None:
-    """Find a file the laws name, wherever it lives."""
-    direct = REPO_ROOT / name
-    if direct.exists():
-        return direct
-    return _repo_index().get(Path(name).name)
-
-
 def test_every_file_the_laws_name_exists() -> None:
-    """A law pointing at a file that is not there is a law nobody is keeping."""
+    """A law pointing at a file that is not there is a law nobody is keeping.
+
+    The path is checked exactly as the law wrote it. An earlier version fell
+    back to matching by basename anywhere in the repository, as tolerance for
+    files moving - and that tolerance let `bench/PROVENANCE.md` pass for months
+    on the strength of `fixtures/PROVENANCE.md` sharing its name. A law that
+    names a path is naming that path; if the file moves, the law moves with it.
+    """
     named = _named_paths()
     assert named, "no paths found in LAWS.md - the pattern is wrong, not the laws"
 
-    missing = sorted(name for name in named if _resolve(name) is None)
+    missing = sorted(name for name in named if not (REPO_ROOT / name).exists())
     assert not missing, "docs/LAWS.md names files that do not exist:\n  - " + "\n  - ".join(
         missing
     )
@@ -108,12 +92,12 @@ def test_law_7_other_named_tests_exist() -> None:
     ("law", "phrase"),
     [
         (1, "every finding cites"),
-        (2, "never"),
+        (2, "never cleared"),
         (3, "user-provided"),
         (4, "precision"),
         (5, "cost"),
         (6, "accuracy"),
-        (7, "no"),
+        (7, "anthropic_api_key"),
     ],
 )
 def test_each_law_is_still_present(law: int, phrase: str) -> None:
@@ -121,6 +105,11 @@ def test_each_law_is_still_present(law: int, phrase: str) -> None:
 
     LAWS.md has an amendment procedure. This does not enforce it - it just makes
     a silent removal fail a test, so removing one is a deliberate act.
+
+    Each phrase has to be one the law cannot lose without losing its meaning.
+    LAW 7's used to be "no", which is a substring of "not" and therefore of any
+    English paragraph - a guard that could not fire. It now pins the clause with
+    teeth: CI runs with no ANTHROPIC_API_KEY.
     """
     text = LAWS.read_text(encoding="utf-8").lower()
     assert f"law {law}" in text, f"LAW {law} is no longer in docs/LAWS.md"
@@ -138,8 +127,12 @@ def test_the_gate_script_runs_the_test_suites_the_laws_rely_on() -> None:
     import json
 
     gates = (REPO_ROOT / "scripts" / "gates.sh").read_text(encoding="utf-8")
+    # Anchored to a live invocation at the start of a line, not a substring: the
+    # fast way to disable a flaky gate is to comment its line out, and the name
+    # would still be in the file.
+    invoked = set(re.findall(r'^\s*gate\s+"([^"]+)"', gates, flags=re.MULTILINE))
     for required in ("py:test", "ts:test", "contract:check", "inspect:fixture"):
-        assert required in gates, f"gates.sh no longer runs {required}"
+        assert required in invoked, f"gates.sh no longer runs {required}"
 
     # ts:test delegates to turbo, which fans out across the workspace. The e2e
     # test lives in apps/web, so it is enforced only if BOTH halves hold: the

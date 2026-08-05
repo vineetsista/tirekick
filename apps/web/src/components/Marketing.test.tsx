@@ -172,7 +172,7 @@ describe("the disclaimer architecture matches LIABILITY section 4", () => {
     expect(css).toContain("@media print");
     // "Running footer" means every page, which is what position:fixed buys.
     expect(css).toMatch(/body::after[\s\S]*position:\s*fixed/);
-    expect(css).toContain("Not an inspection");
+    expect(css).toContain("This is not an inspection");
   });
 
   it("keeps the watermark off the printed page", () => {

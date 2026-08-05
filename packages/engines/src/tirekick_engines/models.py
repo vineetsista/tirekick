@@ -123,6 +123,26 @@ class BoundingBox(Base):
     w: Annotated[float, Field(ge=0.0, le=1.0)]
     h: Annotated[float, Field(ge=0.0, le=1.0)]
 
+    @model_validator(mode="after")
+    def _inside_the_frame(self) -> BoundingBox:
+        """Four legal coordinates can still describe an illegal region.
+
+        x=0.9 with w=0.4 puts 30% of the cited box outside the photograph. The
+        viewer draws it anyway - clipped, at the wrong size - and a reader
+        cannot redraw the region from the numbers to check the claim, which is
+        the whole point of publishing them (LAW 1).
+        """
+        # A tolerance the size of a rounding error at four decimal places: the
+        # coordinates arrive as fractions of a pixel count and are serialised
+        # rounded, so an exactly-full-width box can land at 1.00001.
+        epsilon = 1e-4
+        if self.x + self.w > 1.0 + epsilon or self.y + self.h > 1.0 + epsilon:
+            raise ValueError(
+                f"box runs past the image edge: x+w={self.x + self.w:.4f}, "
+                f"y+h={self.y + self.h:.4f}, both must be <= 1"
+            )
+        return self
+
 
 class ImageRegionEvidence(Base):
     kind: Literal["image_region"] = "image_region"
@@ -202,6 +222,14 @@ class Asset(Base):
 class CostBand(Base):
     low: float = Field(ge=0.0)
     high: float = Field(ge=0.0)
+
+    @model_validator(mode="after")
+    def _ordered(self) -> CostBand:
+        # "$800 to $200" is not a range, it is a typo - and it reaches the
+        # buyer as a sentence they say to a seller.
+        if self.high < self.low:
+            raise ValueError(f"inverted cost band: low={self.low}, high={self.high}")
+        return self
 
 
 class DraftFinding(Base):
@@ -480,10 +508,24 @@ class PriceDeduction(Base):
     high_usd: float = Field(ge=0.0)
     basis: str = Field(min_length=1)
 
+    @model_validator(mode="after")
+    def _ordered(self) -> PriceDeduction:
+        if self.high_usd < self.low_usd:
+            raise ValueError(f"inverted deduction: low={self.low_usd}, high={self.high_usd}")
+        return self
+
 
 class PriceRange(Base):
     low: float = Field(ge=0.0)
     high: float = Field(ge=0.0)
+
+    @model_validator(mode="after")
+    def _ordered(self) -> PriceRange:
+        # A fair range whose floor is above its ceiling makes every verdict
+        # computed against it meaningless, in both directions.
+        if self.high < self.low:
+            raise ValueError(f"inverted price range: low={self.low}, high={self.high}")
+        return self
 
 
 class PriceCheck(Base):
@@ -718,6 +760,9 @@ class Teaser(Base):
     coverage: Coverage
     red_flag_score: int = Field(ge=0, le=100)
     headline: str = Field(min_length=1)
+    #: Findings about THIS vehicle. Recall campaigns and complaint patterns
+    #: describe the model year and are counted nowhere in this block - they
+    #: would put a number on the teaser that the headline beside it contradicts.
     finding_count: int = Field(ge=0)
     counts: list[SeverityCount] = Field(default_factory=list)
     mechanic_referral_count: int = Field(ge=0)

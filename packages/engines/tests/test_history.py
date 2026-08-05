@@ -53,6 +53,18 @@ DENYING = [
     "Odometer: no discrepancy reported",
     "Frame damage: none disclosed",
     "No salvage or flood history on record",
+    "No salvage title on record",
+    "Never declared a total loss",
+    "Salvage records: 0",
+    "Salvage? No.",
+]
+
+#: Real reports number their rows. In each of these "No." abbreviates "number"
+#: and the line is asserting the brand at full strength.
+ENUMERATED_ASSERTING = [
+    "No. 3 - SALVAGE TITLE ISSUED",
+    "Record No. 4: FLOOD DAMAGE REPORTED",
+    "Item No. 2 - REBUILT TITLE ISSUED",
 ]
 
 
@@ -75,6 +87,45 @@ def test_a_denied_brand_produces_nothing(tmp_path: Path, line: str) -> None:
     """
     assets, root = _document(tmp_path, line)
     assert history.title_brand_findings(assets, root) == []
+
+
+@pytest.mark.parametrize("line", ENUMERATED_ASSERTING)
+def test_an_enumerated_record_row_is_read_as_asserting(tmp_path: Path, line: str) -> None:
+    """The test that protects branded cars from reading as clean.
+
+    'No. 3 - SALVAGE TITLE ISSUED' contains no denial at all: 'No.' is how a
+    numbered report says 'number'. A scanner that reads it as negation drops
+    the salvage brand silently - the false negative ACCURACY.md names as the
+    costliest error, in the opposite direction from the 'Salvage: None' case.
+    """
+    assets, root = _document(tmp_path, line)
+    drafts = history.title_brand_findings(assets, root)
+    assert len(drafts) == 1, f"expected a finding for {line!r}"
+    assert drafts[0].confidence == 1.0, f"{line!r} must ship asserted, not hedged"
+    assert drafts[0].severity == "major"
+
+
+def test_a_later_outright_assertion_outranks_an_earlier_hedge(tmp_path: Path) -> None:
+    """One finding per brand, at the strongest reading the document supports.
+
+    A line carrying both a denial token and an assertion verb ships hedged.
+    But when a later line asserts the same brand outright, keeping the hedge
+    because it arrived first would soften a salvage warning to minor at half
+    confidence - and cite the muddier line as the evidence.
+    """
+    text = (
+        "Odometer reading: 0 discrepancies. SALVAGE TITLE ISSUED 2020\n"
+        "Salvage title issued 03/2019\n"
+    )
+    assets, root = _document(tmp_path, text)
+    drafts = history.title_brand_findings(assets, root)
+    assert len(drafts) == 1
+    assert drafts[0].confidence == 1.0
+    assert drafts[0].severity == "major"
+    evidence = drafts[0].evidence[0]
+    assert evidence.kind == "document_excerpt"
+    assert evidence.excerpt == "Salvage title issued 03/2019"
+    assert "line 2" in evidence.caption
 
 
 def test_the_matched_line_is_quoted_back_verbatim(tmp_path: Path) -> None:

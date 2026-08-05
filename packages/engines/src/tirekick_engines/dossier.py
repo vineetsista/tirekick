@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from . import registry
 from .cogs import CostMeter
 from .coverage import compute_coverage
 from .engines import audio as audio_engine
@@ -112,32 +113,48 @@ def _red_flag_score(findings: list[Finding], coverage: Coverage) -> int:
     return min(100, int(round(total)))
 
 
-def _headline(score: int, findings: list[Finding]) -> str:
+def _headline(score: int, findings: list[Finding], vehicle: VehicleRecord | None) -> str:
     """One sentence about this car, plus a separate count for its model.
 
     The two are never added together. Conflating "we can see rust on this car"
     with "this model year has recall campaigns on file" is how a report starts
     overstating itself.
+
+    The recall count comes from the federal record, not from the surviving
+    findings. A campaign against a locked system - airbags, brakes, steering,
+    structure - is converted to a mechanic referral by the safety clamp before
+    this function ever sees it, so counting findings meant a car whose only
+    campaign was an airbag recall reported "Nothing adverse was visible in the
+    media provided." The most common recall category in the fleet was the one
+    the headline could not mention.
     """
     observed = _vehicle_level(findings)
-    recalls = [f for f in findings if f.type == "open_recall"]
+    recall_count = len(vehicle.recalls) if vehicle is not None else 0
     tail = (
-        f" Separately, {len(recalls)} recall campaign(s) are on record for this "
+        f" Separately, {recall_count} recall campaign(s) are on record for this "
         f"model year - free to fix, and worth one phone call to a dealer."
-        if recalls
+        if recall_count
         else ""
     )
 
     critical = [f for f in observed if f.severity == "critical"]
     major = [f for f in observed if f.severity == "major"]
+    # `info` is a reading, not a fault: an odometer value is not a minor finding
+    # and must not be counted as one in the sentence that leads the report.
+    minor = [f for f in observed if f.severity == "minor"]
     if critical:
         return f"{len(critical)} critical finding(s) visible in the media provided.{tail}"
     if major:
         return f"{len(major)} finding(s) that are likely to cost money.{tail}"
+    if minor:
+        return (
+            f"{len(minor)} minor finding(s) visible; nothing major in what we "
+            f"could see.{tail}"
+        )
     if observed:
         return (
-            f"{len(observed)} minor finding(s) visible; nothing major in what we "
-            f"could see.{tail}"
+            f"Nothing adverse was visible in the media provided. "
+            f"{len(observed)} reading(s) were recorded.{tail}"
         )
     if score == 0:
         return f"Nothing adverse was visible in the media provided.{tail}"
@@ -153,8 +170,16 @@ def _build_systems(
     received = set(coverage.received_views)
     rows: list[SystemRow] = []
 
+    # Only findings about THIS car may set a system's status. A recall campaign
+    # is filed against every car of a model year and carries confidence 1.0 -
+    # confidence that the campaign exists, not that anything is wrong with the
+    # car in front of the buyer. Grouping it here rendered the transmission row
+    # as "attention, 1.0" on a vehicle nothing had observed a transmission fault
+    # on, which is the conflation D-021 forbids two paragraphs above this one.
+    # The campaigns are still reported in full, in the section that is about the
+    # model rather than the car.
     by_system: dict[str, list[Finding]] = {}
-    for f in findings:
+    for f in _vehicle_level(findings):
         by_system.setdefault(f.system, []).append(f)
 
     for system in ALL_SYSTEMS:
@@ -354,15 +379,21 @@ def _negotiation_script(
     costed = [f for f in findings if f.estimated_cost_usd is not None]
     for f in costed[:3]:
         assert f.estimated_cost_usd is not None
+        # The band is ours, and the script says so. It used to put "a shop quoted
+        # that kind of work at roughly $600 to $900" in the buyer's mouth - a
+        # provenance that does not exist, scripted for them to assert to a
+        # stranger's face. No shop was called. The number is a rough band this
+        # analysis attached, and a seller is entitled to hear it described as
+        # what it is.
         beats.append(
             ScriptBeat(
                 beat=f"Raise: {f.title}",
                 say=(
-                    f"The analysis flagged {f.title.lower()}. I'd want that looked "
-                    f"at - a shop quoted that kind of work at roughly "
-                    f"${f.estimated_cost_usd.low:,.0f} to "
-                    f"${f.estimated_cost_usd.high:,.0f}. Can we talk about the price "
-                    f"with that in mind?"
+                    f"The analysis flagged {f.title.lower()}, and put a rough band "
+                    f"of ${f.estimated_cost_usd.low:,.0f} to "
+                    f"${f.estimated_cost_usd.high:,.0f} on that kind of work - its "
+                    f"own estimate, not a quote. I'd want a shop to price it "
+                    f"properly. Can we talk about the price with that in mind?"
                 ),
             )
         )
@@ -436,6 +467,15 @@ def build_report(
     finding is visible to us on the run, even though it is invisible to the buyer.
     """
     coverage = compute_coverage(assets)
+    stamped_at = generated_at or _default_generated_at(mode)
+
+    # LAW 4 - a type that was measured and failed does not reach a paid report.
+    # Applied before the safety clamp so a withheld type cannot arrive as a
+    # referral either: the gate is about whether we can tell the difference
+    # between a real defect and a false one, and a referral built on a
+    # measurement we know to be wrong is the same claim in a softer voice.
+    withheld = registry.withheld_types()
+    drafts = [d for d in drafts if d.type not in withheld]
 
     # LAW 2 - nothing reaches the report without passing through here.
     safety = apply_safety_law(drafts)
@@ -447,6 +487,9 @@ def build_report(
     score = _red_flag_score(findings, coverage)
 
     could_not_assess = could_not_assess_lines()
+    # A withheld type is a gap in this report, and it is named in the block that
+    # leads the verdict rather than left as a silence the buyer reads as absence.
+    could_not_assess.extend(withheld.values())
     if coverage.missing_views:
         could_not_assess.append(
             f"{len(coverage.missing_views)} standard view(s) were not provided: "
@@ -471,7 +514,7 @@ def build_report(
         subject_mileage=subject_mileage,
         findings=findings,
         decoded=vehicle.decoded if vehicle is not None else None,
-        as_of=generated_at or _default_generated_at(mode),
+        as_of=stamped_at,
     )
 
     for asset in assets:
@@ -480,7 +523,9 @@ def build_report(
     report = Report(
         report_id=report_id,
         inspection_id=inspection_id,
-        generated_at=generated_at or _default_generated_at(mode),
+        # One clock reading for the whole report. Called twice, a live run gave
+        # pricing a staleness cutoff that was not the report's own timestamp.
+        generated_at=stamped_at,
         mode=mode,  # type: ignore[arg-type]
         banner=REPORT_BANNER,
         vehicle=vehicle,
@@ -490,7 +535,7 @@ def build_report(
         coverage=coverage,
         verdict=Verdict(
             red_flag_score=score,
-            headline=_headline(score, findings),
+            headline=_headline(score, findings, vehicle),
             could_not_assess=could_not_assess,
             summary=(
                 f"{coverage.statement} Red-flag score {score}/100, which reflects "

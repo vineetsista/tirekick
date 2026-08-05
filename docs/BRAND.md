@@ -175,8 +175,10 @@ the precise failure it exists to prevent.
 whole mark - the interface face rather than a drawn logo, because a wordmark in
 the product's own type is honest about what we are.
 
-Report watermark and share footer: `INSPECTED BY TIREKICK AI` in mono uppercase, muted,
-plus the "not an inspection" line from LIABILITY section 4.
+Report watermark and share footer: `ANALYZED BY TIREKICK AI` in mono uppercase, muted,
+plus the "not an inspection" line from LIABILITY section 4. It read `INSPECTED BY`
+until P9 - the claim the entire liability architecture denies, in the passive
+voice, on the surfaces most likely to be forwarded to a stranger.
 
 ## What we never do
 

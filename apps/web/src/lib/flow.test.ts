@@ -2,8 +2,10 @@ import { execFileSync } from "node:child_process";
 import { existsSync, rmSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { NextRequest } from "next/server";
 import { afterAll, describe, expect, it, vi } from "vitest";
-import { canReadReport, issueGrant, verifyGrant } from "./access";
+import { GET as mediaGET } from "@/app/f/[inspectionId]/[...path]/route";
+import { canRead, canReadReport, grantCookieName, issueGrant, verifyGrant } from "./access";
 import { analyse, createInspection, inspectionDir, loadReport, loadTeaser } from "./inspections";
 
 /**
@@ -89,6 +91,32 @@ describe.skipIf(!hasEngines)("upload -> paid dossier", () => {
     const access = canReadReport(id, grant);
     expect(access.allowed).toBe(true);
     expect(access.reason).toBe("paid");
+
+    // 7. The photographs obey the same grant as the page (P9, D-052). The
+    //    uploaded document is a cited asset; without the cookie its bytes are
+    //    a 404, with it they are the exact bytes that went in.
+    const doc = report!.assets.find((a) => a.kind === "document")!;
+    const url = `http://localhost/f/${id}/${doc.path}`;
+    const params = { params: Promise.resolve({ inspectionId: id, path: [doc.path] }) };
+
+    const anonymous = await mediaGET(new NextRequest(url), params);
+    expect(anonymous.status).toBe(404);
+
+    const granted = await mediaGET(
+      new NextRequest(url, {
+        headers: { cookie: `${grantCookieName(id)}=${grant}` },
+      }),
+      params,
+    );
+    expect(granted.status).toBe(200);
+    expect(granted.headers.get("cache-control")).toBe("private, no-store");
+    const served = Buffer.from(await granted.arrayBuffer());
+    expect(served.equals(await fixtureBytes("history_01.txt"))).toBe(true);
+
+    // 8. The uploader's own grant opens the teaser tier, not the dossier.
+    const owner = issueGrant(id, "owner");
+    expect(canRead(id, "teaser", owner).allowed).toBe(true);
+    expect(canRead(id, "report", owner).allowed).toBe(false);
   }, 120_000);
 });
 

@@ -833,3 +833,180 @@ The token broke; the box did not shrink.
 By inspection those two values look interchangeable. Only laying the page out
 against content nastier than the fixture told them apart, which is the argument
 for this decision in a sentence.
+
+### D-052 - Media is served through the same check as the page, and only what the report cites
+**P9.** `/f/<id>/*` was a directory under `public/`: the report page verified a
+grant while the photographs it renders did not. PHASE_8 named it - "whatever
+replaces local disk has to serve media through the same check" - and this phase
+is that. A route handler now serves every media byte, and the framework detail
+that decided the design is that a file under `public/` is served *before* any
+route handler runs: the demo's media had to leave `public/` entirely, or the
+check would exist while never executing for the one inspection every stranger
+loads. The sync script now deletes the copy it used to create.
+
+Two judgement calls inside that, both restrictive on purpose:
+
+**The allowlist is the report's own citations, not the media directory.** The
+directory can hold things no report mentions - `redactions.json` sidecars naming
+the reviewer and boxing every face, raw frames left by a crashed extraction, an
+upload the pipeline rejected. "Serve what is on disk under this id" publishes
+all of it; "serve what the report cites" publishes exactly the evidence the
+buyer was shown citations for, which is the boundary LAW 1 already draws. The
+spectrogram rides along explicitly (it is cited by `audio.spectrogramPath`, not
+by an asset row). Cost: a file the pipeline writes but forgets to cite becomes
+invisible to the viewer - which is the correct failure, since an uncited file
+is not evidence.
+
+**Denial is a 404, not a 403.** The route answers "no such thing" whether the
+inspection is absent, the file uncited, or the grant missing, so a prober
+cannot map which inspection ids exist. Cost: a buyer whose cookie expired sees
+a missing image rather than an explanation; the report page above it carries
+the recovery path.
+
+### D-053 - Grants have tiers, the grant travels in a cookie, and `owner` opens the teaser only
+**P9.** The media route forced a question P7's grant design never had to answer:
+the free teaser page renders one photograph (D-044), so *some* media must open
+without payment - but an upload is somebody's prospective car, and nothing about
+it should be public. "Free" is a statement about money, not about who may look.
+
+So the tiers: `paid` and `demo` open the report and every photograph it cites;
+`owner` - issued to the uploader the moment their inspection is created - opens
+the teaser and exactly one photograph, the sample finding's. A stranger with the
+URL and no grant gets nothing at all, teaser included. Cost: the owner cannot
+see their own photographs through the product without paying, only the sample.
+They possess the originals; what they have not bought is the analysis.
+
+The grant moved from a function parameter into an httpOnly cookie, set by one
+route (`/access/<id>?t=...`) that verifies the token and redirects. An `<img>`
+tag can carry no header we control, and a token in the URL leaks through
+referrers, history sync and screenshots; after the exchange the token never
+appears in a URL again. The redirect target is confined to same-site paths, or
+the exchange route would be an open redirect wearing our domain. Cookie life is
+90 days - the media retention window UNIT_ECONOMICS already assumes, so the
+cookie never promises access to bytes that are gone.
+
+### D-054 - The upload page ships as the honest dev implementation, not a mock of production
+**P9.** LAW 7's end-to-end flow has driven upload -> analyse -> grant -> dossier
+through library calls since P7, and no page let a person do the same. The flow
+now has a form (`/new`): the same `createInspection` and `analyse` the test
+drives, an `owner` grant in a cookie, and a redirect to the teaser.
+
+What it does not do is pretend. Analysis is the local Python subprocess
+`inspections.ts` has always declared itself to be, in fixture mode, with no
+vision key - and the page says so in its copy: photographs are catalogued, not
+examined; the result states what nothing looked at. On a deploy with no Python
+runtime the action fails with the true reason rather than a soothing one. Cost:
+the page is a dead end on Vercel until the worker host exists - which is the
+same dead end the whole pipeline has, now visible in a form instead of hidden
+in a test file.
+
+Uploaded filenames are sanitised to the character set every pipeline-emitted
+asset already uses (basename only, no leading dots, collisions suffixed), so an
+upload named `../../report.json` becomes a file *inside* media/ rather than a
+write outside it - checked by the same validator the media route applies on the
+way back out.
+
+### D-055 - The layout gate fails loudly when it cannot serve a file
+**P9.** Moving demo media out of `public/` touched the one consumer nobody
+advertises: the D-050 browser gate, which serves `/f/**` off disk so images have
+real intrinsic dimensions. Its miss path was `route.abort()` - an image that
+failed to load measured zero, and every overflow number on that page became
+fiction while the suite stayed green. That is the exact failure D-050 exists to
+forbid, one layer down, in the gate's own plumbing.
+
+The interceptor now records every path it could not serve and the suite throws
+after the run, naming them. Verified by pointing it at a directory that does not
+exist and watching all the image-bearing pages fail at once. Cost: a genuinely
+new asset in a stress case must exist under `fixtures/demo-01/media` or the gate
+refuses to run quietly without it - which is the point.
+
+### D-056 - LAW 4's switch is enforced on a measured failure, and disclosed on an unmeasured one
+**P9.** LAWS.md says "below threshold means disabled in paid output" and names
+`registry.py::enabled_for_paid` as the enforcement point. An audit of the report
+path found the flag is read by the gate table and by the accuracy statement - by
+the things that *describe* the gate - and by nothing that enforces it. The switch
+governed a console printout.
+
+Enforcing it literally would empty every report this product can currently
+produce, because nothing has been measured at all. That is not what the project
+decided: D-032 settled the unmeasured state with disclosure, generating the
+sentence above the payment button from the same registry. So the two states are
+now treated as the different things they are. **Measured and failing** is
+enforced: the drafts are dropped before the safety clamp, and each withheld type
+is named in the could-not-assess block with its precision, its sample size and
+its threshold, so the gap is visible rather than silent. **Not measured** ships
+under D-032's disclosure.
+
+Cost: the law's headline sentence is broader than the code, and this decision
+narrows the code's obligation rather than the law's words. The honest resolution
+is to amend LAW 4 to say what the product does - which requires a commit that
+edits LAWS.md and nothing else - and that commit is not in this phase. Until it
+lands, the gap is named here rather than left for the next audit to find again.
+
+### D-057 - The negotiation script stops attributing its own estimate to a shop
+**P9.** The script told the buyer to say, to a seller's face: *"a shop quoted
+that kind of work at roughly $600 to $900."* No shop was called. D-024 already
+holds that cost bands have no real source, `fixtures/PROVENANCE.md` declares the
+fixture's bands invented, and the same function's docstring promises "a script
+that never asks the buyer to overstate what we found". It scripted a fabricated
+provenance for the buyer to assert as fact.
+
+The band is now described as what it is - the analysis's own rough estimate, not
+a quote - and the sentence asks the seller to let a shop price it properly. Cost:
+a weaker negotiating line, because "the analysis estimated" carries less weight
+in a driveway than "a shop quoted", and that is precisely why the second version
+was tempting.
+
+Two related fixes shipped with it. `vision.py` accepted `estimated_cost_usd`
+straight out of a model response despite the comment above the line saying it
+never does: D-024's stated mechanism - "a field that is not in the schema cannot
+be returned" - is false, because JSON Schema permits extra properties unless
+told otherwise. A volunteered band now dies at the boundary in live mode, while
+fixture responses keep theirs. And the headline stopped counting recalls from
+the surviving findings: a campaign against a locked system becomes a mechanic
+referral before the count runs, so a car whose only campaign was an airbag recall
+- the most common category in the fleet - reported "Nothing adverse was visible
+in the media provided."
+
+### D-058 - The systems table is about this car; the recall section is about the model year
+**P9.** D-021 kept model-level records out of the red-flag score and said why:
+scoring five campaigns like observed damage reads as "this car is a wreck" and is
+not what the evidence says. The systems table was never given the same rule. A
+recall carries confidence 1.0 - confidence that the campaign *exists* - so the
+shipped fixture rendered the transmission row as attention at 1.0 on a car
+nothing had observed a transmission fault on, and the teaser turned that into
+"Something was found here." The engine row led with a recall title over the fluid
+leak actually visible in the photograph.
+
+Only vehicle-level findings set a system's status now, and the teaser's severity
+counts follow the same rule - they read "7 major" beside a headline saying two
+and a score that excluded five of them. Cost: a system whose only record is a
+recall now reads `cannot_determine`, which is a weaker-looking row, and it is the
+true one: nothing was observed about that system on this car.
+
+### D-059 - What the teaser sells is derived from what the report contains
+**P9.** The six unlock bullets were a fixed list. A buyer who uploaded eight
+photographs and nothing else was sold "the engine audio spectrogram", "the full
+vehicle record" and "what your own paperwork says", paid $25, and opened a report
+where none of those sections render - while the price comparison, a real paid
+section, was advertised nowhere. The teaser computed `has_audio` and
+`has_price_check` and used neither.
+
+The list is now built from the report: a bullet exists when the section behind it
+does. The sample statement stopped claiming "each with its own photograph and
+box" for findings cited to a document rather than an image. Cost: the free page
+sells less to buyers who provided less - which is the correct amount, and is the
+difference between a teaser and a bait.
+
+### D-060 - Prices, ranges and boxes are validated as the shapes they claim to be
+**P9.** Four coordinates each legal in [0,1] can still describe a box that runs
+off the edge of the photograph, and a range whose low exceeds its high is not a
+range. Both were representable, and a report carrying either is one a reader
+cannot check: a box nobody can redraw is not evidence, and a fair range with an
+inverted floor makes every verdict computed against it meaningless.
+
+`BoundingBox` now rejects x+w or y+h past 1 (with a rounding-error tolerance, since
+the fractions are serialised at four decimals), and `CostBand`, `PriceRange` and
+`PriceDeduction` reject inverted pairs. Cost: an engine that produces a
+slightly-out-of-frame box now fails loudly at construction instead of shipping a
+box the viewer clips - which is the trade LAW 1 already makes everywhere else.

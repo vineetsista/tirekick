@@ -15,7 +15,10 @@ import Link from "next/link";
 export function ReportNav({
   sections,
 }: {
-  sections: { id: string; label: string; count?: number }[];
+  // The caller derives this list from the sections it renders, so `count` is
+  // present-but-undefined for the sections that have nothing to count, and
+  // `exactOptionalPropertyTypes` treats that as different from absent.
+  sections: { id: string; label: string; count?: number | undefined }[];
 }) {
   return (
     <nav

@@ -13,15 +13,15 @@ from pathlib import Path
 
 import pytest
 
+from tirekick_engines.cli import build_parser
 from tirekick_engines.dossier import MODEL_LEVEL_TYPES
 from tirekick_engines.models import LOCKED_SYSTEM_STATEMENT, LOCKED_SYSTEMS
 from tirekick_engines.pipeline import run_inspection
 from tirekick_engines.registry import FINDING_TYPES
-from tirekick_engines.teaser import accuracy_statement, build_teaser
+from tirekick_engines.teaser import PRICE_USD, accuracy_statement, build_teaser
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 FIXTURE_DIR = REPO_ROOT / "fixtures" / "demo-01"
-PRICE = 25.0
 
 
 @pytest.fixture(scope="module")
@@ -33,7 +33,7 @@ def report():  # type: ignore[no-untyped-def]
 
 @pytest.fixture(scope="module")
 def teaser(report):  # type: ignore[no-untyped-def]
-    return build_teaser(report, price_usd=PRICE)
+    return build_teaser(report, price_usd=PRICE_USD)
 
 
 @pytest.fixture(scope="module")
@@ -257,7 +257,7 @@ def test_a_report_with_no_photographic_finding_has_no_sample(report) -> None:  #
             ]
         }
     )
-    assert build_teaser(stripped, price_usd=PRICE).sample is None
+    assert build_teaser(stripped, price_usd=PRICE_USD).sample is None
 
 
 # --------------------------------------------------------------------------- #
@@ -359,9 +359,34 @@ def test_the_statement_changes_when_something_clears_its_gate(monkeypatch) -> No
 
 
 def test_the_price_and_what_it_buys_are_both_stated(teaser) -> None:  # type: ignore[no-untyped-def]
-    assert teaser.price_usd == PRICE
+    assert teaser.price_usd == PRICE_USD
     assert len(teaser.unlocks) >= 5
     assert any("box drawn on it" in line for line in teaser.unlocks)
+
+
+def test_a_teaser_built_without_a_price_still_carries_the_shared_one() -> None:
+    """The price is not an argument the caller has to remember.
+
+    `build_teaser` took `price_usd` with no default, so every call site chose a
+    number, and the CLI's choice was its own literal. A caller that forgets now
+    gets the constant the landing page prints rather than a decision.
+    """
+    report = run_inspection(
+        inspection_dir=FIXTURE_DIR, mode="fixture", generated_at="2026-01-01T00:00:00Z"
+    ).report
+    assert build_teaser(report).price_usd == PRICE_USD
+
+
+def test_the_cli_price_default_is_the_shared_constant() -> None:
+    """The teaser the engine writes is the number the checkout page shows.
+
+    This compares values, which is the weaker half: `default=25.0` retyped here
+    would agree with the constant on the day it was typed and disagree the day
+    the constant moved. `test_shared_constants_parity.py` reads the source and
+    forbids the retyping; this catches the default being dropped or replaced.
+    """
+    args = build_parser().parse_args(["inspect", "--fixture", "demo-01"])
+    assert args.price == PRICE_USD
 
 
 def test_the_synthetic_flag_survives_into_the_teaser(teaser) -> None:  # type: ignore[no-untyped-def]

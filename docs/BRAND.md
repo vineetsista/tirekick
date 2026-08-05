@@ -29,7 +29,11 @@ Bloomberg terminal, not car dealership. Flight recorder, not Carfax.
 
 Three faces, each doing one job. All are self-hosted in `apps/web/public/fonts`
 so the report renders identically offline and nothing about a buyer's vehicle is
-announced to a font CDN (LAW 3 in spirit, if not in letter).
+announced to a font CDN (LAW 3 in spirit, if not in letter). `fonts.test.ts`
+checks both directions - every face the stylesheet loads is vendored, and every
+vendored face is loaded - and that each one ships with the OFL text that makes
+redistributing it legal. That obligation is the one in this repository that is
+somebody else's rather than self-imposed, so it gets a test rather than a note.
 
 - **JetBrains Mono** (`--tk-mono`) for measured values: confidences, VINs, box
   coordinates, prices, timestamps, asset ids, hashes. Tabular figures on, so
@@ -93,11 +97,14 @@ first-class output (LAW 1) and must not look like a disabled row. It was raised
 from `#6E7681`, which measured 4.03:1 against the panel and so failed WCAG AA
 while carrying exactly the content this project claims to take most seriously.
 
-**On paper the palette inverts.** `@media print` in `globals.css` redefines the
-nine neutrals to ink on white and leaves the meaning ramp alone, because a report
-is something a buyer hands to a mechanic in a workshop and the severity of a
-finding must survive a black-and-white laser printer. The table above is the
-screen palette; the print overrides are read from the same file.
+**On paper the palette inverts.** `@media print` in `globals.css` redefines nine
+tokens to ink on white and leaves the four severity colours and `--tk-locked`
+alone, because a report is something a buyer hands to a mechanic in a workshop and
+the severity of a finding must survive a black-and-white laser printer. Eight of
+the nine are neutrals; the ninth is `--tk-unknown`, which is on the meaning ramp
+and is darkened anyway - "cannot determine" has to stay readable on paper, and it
+carries no severity to preserve. The table above is the screen palette; the print
+overrides are read from the same file.
 
 The table is checked. `apps/web/src/lib/tokens.test.ts` parses it and fails if a
 value here disagrees with `globals.css`, if it names a token the stylesheet does
@@ -174,6 +181,13 @@ the precise failure it exists to prevent.
 `TIREKICK` set in Archivo, uppercase, 800 weight, 0.22em tracking. That is the
 whole mark - the interface face rather than a drawn logo, because a wordmark in
 the product's own type is honest about what we are.
+
+It is typed as two inline styles rather than a class, and the two disagree: the
+report nav is 0.22em and the landing page is 0.26em. Nothing holds them in step,
+because `tokens.test.ts` checks that a token *exists*, not that two hand-written
+values match. 0.22em is the intended figure; the landing page is the one that is
+wrong, and it is recorded here rather than silently corrected because a wordmark
+defined in two places will drift again the moment a third appears.
 
 Report watermark and share footer: `ANALYZED BY TIREKICK AI` in mono uppercase, muted,
 plus the "not an inspection" line from LIABILITY section 4. It read `INSPECTED BY`

@@ -2,8 +2,13 @@ import { readFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { parseReport, reportSchema } from "./schema";
-import { LOCKED_SYSTEM_STATEMENT, SCHEMA_VERSION } from "./constants";
+import { parseReport, parseTeaser, reportSchema } from "./schema";
+import {
+  LOCKED_SYSTEMS,
+  LOCKED_SYSTEM_STATEMENT,
+  PRICE_USD,
+  SCHEMA_VERSION,
+} from "./constants";
 
 /**
  * THE DRIFT GATE (DECISIONS.md D-002).
@@ -18,6 +23,7 @@ import { LOCKED_SYSTEM_STATEMENT, SCHEMA_VERSION } from "./constants";
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, "../../..");
 const reportPath = resolve(repoRoot, "fixtures/reports/demo-01.report.json");
+const teaserPath = resolve(repoRoot, "fixtures/reports/demo-01.teaser.json");
 
 describe("python -> typescript report contract", () => {
   it("the fixture report artifact exists", () => {
@@ -62,5 +68,62 @@ describe("python -> typescript report contract", () => {
     const report = parseReport(raw);
     const anySynthetic = report.assets.some((a) => a.synthetic);
     expect(report.containsSyntheticMedia).toBe(anySynthetic);
+  });
+});
+
+/**
+ * The teaser is the other half of the same artifact, and the drift gate only
+ * ever looked at the report.
+ *
+ * `teaser.py` emits this file and nothing in this package parsed it: the check
+ * that a Pydantic change reaches zod stopped at the paywall. It is also the half
+ * a stranger reads before paying, which makes it the worse one to leave ungated.
+ */
+describe("python -> typescript teaser contract", () => {
+  it("the fixture teaser artifact exists", () => {
+    expect(
+      existsSync(teaserPath),
+      `Missing ${teaserPath}. Run: pnpm run inspect:fixture`,
+    ).toBe(true);
+  });
+
+  it("parses under the zod contract and is actually a teaser", () => {
+    const raw: unknown = JSON.parse(readFileSync(teaserPath, "utf8"));
+    const teaser = parseTeaser(raw);
+
+    expect(teaser.schemaVersion).toBe(SCHEMA_VERSION);
+    expect(teaser.mode).toBe("fixture");
+    expect(teaser.couldNotAssess.length).toBeGreaterThan(0);
+  });
+
+  it("carries the same price the web app prints", () => {
+    /**
+     * The landing page printed the TypeScript constant and the teaser one click
+     * later printed a number the Python CLI had chosen from its own literal
+     * default. Two prices, on consecutive pages, in front of the same buyer,
+     * with nothing in the repository comparing them.
+     *
+     * This is the value half of that gate and it reads the real artifact, so it
+     * fails when the engine is re-run after either side moves. The source half -
+     * forbidding a second literal at all - is in
+     * packages/engines/tests/test_shared_constants_parity.py, because equal
+     * literals pass every value comparison right up until the day they stop.
+     */
+    const raw: unknown = JSON.parse(readFileSync(teaserPath, "utf8"));
+    const teaser = parseTeaser(raw);
+    expect(teaser.priceUsd).toBe(PRICE_USD);
+  });
+
+  it("locks every locked system, in status and in wording", () => {
+    const raw: unknown = JSON.parse(readFileSync(teaserPath, "utf8"));
+    const teaser = parseTeaser(raw);
+    const locked = teaser.systems.filter((s) =>
+      (LOCKED_SYSTEMS as readonly string[]).includes(s.system),
+    );
+    expect(locked.length).toBe(LOCKED_SYSTEMS.length);
+    for (const row of locked) {
+      expect(row.status).toBe("locked_mechanic_required");
+      expect(row.statement).toBe(LOCKED_SYSTEM_STATEMENT);
+    }
   });
 });

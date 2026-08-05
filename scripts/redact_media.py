@@ -6,6 +6,7 @@ Three modes, and the order matters.
     python scripts/redact_media.py propose <dir>   ask the model for regions (needs a key)
     python scripts/redact_media.py apply   <dir>   blur, in place, irreversibly
     python scripts/redact_media.py check   <dir>   fail if anything is unreviewed
+                                                   or still carries metadata
 
 `propose` never writes a reviewer name. A human opens `redactions.json`, checks
 every box against the image, adds or corrects regions, and puts their own name in
@@ -30,8 +31,6 @@ from tirekick_engines import prompts, redact  # noqa: E402
 from tirekick_engines.client import LiveModeUnavailable, ModelClient, resolve_model  # noqa: E402
 from tirekick_engines.cogs import CostMeter  # noqa: E402
 from tirekick_engines.models import BoundingBox  # noqa: E402
-
-IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png"}
 
 LOCATE_SCHEMA = {
     "type": "object",
@@ -63,12 +62,35 @@ LOCATE_SCHEMA = {
 }
 
 
+def _walk(directory: Path, suffixes: frozenset[str]) -> list[Path]:
+    """Every file with one of these suffixes, with nothing skipped by name.
+
+    This used to skip any name containing ".spectrogram", to keep the generated
+    spectrogram PNG out of the records. That is a substring match against a
+    filename: front.spectrogram.jpg is a legal name for a photograph of the
+    front of a car, and such a file was invisible to init, to apply and to
+    check at once - never listed, never stripped, and reported clean. A
+    generated image is cheap to sign off once; a name-shaped hole in the gate
+    is not cheap at all.
+    """
+    return sorted(p for p in directory.rglob("*") if p.suffix.lower() in suffixes)
+
+
 def images(directory: Path) -> list[Path]:
-    return sorted(
-        p
-        for p in directory.rglob("*")
-        if p.suffix.lower() in IMAGE_SUFFIXES and ".spectrogram" not in p.name
-    )
+    """The files `apply` can actually open, blur and re-encode."""
+    return _walk(directory, redact.STRIPPABLE_SUFFIXES)
+
+
+def photographs(directory: Path) -> list[Path]:
+    """Everything that looks like a camera file, including the formats this tool
+    cannot process.
+
+    `check` walks this wider set on purpose. A .heic is a photograph with GPS in
+    it whether or not Pillow can open it, and the version of this scan that
+    listed only the openable formats reported a directory clean while an
+    untouched iPhone original sat in it.
+    """
+    return _walk(directory, redact.STRIPPABLE_SUFFIXES | redact.UNSTRIPPABLE_SUFFIXES)
 
 
 def cmd_init(directory: Path) -> int:
@@ -143,6 +165,12 @@ def cmd_apply(directory: Path) -> int:
     paths = images(directory)
     try:
         redact.assert_reviewed(directory, paths, records)
+        # Both refusals happen before the first re-encode. The format check
+        # used to run after the loop, so a directory holding one .heic had
+        # every other file irreversibly rewritten and *then* got its error -
+        # "refuses rather than reporting success" was really "mutates
+        # everything it can, then reports failure".
+        redact.assert_formats_strippable(directory, photographs(directory))
     except redact.RedactionError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
@@ -162,6 +190,15 @@ def cmd_apply(directory: Path) -> int:
         else:
             print(f"  {path.name}: nothing to blur, EXIF dropped")
 
+    # Those per-file lines each claim "EXIF dropped". Check the claim instead of
+    # printing it: a re-encode that quietly carried metadata through, or a file
+    # this tool never had a way to touch, would otherwise be reported as done.
+    try:
+        redact.assert_metadata_stripped(directory, photographs(directory))
+    except redact.RedactionError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
     print(
         f"\n  {len(paths)} image(s) re-encoded in place, {blurred} with regions "
         f"blurred. This is not reversible."
@@ -170,13 +207,55 @@ def cmd_apply(directory: Path) -> int:
 
 
 def cmd_check(directory: Path) -> int:
+    problems: list[str] = []
     try:
         redact.assert_reviewed(directory, images(directory), redact.load(directory))
     except redact.RedactionError as exc:
-        print(f"error: {exc}", file=sys.stderr)
+        problems.append(str(exc))
+
+    # A signature says a person looked at the pixels. It says nothing about the
+    # bytes around them, and that is where the GPS position lives - so a
+    # directory of honest "nothing to redact" records used to pass this command
+    # with the seller's driveway in every file.
+    try:
+        redact.assert_metadata_stripped(directory, photographs(directory))
+    except redact.RedactionError as exc:
+        problems.append(str(exc))
+
+    if problems:
+        # Both questions, every run. Stopping at the first failure hides the
+        # second until the first is fixed, and the reviewer who has just been
+        # told about an unsigned file re-runs expecting green.
+        for problem in problems:
+            print(f"error: {problem}", file=sys.stderr)
         return 1
-    print(f"  every image in {directory} has been reviewed and signed off")
+
+    checked = photographs(directory)
+    print(
+        f"  {len(checked)} still image(s) in {directory}: reviewed, signed off, "
+        f"no metadata container"
+    )
+    _report_what_was_not_examined(directory)
     return 0
+
+
+def _report_what_was_not_examined(directory: Path) -> None:
+    """Say which files green does not cover.
+
+    `check` reads still images. An .mp4 carries a position in its (c)xyz atom
+    and a .wav can carry a LIST/INFO block, and nothing here opens either - so
+    a success line that said "every image ... has been reviewed, signed off and
+    stripped" left the reader to infer the limit from the word "image". Naming
+    the unread files is the difference between a declared gap and a hidden one.
+    """
+    unexamined = _walk(directory, redact.UNEXAMINED_MEDIA_SUFFIXES)
+    if not unexamined:
+        return
+    names = ", ".join(redact.asset_key(directory, p) for p in unexamined)
+    print(
+        f"  not examined: {names}. This tool reads still images only, and an "
+        f".mp4 can carry GPS in its (c)xyz atom. Nothing here has checked them."
+    )
 
 
 def main(argv: list[str] | None = None) -> int:

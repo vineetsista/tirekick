@@ -20,6 +20,20 @@ dev = [
     "ruff>=0.8,<0.9",
     "mypy>=1.14,<2",
 ]
+# The SDK stays optional, and that is a decision rather than an oversight. LAW 7
+# promises a fork with no secrets gets a green build, so `scripts/py-setup.sh` -
+# which is what ci.yml runs - installs `dev` alone and CI never has `anthropic`.
+#
+# The cost was real: the P9 audit found the retry and backoff tests had never
+# executed in CI, because they needed `anthropic.APIStatusError` to construct the
+# error they retry. Money-spending behaviour, guarded by tests that ran on one
+# laptop. The fix was to make that behaviour testable without the SDK rather than
+# to promote the dependency, because promoting it would mean installing the thing
+# everywhere in order to prove it is needed nowhere.
+#
+# What holds this in place is not this comment. `test_live_vision.py` reads this
+# file back: `anthropic` in `live` only, absent from `dev` and from the runtime
+# dependencies, py-setup.sh installing `[dev]`, and ci.yml calling py-setup.sh.
 live = [
     "anthropic>=0.42,<1",
 ]

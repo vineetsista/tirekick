@@ -20,6 +20,16 @@ reported a salvage indicator there would talk a buyer out of a clean car - the
 exact error ACCURACY.md names as the one that costs a good deal. So a match is
 classified as asserted, denied, or ambiguous, denied matches produce nothing, and
 ambiguous ones ship hedged and at lower severity. See DECISIONS.md D-017.
+
+The mirror of that failure took nine phases to find, and it is worse, because it
+is the one nobody can catch by reading the report: a denial we invent out of a
+word that was not denying anything. "No. 3 - SALVAGE TITLE ISSUED" is a numbered
+row, "NOT ACTUAL MILEAGE" is the name of an odometer brand, and "No accidents
+reported. Salvage title issued" denies accidents only. Each read as a denial, and
+each answered a document announcing a branded title with an empty page. The three
+guards against that are _ENUMERATION, _NAMED_WITH_A_NEGATION and _CLAUSE_BREAK,
+and every one of them was written after a line a real report prints came out
+classified as the opposite of what it says.
 """
 
 from __future__ import annotations
@@ -154,27 +164,94 @@ BRAND_PATTERNS: tuple[BrandPattern, ...] = (
     ),
 )
 
-#: Tokens that, on the same line as a match, mean the document is denying the
-#: brand rather than reporting it. "Salvage: None" is the common shape, and
+#: A row number wearing a denial's clothes. Real reports number their rows -
+#: "No. 3 - SALVAGE TITLE ISSUED", "Record No 4", "Stock No 44" - and every one
+#: of those "No"s abbreviates "number". Reading one as a denial drops an
+#: asserted brand in silence, which is the error a buyer cannot recover from:
+#: they never see the line, so they never get the chance to check our reading.
+#:
+#: The rule is stated once, here, and applied by blanking the label out before
+#: the line is classified - not by a lookahead copied into each denial pattern.
+#: The first version of the fix was that lookahead, and it only ever guarded
+#: the spelling with a period; "Record No 4" went on reading as a denial.
+#:
+#: A bare "No 5" is deliberately not enumeration. "No 2019-2023 salvage records
+#: found" has the identical shape and is a denial, nothing in the text tells
+#: them apart, and we would rather refuse the guess: a row number is printed
+#: with its period or with a label in front of it, and both are matched here.
+_ENUMERATION = re.compile(
+    r"\b(?:record|item|stock|entry|line|ref|seq)\s+nos?\b\.?\s*\d+\b|\bnos?\b\.\s*\d+\b",
+    re.IGNORECASE,
+)
+
+#: A brand whose own name is spelled with a negation word. "NOT ACTUAL MILEAGE"
+#: is the federal odometer brand and appears in exactly those words on the
+#: title, so its "not" denies nothing - it is the name of the thing. Until this
+#: existed the odometer brand was unreportable in its canonical wording, which
+#: is the wording a buyer photographs, and the scanner answered a document
+#: saying the mileage is false by saying nothing at all.
+_NAMED_WITH_A_NEGATION = re.compile(r"\bnot actual mileage\b", re.IGNORECASE)
+
+#: Where one statement on a line ends and the next begins. A denial has a scope
+#: and it is not the whole line: "No accidents reported. SALVAGE TITLE ISSUED
+#: 03/2019" denies accidents and reports salvage, and reading it as one denial
+#: threw the salvage brand away.
+#:
+#: A PIPE IS NOT ON THIS LIST, and that is the whole of what P10 learned here.
+#: A cell separator was added to it for one session, on the reasoning that a
+#: table row holds two statements. Nothing tells a cell apart from a sentence
+#: except what the cells say, so every clean row of every markdown history
+#: report - "| Salvage | None reported |" - split into a bare label and an
+#: answer about nothing, and shipped as a major at confidence 1.0 with its own
+#: denial quoted underneath as the evidence. It bought one contrived row full
+#: strength and cost a whole layout a false alarm. D-017 says which direction to
+#: be wrong in, and it is not that one.
+#:
+#: The lookbehind keeps dot-leader rows in one piece: "Salvage brand .......
+#: None reported" must not split at its leader. It tests for a preceding DOT
+#: rather than for any preceding whitespace, because `_blank` below replaces a
+#: masked span with spaces - so a lookbehind that refused to split after
+#: whitespace was disarmed by our own masking, and "Odometer: NOT ACTUAL
+#: MILEAGE. No accidents reported" became one statement whose trailing denial
+#: swallowed the odometer brand.
+_CLAUSE_BREAK = re.compile(r"(?<!\.)[.;]\s+")
+
+#: Words a bare answer is made of. Everything else in a clause is a subject, and
+#: a clause with a subject of its own is a statement of its own.
+#:
+#: This is the distinction that lets "." and ";" be statement boundaries without
+#: turning "Salvage brand; none reported" into a bare label. "None reported" says
+#: nothing that is not an answer, so it answers the label in front of it;
+#: "No accidents reported" is about accidents, and denies the brand nothing.
+_ANSWER_WORDS = frozenset(
+    """
+    no none not never nil negative zero clear clean na n a yes true
+    reported recorded found issued declared branded applied stamped
+    disclosed indicated on file record records
+    """.split()
+)
+
+#: Tokens that, on the same statement as a match, mean the document is denying
+#: the brand rather than reporting it. "Salvage: None" is the common shape, and
 #: reporting it as a salvage indicator would be a false alarm on a clean car.
 #:
-#: The one negation lookalike is "No." as the abbreviation of "number". Real
-#: reports number their rows - "No. 3 - SALVAGE TITLE ISSUED" - and reading
-#: that "No." as a denial silently drops an asserted brand, the false negative
-#: ACCURACY.md names as the costliest error. "No" followed by a period and a
-#: number is the enumeration, never the denial, so the lookahead excludes it
-#: here and in _NEGATED_ASSERTION below. "Salvage? No." keeps its full stop
-#: and stays a denial: only the digit after the period marks an enumeration.
+#: "N/A" counts wherever it appears, not only after a colon. The colon-anchored
+#: form missed "Salvage ......... N/A" - the same answer in the layout most
+#: reports actually use - and read it as an asserted salvage brand.
+#:
+#: Words that only look like denials are blanked before this runs; see
+#: _ENUMERATION and _NAMED_WITH_A_NEGATION.
 _DENIAL = re.compile(
-    r"\b(no(?!\.\s*\d)|none|not|never|nil|negative|clear|clean|zero|0)\b"
+    r"\b(no|none|not|never|nil|negative|clear|clean|zero|0)\b"
     r"|\bno records? (found|reported)\b"
+    r"|\bn/a\b"
     r"|:\s*(n/?a|no|none)\b",
     re.IGNORECASE,
 )
 
-#: Tokens that mean the line is asserting the brand. On a line that also
-#: carries a denial token, these demote the denial to ambiguous: both signals
-#: are present, and picking one would be a guess.
+#: Tokens that mean the statement is asserting the brand. In a statement that
+#: also carries a denial token, these demote the denial to ambiguous: both
+#: signals are present, and picking one would be a guess.
 _ASSERTION = re.compile(
     r"\b(issued|reported|declared|branded|recorded|applied|stamped|yes|true)\b",
     re.IGNORECASE,
@@ -187,7 +264,7 @@ _ASSERTION = re.compile(
 #: phrasing of good news reads as ambiguous - which is how the first version of
 #: this scanner put a salvage indicator on a clean fixture.
 _NEGATED_ASSERTION = re.compile(
-    r"\b(no(?!\.\s*\d)|none|not|never|nil|zero)\b[^\n]{0,20}?"
+    r"\b(no|none|not|never|nil|zero)\b[^\n]{0,20}?"
     r"\b(reported|recorded|found|issued|declared|branded|applied|stamped|"
     r"disclosed|indicated)\b",
     re.IGNORECASE,
@@ -204,24 +281,92 @@ class BrandHit:
     stance: str
 
 
-def _classify(line: str) -> str:
-    """Is this line reporting the brand, denying it, or unreadable either way?
+def _blank(match: re.Match[str]) -> str:
+    """Spaces of the same width, so every other offset stays where it was.
 
-    A line with no negating language at all is treated as asserting the brand.
-    That is the asymmetry this function exists to get right: 'Title brand:
-    SALVAGE' carries no verb, and reading it as ambiguous would soften a report
-    that a buyer needs delivered at full strength. Denial has to be written down
-    to count, because denial is what the clean-title case actually looks like -
-    'Salvage: None' - and that shape is unmistakable.
+    `brand_at` below is an index into the original line. Replacing a span with
+    a shorter one would slide the brand keyword out from under it.
     """
-    if _NEGATED_ASSERTION.search(line):
+    return " " * (match.end() - match.start())
+
+
+def _is_bare_answer(clause: str) -> bool:
+    """Does this clause say anything that is not an answer?
+
+    "None reported" does not, so it belongs to whatever label precedes it.
+    "No accidents reported" does - it is about accidents - so it is a statement
+    of its own and denies the brand next door nothing.
+    """
+    words = re.findall(r"[a-z]+", clause.lower())
+    return bool(words) and all(word in _ANSWER_WORDS for word in words)
+
+
+def _is_bare_label(clause: str) -> bool:
+    """A clause that is waiting for an answer: no verb of its own, no denial.
+
+    Only such a clause absorbs the answer after it. Without this guard an
+    already-asserted brand could be talked back out of the report by whatever
+    happened to follow it on the line.
+    """
+    return not _ASSERTION.search(clause) and not _DENIAL.search(clause)
+
+
+def _statement_around(line: str, index: int) -> str:
+    """The one statement on this line that the character at `index` belongs to.
+
+    Plus the answer to it, if the next clause is nothing but an answer. A row
+    printed "Salvage brand; none reported" is a label and its answer however it
+    is punctuated, and reading the label alone reports a salvage brand on a car
+    whose paperwork denies one in the next three words.
+    """
+    spans: list[tuple[int, int]] = []
+    start = 0
+    for brk in _CLAUSE_BREAK.finditer(line):
+        spans.append((start, brk.start()))
+        start = brk.end()
+    spans.append((start, len(line)))
+
+    at = next((i for i, (_, stop) in enumerate(spans) if index < stop), len(spans) - 1)
+    statement = line[spans[at][0] : spans[at][1]]
+    if not _is_bare_label(statement):
+        return statement
+
+    for nxt_start, nxt_stop in spans[at + 1 :]:
+        clause = line[nxt_start:nxt_stop]
+        if not _is_bare_answer(clause):
+            break
+        statement = f"{statement} {clause}"
+    return statement
+
+
+def _classify(line: str, brand_at: int) -> str:
+    """Is this brand being reported, denied, or written down unreadably?
+
+    A statement with no negating language at all is treated as asserting the
+    brand. That is the asymmetry this function exists to get right: 'Title
+    brand: SALVAGE' carries no verb, and reading it as ambiguous would soften a
+    report that a buyer needs delivered at full strength. Denial has to be
+    written down to count, because denial is what the clean-title case actually
+    looks like - 'Salvage: None' - and that shape is unmistakable.
+
+    Two things happen before any of that, and both exist because a word that
+    looks like a denial is not always denying anything. Enumeration labels and
+    brand names spelled with a negation are blanked out; then only the
+    statement carrying the brand keyword is read, because a denial in the
+    clause next door is about whatever that clause is about. Each of the three
+    steps was added after a line a real report would print classified as the
+    opposite of what it says.
+    """
+    neutral = _NAMED_WITH_A_NEGATION.sub(_blank, _ENUMERATION.sub(_blank, line))
+    statement = _statement_around(neutral, brand_at)
+    if _NEGATED_ASSERTION.search(statement):
         return "denied"
-    denied = bool(_DENIAL.search(line))
+    denied = bool(_DENIAL.search(statement))
     if not denied:
         return "asserted"
-    if _ASSERTION.search(line):
-        # Both signals on one line. We cannot tell, and picking a reading would
-        # be worse than reporting that we could not.
+    if _ASSERTION.search(statement):
+        # Both signals in one statement. We cannot tell, and picking a reading
+        # would be worse than reporting that we could not.
         return "ambiguous"
     return "denied"
 
@@ -254,14 +399,18 @@ def scan(assets: list[Asset], media_root: Path) -> list[BrandHit]:
             if not line.strip():
                 continue
             for pattern in BRAND_PATTERNS:
-                if re.search(pattern.pattern, line, flags=re.IGNORECASE):
+                match = re.search(pattern.pattern, line, flags=re.IGNORECASE)
+                if match:
                     hits.append(
                         BrandHit(
                             asset_id=asset.id,
                             pattern=pattern,
                             line_number=lineno,
                             excerpt=_excerpt(line),
-                            stance=_classify(line),
+                            # Where the keyword sits decides which statement on
+                            # the line is read. The excerpt stays the whole line
+                            # either way - LAW 1, the buyer checks our reading.
+                            stance=_classify(line, match.start()),
                         )
                     )
                     # One finding per line: the first, most serious, match wins.

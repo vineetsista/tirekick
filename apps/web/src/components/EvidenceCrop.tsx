@@ -36,6 +36,31 @@ export function EvidenceCrop({
 }) {
   const geo = cropFor(box, sourceWidth, sourceHeight);
 
+  /**
+   * What to show when the asset's pixel dimensions were never recorded.
+   *
+   * D-045 already decided this - "cropFor returns null and the viewer shows the
+   * whole frame" - and this branch then shipped `objectFit: cover`, which is the
+   * opposite: a centre cut that silently discards a seventh of a 4:3 photograph,
+   * half of a portrait one, and gives no sign which part went. The cited region
+   * can be in any of the part that went, in the component whose only job is
+   * showing a buyer the region a finding cites. It was safe from review because
+   * it is the failure branch, and no fixture had a dimensionless asset until the
+   * stress cases arrived.
+   *
+   * `contain` shows every pixel. The frame keeps its ratio, so the space is
+   * still reserved before the image loads - a report of this length is navigated
+   * by anchors, and an unreserved image lands them somewhere else. The bars it
+   * costs are the honest shape of not knowing how big the photograph is, and the
+   * caption says as much.
+   */
+  const wholeFrame = {
+    width: "100%",
+    height: "100%",
+    objectFit: "contain",
+    display: "block",
+  } as const;
+
   const frame = (
     <div
       style={{
@@ -54,11 +79,7 @@ export function EvidenceCrop({
             ? `Cropped region of ${assetId}: ${caption}`
             : `${assetId}: ${caption}`
         }
-        style={
-          geo
-            ? { position: "absolute", ...geo.image, maxWidth: "none" }
-            : { width: "100%", height: "100%", objectFit: "cover", display: "block" }
-        }
+        style={geo ? { position: "absolute", ...geo.image, maxWidth: "none" } : wholeFrame}
       />
 
       {geo && (
@@ -163,7 +184,7 @@ export function EvidenceCrop({
         <span className="dim" style={{ textAlign: "right" }}>
           {geo
             ? `${(box.w * 100).toFixed(0)}×${(box.h * 100).toFixed(0)}% of frame`
-            : "region not shown - image dimensions unrecorded"}
+            : "whole frame - region not marked, dimensions unrecorded"}
         </span>
       </figcaption>
     </figure>

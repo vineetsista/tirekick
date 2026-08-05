@@ -47,6 +47,21 @@ from .models import (
 from .registry import FINDING_TYPES
 from .safety import is_locked
 
+#: What the paid report costs, in whole US dollars, and the only place Python
+#: writes that number down.
+#:
+#: The Python copy of `packages/shared/src/constants.ts::PRICE_USD`, held to it
+#: by `test_shared_constants_parity.py` the way `REPORT_BANNER` is (D-049). It
+#: had been three unlinked literals - here via `cli.py --price`, in `checkout.ts`
+#: for the landing page, and again in `test_teaser.py` - so the landing page
+#: printed the TypeScript number and the teaser one click later printed this one,
+#: with nothing comparing them.
+#:
+#: This is a display price. It is not what Stripe charges: that amount is
+#: configured on the payment link, outside this repository, and nothing in this
+#: repository can read it. See `apps/web/src/lib/checkout.ts`.
+PRICE_USD = 25.0
+
 #: What a non-locked system row says in the teaser.
 #:
 #: The paid report puts the worst finding's title here, which is exactly the
@@ -290,8 +305,13 @@ def _unlocks(report: Report) -> list[str]:
     return lines
 
 
-def build_teaser(report: Report, *, price_usd: float) -> Teaser:
-    """Project a full report down to what may be shown for free."""
+def build_teaser(report: Report, *, price_usd: float = PRICE_USD) -> Teaser:
+    """Project a full report down to what may be shown for free.
+
+    `price_usd` defaults to the shared constant rather than being required, so a
+    caller who does not care about the price cannot accidentally invent one. It
+    stays overridable because the CLI has a flag for it.
+    """
     coverage: Coverage = report.coverage
 
     return Teaser(

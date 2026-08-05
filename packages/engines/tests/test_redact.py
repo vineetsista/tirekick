@@ -251,3 +251,51 @@ def test_redaction_survives_a_round_trip_through_the_record(tmp_path: Path) -> N
 
 def test_an_empty_directory_loads_as_no_records(tmp_path: Path) -> None:
     assert redact.load(tmp_path) == {}
+
+
+def test_the_written_note_tells_the_reader_what_a_key_has_to_be(
+    tmp_path: Path,
+) -> None:
+    """The record is edited by hand, so the file has to say how to edit it.
+
+    A bare stem silently vouched for nothing once the key gained its extension,
+    and the only place a person finds that out is the note at the top of the
+    file they are typing into. The note is a claim about behaviour, so it is
+    checked against the behaviour rather than trusted.
+    """
+    import json
+
+    path = redact.save(
+        tmp_path,
+        {
+            "photo_01.jpg": redact.AssetRedaction(
+                asset="photo_01.jpg", reviewed_by="vineet", nothing_to_redact=True
+            )
+        },
+    )
+    note = json.loads(path.read_text(encoding="utf-8"))["_note"]
+
+    assert "photo_01.jpg" in note and "photo_01'" in note
+    # The note is only true if a stem really does vouch for nothing.
+    image = _plate_image(tmp_path / "photo_01.jpg")
+    stem_only = {
+        "photo_01": redact.AssetRedaction(
+            asset="photo_01", reviewed_by="vineet", nothing_to_redact=True
+        )
+    }
+    with pytest.raises(redact.RedactionError, match="no redaction record"):
+        redact.assert_reviewed(tmp_path, [image], stem_only)
+
+
+def test_the_note_is_not_loaded_as_an_asset(tmp_path: Path) -> None:
+    """It sits beside `assets`, not inside it. A note that loaded as a record
+    would be a signature against a file that does not exist."""
+    redact.save(
+        tmp_path,
+        {
+            "photo_01.jpg": redact.AssetRedaction(
+                asset="photo_01.jpg", reviewed_by="vineet", nothing_to_redact=True
+            )
+        },
+    )
+    assert list(redact.load(tmp_path)) == ["photo_01.jpg"]

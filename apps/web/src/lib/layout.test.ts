@@ -9,6 +9,7 @@ import { createElement } from "react";
 import { ReportView } from "@/components/ReportView";
 import { TeaserView } from "@/components/TeaserView";
 import Home from "@/app/page";
+import AccuracyPage from "@/app/accuracy/page";
 import { demoReport, demoTeaser } from "@/lib/report";
 import { stressReports, stressTeasers } from "@/lib/stress";
 
@@ -116,6 +117,12 @@ const PAGES: [string, string][] = [
   ["report", renderToStaticMarkup(createElement(ReportView, { report: demoReport }))],
   ["teaser", renderToStaticMarkup(createElement(TeaserView, { teaser: demoTeaser }))],
   ["landing", renderToStaticMarkup(createElement(Home))],
+  // /accuracy is the page LAW 6 obliges the product to link, and it was the one
+  // page in the product this gate never opened - which is the gap this gate was
+  // written for, reappearing in the gate's own input list. It carries a 16-row,
+  // 6-column table of identifiers on a 320px phone, so it is also the hardest
+  // layout in the product, and it went nine phases without a browser seeing it.
+  ["accuracy", renderToStaticMarkup(createElement(AccuracyPage))],
   ...stressReports(demoReport).map(
     (c): [string, string] => [
       `report/${c.name}`,
@@ -353,6 +360,45 @@ describe("laid out in a real browser", () => {
 
       expect(failures, `${name} has text below WCAG AA`).toEqual([]);
     });
+  });
+
+  /**
+   * The half of the accuracy table's layout that the checks above cannot see.
+   *
+   * `nowrap` on the gate cells and `overflow-x` on their container are a pair,
+   * and only one of them fails loudly. Delete `.table-scroll` and the document
+   * overflows at 320px, which the viewport check catches. Delete `nowrap` and
+   * nothing overflows at all - `body` sets `overflow-wrap: anywhere`, so the
+   * table obediently squeezes into the phone by breaking `odometer_wear_mismatch`
+   * across six line boxes, corrupting on screen the exact identifier column the
+   * parser refuses to corrupt in the source. Every existing assertion stays
+   * green through that, which is how the style survived unguarded.
+   *
+   * So this counts line boxes in the cells. One row of text per cell, at the
+   * narrowest width in the list, or the identifier is broken.
+   */
+  it("keeps the gate table's identifiers unbroken at 320px", async () => {
+    const accuracy = PAGES.find(([name]) => name === "accuracy");
+    expect(accuracy, "the accuracy page is missing from PAGES").toBeDefined();
+    await load(accuracy![1], 320);
+
+    const broken = await page.evaluate(() => {
+      const cells = Array.from(document.querySelectorAll("td"));
+      if (cells.length === 0) return ["the accuracy page rendered no table cells"];
+      return cells
+        .map((td) => {
+          const range = document.createRange();
+          range.selectNodeContents(td);
+          return { text: (td.textContent ?? "").trim(), lines: range.getClientRects().length };
+        })
+        .filter((c) => c.lines !== 1)
+        .map((c) => `"${c.text}" over ${c.lines} line boxes`)
+        .slice(0, 6);
+    });
+
+    expect(broken, "gate-table cells wrapped, so an identifier is broken on screen").toEqual(
+      [],
+    );
   });
 
   it("gives the primary action a real hit target", async () => {

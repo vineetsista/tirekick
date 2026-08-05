@@ -10,6 +10,15 @@ dependency-freedom itself depend on ffmpeg.
 Prints what it kept and what it threw away. The discards are the interesting
 half - a selector that silently drops 90% of a video is indistinguishable from
 one that analysed all of it, right up until someone asks why a scratch was missed.
+
+Every frame this script commits goes through the same re-encode `redact apply`
+performs, because ffmpeg stamps its encoder banner ("Lavc60.31.102") into a JPEG
+COM segment on every frame it writes. Harmless content, but a COM segment is a
+free-form text container that survives every copy, it is not what README.md
+means when it says the committed images carry no metadata, and D-022 does not
+have an exception for containers whose current contents happen to be dull.
+`packages/engines/tests/test_redact_check.py` runs `redact check` over the
+committed fixture media, so a frame that regains one fails a test.
 """
 
 from __future__ import annotations
@@ -21,7 +30,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "packages" / "engines" / "src"))
 
-from tirekick_engines import video  # noqa: E402
+from tirekick_engines import redact, video  # noqa: E402
 from tirekick_engines.engines import walkaround  # noqa: E402
 from tirekick_engines.inputs import InspectionInput  # noqa: E402
 
@@ -59,7 +68,19 @@ def refresh(inspection_dir: Path) -> int:
         names: list[str] = []
         for index, candidate in enumerate(selection.kept, start=1):
             name = walkaround.frame_name(item.id, index)
-            raw[candidate.index].replace(media / name)
+            frame = media / name
+            raw[candidate.index].replace(frame)
+            # Strip before commit, not after somebody notices. Selection ran on
+            # the file ffmpeg wrote, so re-encoding here cannot move a frame in
+            # or out of the selection - it only removes the containers around
+            # the pixels that were already chosen.
+            redact.redact_file(frame, frame, [])
+            leftover = redact.remaining_metadata(frame)
+            if leftover:
+                # A raise, not an assert: `python -O` deletes an assert and
+                # this line is the only thing standing between a stray
+                # container and a commit.
+                raise RuntimeError(f"{name} still carries {', '.join(leftover)}")
             names.append(name)
 
         for leftover in work.glob("raw_*.jpg"):

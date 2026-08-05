@@ -13,8 +13,11 @@ bytes actually assembled for the wire.
 
 from __future__ import annotations
 
+import ast
+import re
 from dataclasses import dataclass
 from pathlib import Path
+from types import ModuleType
 from typing import Any
 
 import pytest
@@ -369,6 +372,215 @@ def test_the_whole_send_loop_runs_with_the_sdk_absent(
         assert result["view_class"] == "exterior_front"
     finally:
         _retryable_errors.cache_clear()
+
+
+# --- Why the retry tests above are allowed to exist at all --------------------
+#
+# The P9 audit found the retry/backoff tests had never run in CI: they needed
+# `anthropic.APIStatusError`, `anthropic` is declared in the `[live]` extra, and
+# `scripts/py-setup.sh` - the script ci.yml runs - installs `[dev]`. Money-spending
+# behaviour was protected by tests that executed on one laptop.
+#
+# Of the three available fixes, moving `anthropic` into `dev` is the wrong one. It
+# would make CI install the SDK in order to prove the product does not need it,
+# and LAW 7's promise is precisely that a fork with no secrets and no optional
+# extras gets a green build; the mypy override in pyproject.toml exists for the
+# same reason. Making the skip loud is second best - a loud skip is still a test
+# that did not run.
+#
+# So the retry logic was made testable without the SDK: `_send` separates a 429
+# from other 4xx by `status_code`, which any object can carry, and the real
+# exception classes are resolved in one place, `_retryable_errors`. That leaves
+# exactly two things unchecked, and they are checked below - that the one place
+# naming SDK symbols still names symbols the SDK has, and that no test in this
+# package quietly reacquires the dependency.
+
+
+def _stub_sdk(**attrs: object) -> ModuleType:
+    """A module pretending to be `anthropic`, carrying only what it is given."""
+    module = ModuleType("anthropic")
+    for name, value in attrs.items():
+        setattr(module, name, value)
+    return module
+
+
+def test_the_retry_wiring_reads_the_two_attributes_it_declares(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The three lines that touch the SDK, exercised where the SDK is absent.
+
+    Every other test here monkeypatches `_retryable_errors` away, so its body was
+    covered by nothing in CI: a typo in either attribute name would surface on the
+    first real 429 of the first paid run.
+
+    What this checks is the resolver, against a stub built in this file - so it
+    catches an edit to `client.py` and nothing else. It was named
+    `..._the_sdk_actually_defines` until P10, which was a claim about a package
+    this test never loads. The test below is the one that reads the real module,
+    and it can only run where the real module is installed.
+    """
+    import sys
+
+    from tirekick_engines.client import _retryable_errors
+
+    class Status(Exception):
+        pass
+
+    class Connection(Exception):
+        pass
+
+    stub = _stub_sdk(APIStatusError=Status, APIConnectionError=Connection)
+    monkeypatch.setitem(sys.modules, "anthropic", stub)
+    _retryable_errors.cache_clear()
+    try:
+        assert _retryable_errors() == (Status, Connection)
+    finally:
+        _retryable_errors.cache_clear()
+
+
+def test_the_real_sdk_is_checked_somewhere_that_is_not_this_file() -> None:
+    """Nothing in this file reads the installed `anthropic`, and nothing may.
+
+    The two tests above pin the resolver against a stub, which catches an edit to
+    `client.py` and cannot catch a rename on the SDK's side. Closing that here
+    would take one `importorskip` - and the guard below exists precisely because
+    that line silently removed the retry tests from CI once already.
+
+    So the real-package assertion lives outside pytest, in
+    `scripts/check_sdk_contract.py`, run by a CI job that installs the `live`
+    extra on purpose. That script fails when the SDK is absent rather than
+    skipping, which is the property this file cannot have: the main suite has to
+    pass with no SDK installed, because running without one is the product's
+    documented default (D-009).
+
+    This test holds the arrangement together. Delete the script or the job and it
+    goes red here, rather than leaving a docstring describing a check that is
+    gone.
+    """
+    script = REPO_ROOT / "scripts" / "check_sdk_contract.py"
+    assert script.exists(), "the real-SDK check named in this file's comments is missing"
+
+    source = script.read_text(encoding="utf-8")
+    assert (
+        "APIStatusError" in source and "APIConnectionError" in source
+    ), "check_sdk_contract.py no longer names the two attributes client.py reads"
+
+    ci = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    job = [line for line in ci.splitlines() if "check_sdk_contract.py" in line]
+    assert job, "no CI job runs check_sdk_contract.py, so the SDK contract is unchecked"
+    assert (
+        "[live]" in ci
+    ), "the SDK-contract job must install the live extra, or it proves nothing"
+
+
+def test_a_renamed_sdk_exception_fails_loudly_instead_of_retrying_nothing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An empty tuple is a legal `except` clause, which is the danger.
+
+    `_retryable_errors` returns `()` when the SDK is absent, and that is correct -
+    there is no transport to fail. If it swallowed a rename the same way, live
+    mode would keep running with retries silently disabled and the first rate
+    limit would abort a paid report. Absent and renamed must not look alike.
+    """
+    import sys
+
+    from tirekick_engines.client import _retryable_errors
+
+    class Connection(Exception):
+        pass
+
+    monkeypatch.setitem(sys.modules, "anthropic", _stub_sdk(APIConnectionError=Connection))
+    _retryable_errors.cache_clear()
+    try:
+        with pytest.raises(AttributeError, match="APIStatusError"):
+            _retryable_errors()
+    finally:
+        _retryable_errors.cache_clear()
+
+
+def _skips_conditional_on_the_sdk(source: str) -> list[str]:
+    """Skip decisions in a test module that mention `anthropic`.
+
+    Parsed rather than grepped because this very file discusses `importorskip` in
+    prose, and a check that a comment can trip is a check that gets deleted. It
+    sees calls, so a skip whose condition hides in a variable would slip past; it
+    catches the shape that actually happened.
+    """
+    found: list[str] = []
+    for node in ast.walk(ast.parse(source)):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", "")
+        if name not in {"importorskip", "skipif", "skip", "xfail"}:
+            continue
+        segment = ast.get_source_segment(source, node) or ""
+        if "anthropic" in segment:
+            found.append(" ".join(segment.split())[:80])
+    return found
+
+
+def test_no_test_in_this_package_is_conditional_on_the_live_extra() -> None:
+    """The regression guard for the hole itself.
+
+    Reinstating `pytest.importorskip("anthropic")` costs one line and takes the
+    retry tests back out of CI, where the reported result would still be a pass.
+    """
+    offenders: dict[str, list[str]] = {}
+    for path in sorted((REPO_ROOT / "packages" / "engines" / "tests").glob("test_*.py")):
+        skips = _skips_conditional_on_the_sdk(path.read_text(encoding="utf-8"))
+        if skips:
+            offenders[path.name] = skips
+    assert not offenders, (
+        "these tests do not run in CI, because CI installs no `anthropic`, and a "
+        f"test that does not run reports a pass: {offenders}"
+    )
+
+
+def test_this_files_own_prose_does_not_satisfy_that_check() -> None:
+    """The guard above is worth nothing if a docstring can trip or dodge it."""
+    own = Path(__file__).read_text(encoding="utf-8")
+    assert "importorskip" in own, "the prose mentioning it is what made grepping wrong"
+    assert _skips_conditional_on_the_sdk(own) == []
+    assert _skips_conditional_on_the_sdk(
+        'import pytest\npytest.importorskip("anthropic")\n'
+    ) == ['pytest.importorskip("anthropic")']
+
+
+def test_the_sdk_stays_out_of_everything_ci_installs() -> None:
+    """The chain the retry tests depend on, checked link by link.
+
+    ci.yml runs py-setup.sh, py-setup.sh installs `[dev]`, and `anthropic` is in
+    neither `dev` nor the runtime dependencies. Break any link and the tests above
+    start passing for the wrong reason on a machine that has the SDK anyway.
+    """
+    import tomllib
+
+    engines = REPO_ROOT / "packages" / "engines"
+    pyproject = tomllib.loads((engines / "pyproject.toml").read_text(encoding="utf-8"))
+    project = pyproject["project"]
+    extras = project["optional-dependencies"]
+
+    def names(requirements: list[str]) -> set[str]:
+        """Distribution names, with the version specifier and any extra stripped."""
+        return {re.split(r"[<>=!\[ ]", each, maxsplit=1)[0] for each in requirements}
+
+    assert "anthropic" not in names(project["dependencies"]), (
+        "a runtime dependency on the SDK is installed everywhere, including the "
+        "no-key-required CI job whose whole purpose is proving it is not needed"
+    )
+    assert "anthropic" not in names(extras["dev"])
+    assert "anthropic" in names(extras["live"])
+
+    setup = (REPO_ROOT / "scripts" / "py-setup.sh").read_text(encoding="utf-8")
+    assert "[dev]" in setup and "[live]" not in setup
+
+    ci = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    assert "scripts/py-setup.sh" in ci, (
+        "if CI installs the engines some other way, this file's claim about what "
+        "CI has is no longer checked by anything"
+    )
 
 
 def test_a_large_photo_is_decoded_at_reduced_resolution(tmp_path: Path) -> None:

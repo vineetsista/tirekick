@@ -12,7 +12,6 @@ are unit tests of deterministic arithmetic, in the same family as the IoU tests.
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import numpy as np
@@ -30,26 +29,41 @@ IMPULSE_TIMES = (5.0, 11.5, 17.25)
 TIMING_TOLERANCE_SEC = 0.05
 
 
-def require_ffmpeg() -> None:
-    """Skip the decode tests without ffmpeg - except in CI, where that is red.
+#: The command that fixes a red run here, quoted in the failure so nobody has to
+#: go looking. Same string gates.sh prints when it refuses to start.
+FFMPEG_INSTALL_HINT = "install ffmpeg (e.g. apt-get install ffmpeg)"
 
-    This used to be a module-wide skipif, which silently vanished every test in
-    the file, including the pure-arithmetic ones that never touch ffmpeg. Now
-    only the tests that decode the fixture clip depend on it, the skip names
-    itself in the summary, and in CI - which installs ffmpeg explicitly - its
-    absence fails, because a gate that quietly passes when it never ran is the
-    failure this project keeps finding. gates.sh preflights ffmpeg for the same
-    reason, so a local ALL GATES GREEN cannot mean less than CI's.
+
+def require_ffmpeg() -> None:
+    """Fail without ffmpeg. Do not skip. D-050, applied to the other binary.
+
+    This was a module-wide skipif first, which silently deleted every test in the
+    file including the arithmetic ones that never touch ffmpeg. It then became a
+    skip locally and a failure when `CI` was set, which was better and still
+    wrong: the honesty of the result depended on one environment variable that one
+    provider happens to export. Anything else running this suite - a container, a
+    pre-commit hook, a second CI - got a green report for eight tests that never
+    executed.
+
+    D-050 settled the general question for chromium and the layout gate: a check
+    that reports success because nothing ran is the failure this project keeps
+    finding in itself, so it throws with the install command instead. ffmpeg is
+    the same case. It is a declared prerequisite - gates.sh exits 1 without it and
+    ci.yml installs it explicitly - so its absence is a broken environment, and a
+    broken environment should be red rather than quiet.
+
+    The cost is a contributor with no ffmpeg seeing failures on a suite they did
+    not break. That is the intended trade: the alternative is the suite telling
+    them the audio engine is fine when nothing looked at it.
     """
     if signal.ffmpeg_available():
         return
-    if os.environ.get("CI"):
-        pytest.fail(
-            "ffmpeg is missing in CI. ci.yml installs it explicitly; if this "
-            "fires, the install step was removed, and these tests must go red "
-            "rather than quietly not run."
-        )
-    pytest.skip("ffmpeg is not installed - install it to run the decode tests")
+    pytest.fail(
+        "ffmpeg is not installed, so the audio decode tests cannot run - "
+        f"{FFMPEG_INSTALL_HINT}. They fail rather than skip on purpose (D-050): "
+        "a suite that reports success because eight tests never executed is "
+        "worse than one that says it could not check."
+    )
 
 
 @pytest.fixture(scope="module")
@@ -61,6 +75,64 @@ def samples() -> np.ndarray:
 @pytest.fixture(scope="module")
 def measured(samples: np.ndarray) -> signal.AudioFeatures:
     return signal.features(samples)
+
+
+def test_missing_ffmpeg_fails_the_suite_rather_than_skipping_it(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The decision above, checked instead of described.
+
+    Both previous versions of `require_ffmpeg` also had a docstring explaining
+    why their behaviour was right, and a docstring is exactly what let a skip
+    survive two rewrites of this file.
+
+    Both outcomes are caught and then told apart, which is not fussiness. The
+    first draft of this test expected only `pytest.fail.Exception`, so when the
+    behaviour was reverted to a skip to prove the test could fail, the `Skipped`
+    raised inside the body propagated and pytest reported *this test* as skipped -
+    a single `s` in the summary and a zero exit code. The guard against a skip
+    reading as a pass had that failure in it too.
+    """
+    monkeypatch.setattr(signal, "ffmpeg_available", lambda: False)
+    with pytest.raises((pytest.fail.Exception, pytest.skip.Exception)) as caught:
+        require_ffmpeg()
+    assert not isinstance(caught.value, pytest.skip.Exception), (
+        "require_ffmpeg skipped. A skipped decode suite is eight tests that did "
+        "not run, reported as a green build"
+    )
+    assert FFMPEG_INSTALL_HINT in str(caught.value)
+
+
+def test_ffmpeg_being_present_is_not_an_event(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The other half: a guard that always fires is a guard nobody keeps."""
+    monkeypatch.setattr(signal, "ffmpeg_available", lambda: True)
+    require_ffmpeg()
+
+
+def test_the_gate_script_refuses_to_start_without_ffmpeg() -> None:
+    """`require_ffmpeg` argues from what gates.sh does. Hold gates.sh to it.
+
+    If the preflight is deleted, a local ALL GATES GREEN starts meaning less than
+    CI's green, and the reasoning in the docstring above quietly stops being true.
+    """
+    gates = (REPO_ROOT / "scripts" / "gates.sh").read_text(encoding="utf-8")
+    assert "command -v ffmpeg" in gates, "gates.sh no longer checks for ffmpeg"
+    assert FFMPEG_INSTALL_HINT in gates, (
+        "gates.sh and this file must print the same fix, or a contributor gets "
+        "two different answers to the same broken environment"
+    )
+    assert gates.index("command -v ffmpeg") < gates.index('gate "'), (
+        "the check has to run before the first gate, or the first gate is the "
+        "one that discovers ffmpeg is missing"
+    )
+
+
+def test_ci_installs_ffmpeg_before_it_runs_the_gates() -> None:
+    """The other half of the same argument, on the machine that matters."""
+    ci = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    install = ci.find("apt-get install -y --no-install-recommends ffmpeg")
+    assert install != -1, "CI no longer installs ffmpeg, so every decode test is red"
+    assert install < ci.index("bash scripts/gates.sh"), "installed after it is needed"
 
 
 def test_decode_returns_mono_float_audio(samples: np.ndarray) -> None:

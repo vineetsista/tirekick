@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { Teaser } from "@tirekick/shared";
-import { PRICE_USD, checkoutConfigured, paymentLink } from "@/lib/checkout";
+import { PRICE_USD, checkoutState } from "@/lib/checkout";
 
 /**
  * The pre-payment acknowledgement. LIABILITY section 4, row three.
@@ -42,8 +42,7 @@ const ACKNOWLEDGEMENTS = [
 export function PurchaseGate({ teaser }: { teaser: Teaser }) {
   const [ticked, setTicked] = useState<Record<string, boolean>>({});
   const allTicked = ACKNOWLEDGEMENTS.every((a) => ticked[a.id]);
-  const link = paymentLink(teaser.inspectionId);
-  const configured = checkoutConfigured();
+  const checkout = checkoutState(teaser.inspectionId);
 
   return (
     <div className="wrap" style={{ paddingTop: 40, paddingBottom: 96, maxWidth: 760 }}>
@@ -67,6 +66,10 @@ export function PurchaseGate({ teaser }: { teaser: Teaser }) {
       <h1 style={{ fontSize: 28, margin: "32px 0 8px", fontWeight: 400 }}>
         {teaser.vehicleSummary || "Your inspection"}
       </h1>
+      {/* One number, from packages/shared/src/constants.ts, which is also what
+          the engine wrote into this teaser and what the landing page printed.
+          It is what we intend to charge; it is not read from Stripe, and this
+          app cannot read what Stripe will charge. See checkout.ts. */}
       <div className="muted" style={{ fontSize: 14 }}>
         Full report, ${PRICE_USD}. One payment, no subscription.
       </div>
@@ -156,15 +159,36 @@ export function PurchaseGate({ teaser }: { teaser: Teaser }) {
 
         {/* Not rendered at all until confirmed, rather than rendered-and-disabled.
             A greyed-out button is still a thing to click at. */}
-        {allTicked && configured && link && (
-          <a href={link} className="btn btn-primary">
-            Pay ${PRICE_USD} and open the report
-          </a>
+        {allTicked && checkout.kind === "ready" && (
+          <>
+            <a href={checkout.href} className="btn btn-primary">
+              Pay ${PRICE_USD} and open the report
+            </a>
+            {/* The one honest thing this page can say about the charge.
+                checkout.ts has compared the price above against the amount this
+                deployment declared it configured at Stripe, and a declaration is
+                not the charge - nothing in this repository can read that. The
+                buyer is the only reader who sees both numbers, so they are told
+                which two to compare and what to do if they differ. */}
+            <div className="muted" style={{ fontSize: 13, marginTop: 14, maxWidth: "62ch" }}>
+              Stripe holds the amount it charges, and this page cannot read it. The
+              payment page shows the amount before you confirm &mdash; if it is not
+              ${PRICE_USD}, close it without paying.
+            </div>
+          </>
         )}
 
         {/* An unconfigured checkout says so. A dead href that looks live is
-            worse than a button that admits it is not ready. */}
-        {allTicked && !configured && (
+            worse than a button that admits it is not ready.
+
+            The three notices below are not behind the acknowledgements, and the
+            button is. A notice is a statement about this build, not about the
+            purchase, and making somebody tick three boxes before telling them
+            there is nothing to buy is the shape of late disclosure the rest of
+            this page exists to refuse. It is also the only way the states are
+            visible to a test: the ticked render is a DOM interaction the test
+            suite does not drive. */}
+        {checkout.kind === "no_link" && (
           <div
             className="panel prose"
             style={{ borderLeft: "3px solid var(--tk-unknown)", fontSize: 14 }}
@@ -175,6 +199,40 @@ export function PurchaseGate({ teaser }: { teaser: Teaser }) {
             This build has no Stripe payment link configured, so there is nothing to
             charge you with. Set <code>NEXT_PUBLIC_STRIPE_PAYMENT_LINK</code> to
             enable checkout.
+          </div>
+        )}
+
+        {/* A link whose amount nobody declared is the state that shipped: a
+            button that charges whatever Stripe holds, beside a number chosen
+            here. It is closed for the same reason an unset link is. */}
+        {checkout.kind === "amount_undeclared" && (
+          <div
+            className="panel prose"
+            style={{ borderLeft: "3px solid var(--tk-unknown)", fontSize: 14 }}
+          >
+            <div className="mono-label" style={{ marginBottom: 8 }}>
+              Payment is not connected yet
+            </div>
+            This build has a Stripe payment link but has not declared the amount
+            configured on it, so nothing here can say the price above is the price
+            you would be charged. Set{" "}
+            <code>NEXT_PUBLIC_STRIPE_PRICE_USD</code> to that amount to enable
+            checkout.
+          </div>
+        )}
+
+        {checkout.kind === "amount_disagrees" && (
+          <div
+            className="panel prose"
+            style={{ borderLeft: "3px solid var(--tk-sev-major)", fontSize: 14 }}
+          >
+            <div className="mono-label" style={{ marginBottom: 8 }}>
+              Checkout is closed: this build disagrees with itself
+            </div>
+            The amount this deployment declares it configured at Stripe (
+            <code>{checkout.declared}</code>) does not match the price this page
+            shows. Rather than send you to a payment page for an amount we cannot
+            state, there is no button. Nobody is being charged anything.
           </div>
         )}
       </div>

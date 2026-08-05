@@ -157,7 +157,16 @@ def build_parser() -> argparse.ArgumentParser:
     inspect.add_argument("--mode", choices=["fixture", "live"], default=None)
     inspect.add_argument("--out", help="write the report JSON here")
     inspect.add_argument("--teaser-out", default=None, help="write the free teaser here")
-    inspect.add_argument("--price", type=float, default=25.0, help="price shown on the teaser")
+    # The default is the shared constant, not a number typed here. It was a
+    # literal, and the teaser it wrote into the artifact was the second price a
+    # buyer met - the landing page printed the TypeScript copy and this printed
+    # its own, with nothing comparing them. See teaser.PRICE_USD.
+    inspect.add_argument(
+        "--price",
+        type=float,
+        default=teaser_module.PRICE_USD,
+        help="price shown on the teaser; defaults to the shared constant",
+    )
     inspect.add_argument(
         "--generated-at",
         default=None,

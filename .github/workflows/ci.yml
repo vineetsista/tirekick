@@ -47,7 +47,10 @@ jobs:
       - name: Install python engines
         run: bash scripts/py-setup.sh
 
-      # ffmpeg is used by the audio engine and by fixture media generation.
+      # ffmpeg is used by the audio engine and by fixture media generation. Like
+      # the chromium step below it is not optional: test_signal.py fails rather
+      # than skips without it (D-050), and gates.sh refuses to start at all, so a
+      # runner without ffmpeg goes red instead of reporting a green it did not earn.
       - name: Install ffmpeg
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
 
@@ -102,3 +105,38 @@ jobs:
           packages/engines/.venv/bin/python -m tirekick_engines.cli inspect \
             --fixture demo-01 --out /tmp/no-key.report.json
           test -s /tmp/no-key.report.json
+
+  sdk-contract:
+    name: sdk contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    # The one job that installs the Anthropic SDK, and the only place the real
+    # package is ever opened. `client._retryable_errors` reads two attributes off
+    # it and returns () when the import fails - and () is a legal `except` clause
+    # that catches nothing, so an SDK rename does not raise, it silently turns
+    # the retry loop into a single attempt.
+    #
+    # It cannot live in packages/engines/tests: that suite has to pass with no
+    # SDK installed (D-009), and the one line that would close the gap there -
+    # `pytest.importorskip("anthropic")` - is exactly the line that removed the
+    # retry tests from CI for a phase while still reporting a pass.
+    #
+    # This job is allowed to break on an upstream release. That is the alarm
+    # working: the gates job stays green, the product keeps running without a
+    # key, and the thing that is actually broken - our retry wiring against the
+    # current SDK - is the thing that goes red.
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install python engines with the live extra
+        run: |
+          bash scripts/py-setup.sh
+          packages/engines/.venv/bin/pip install -e 'packages/engines[live]'
+
+      - name: The SDK still defines what client.py reads
+        run: packages/engines/.venv/bin/python scripts/check_sdk_contract.py

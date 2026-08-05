@@ -343,6 +343,52 @@ describe("evidence and confidence (LAW 1)", () => {
   });
 });
 
+describe("the sticky nav is a contents page for what is actually there", () => {
+  /**
+   * The nav was a hand-written array sitting next to the sections it claimed to
+   * list, and it drifted the way hand-written lists always do: P7 added the
+   * walkaround section, nobody added the walkaround entry, and for two phases the
+   * only route to it was scrolling past the gallery. `run` had never been in it
+   * either. Nothing failed, because no test compared the two.
+   *
+   * The list is derived now. This is the assertion that keeps it derived - it
+   * fails for a section rendered outside the array as loudly as it failed for the
+   * walkaround, which the derivation on its own cannot do.
+   */
+  const navStart = html.indexOf('aria-label="Report sections"');
+  const nav = html.slice(navStart, html.indexOf("</nav>", navStart));
+
+  /** The <section> elements `Section` renders, by id. Gallery tiles are divs. */
+  const rendered = [...html.matchAll(/<section class="section" id="([^"]+)"/g)].map(
+    (m) => m[1]!,
+  );
+
+  it("renders the sections this fixture should produce", () => {
+    // A guard on the guard: both assertions below pass vacuously if the scan
+    // finds nothing, and the whole point is the section nobody noticed.
+    expect(rendered.length).toBeGreaterThan(10);
+    expect(demoReport.walkaround, "the fixture has no walkaround to list").not.toBeNull();
+    expect(rendered).toContain("walkaround");
+  });
+
+  it("gives every rendered section an entry in the nav", () => {
+    const missing = rendered.filter((id) => !nav.includes(`href="#${id}"`));
+    expect(missing, `sections a reader cannot navigate to: ${missing.join(", ")}`).toEqual(
+      [],
+    );
+  });
+
+  it("points every nav entry at a section that exists", () => {
+    // The other direction. An anchor to a section the report did not render
+    // scrolls nowhere and reads as a broken page rather than an absent feature.
+    const targets = [...nav.matchAll(/href="#([^"]+)"/g)].map((m) => m[1]!);
+    expect(targets.length).toBe(rendered.length);
+    for (const id of targets) {
+      expect(rendered, `nav links #${id}, which nothing renders`).toContain(id);
+    }
+  });
+});
+
 describe("price check (never a verdict without comps)", () => {
   it("shows the comps behind any price range it states", () => {
     if (!demoReport.price) return;

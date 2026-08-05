@@ -36,19 +36,91 @@ export const systemKeySchema = z.enum([
 ]);
 export type SystemKey = z.infer<typeof systemKeySchema>;
 
+const lockedSet: ReadonlySet<string> = new Set(LOCKED_SYSTEMS);
+
+export function isLockedSystem(system: SystemKey): boolean {
+  return lockedSet.has(system);
+}
+
+/**
+ * Turn a list of law violations into zod issues.
+ *
+ * The LAW 2 rules below are written once, as functions returning the sentences a
+ * reader sees, and then attached in two places: a refinement on the sub-schema
+ * (so a single finding or row cannot be parsed in violation) and `assertLaws` or
+ * `parseTeaser` (which are reachable with an object that was never parsed). Two
+ * hand-written copies of the same rule is the drift this package exists to stop,
+ * so there is one copy and two call sites.
+ */
+function addLawIssues(problems: readonly string[], ctx: z.RefinementCtx): void {
+  for (const message of problems) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message });
+  }
+}
+
 export const runModeSchema = z.enum(["fixture", "live"]);
+
+/** Which engine produced a finding. Mirrors `engine_name` in the db package. */
+export const engineNameSchema = z.enum(["vision", "audio", "data", "pricing"]);
+export type EngineName = z.infer<typeof engineNameSchema>;
+
+/**
+ * A `{low, high}` band, in the order a reader would say it.
+ *
+ * Mirrors CostBand._ordered and PriceRange._ordered in models.py. "$800 to $200"
+ * is not a range, it is a typo - and it reaches the buyer either as a sentence
+ * they say to a seller or as the floor every price verdict is computed against,
+ * which makes an inverted one meaningless in both directions.
+ */
+function orderedBandSchema(label: string) {
+  return z
+    .object({ low: z.number().nonnegative(), high: z.number().nonnegative() })
+    .superRefine((band, ctx) => {
+      if (band.high < band.low) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `inverted ${label}: low=${band.low}, high=${band.high}`,
+        });
+      }
+    });
+}
 
 /* ------------------------------------------------------------------ */
 /* evidence - LAW 1                                                    */
 /* ------------------------------------------------------------------ */
 
 /** Normalized [0,1] box: x,y is the top-left corner. */
-export const boundingBoxSchema = z.object({
-  x: z.number().min(0).max(1),
-  y: z.number().min(0).max(1),
-  w: z.number().min(0).max(1),
-  h: z.number().min(0).max(1),
-});
+export const boundingBoxSchema = z
+  .object({
+    x: z.number().min(0).max(1),
+    y: z.number().min(0).max(1),
+    w: z.number().min(0).max(1),
+    h: z.number().min(0).max(1),
+  })
+  .superRefine((box, ctx) => {
+    /**
+     * Four legal coordinates can still describe an illegal region (D-060).
+     *
+     * x=0.9 with w=0.4 puts 30% of the cited box outside the photograph. The
+     * viewer draws it anyway - clipped, at the wrong size - and a reader cannot
+     * redraw the region from the numbers to check the claim, which is the whole
+     * point of publishing them (LAW 1). BoundingBox._inside_the_frame has
+     * refused this since P9; this side accepted it.
+     *
+     * The tolerance is the size of a rounding error at four decimal places: the
+     * coordinates arrive as fractions of a pixel count and are serialised
+     * rounded, so an exactly-full-width box can land at 1.00001.
+     */
+    const epsilon = 1e-4;
+    if (box.x + box.w > 1 + epsilon || box.y + box.h > 1 + epsilon) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          `box runs past the image edge: x+w=${(box.x + box.w).toFixed(4)}, ` +
+          `y+h=${(box.y + box.h).toFixed(4)}, both must be <= 1`,
+      });
+    }
+  });
 export type BoundingBox = z.infer<typeof boundingBoxSchema>;
 
 export const imageRegionEvidenceSchema = z.object({
@@ -81,12 +153,31 @@ export const documentExcerptEvidenceSchema = z.object({
   caption: z.string().min(1),
 });
 
-export const evidenceSchema = z.discriminatedUnion("kind", [
-  imageRegionEvidenceSchema,
-  audioSegmentEvidenceSchema,
-  dataRecordEvidenceSchema,
-  documentExcerptEvidenceSchema,
-]);
+export const evidenceSchema = z
+  .discriminatedUnion("kind", [
+    imageRegionEvidenceSchema,
+    audioSegmentEvidenceSchema,
+    dataRecordEvidenceSchema,
+    documentExcerptEvidenceSchema,
+  ])
+  .superRefine((ev, ctx) => {
+    /**
+     * A segment that ends before it starts cites nothing a listener can play.
+     * Mirrors AudioSegmentEvidence._ordered.
+     *
+     * It sits on the union rather than on the member because zod 3's
+     * discriminatedUnion accepts only plain objects - refining
+     * `audioSegmentEvidenceSchema` in place would take it out of the union it
+     * belongs to. Every path that parses evidence goes through here, so the
+     * enforcement point is the same one Python has.
+     */
+    if (ev.kind === "audio_segment" && ev.endSec < ev.startSec) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `audio evidence ends before it starts: ${ev.startSec} -> ${ev.endSec}`,
+      });
+    }
+  });
 export type Evidence = z.infer<typeof evidenceSchema>;
 
 /* ------------------------------------------------------------------ */
@@ -162,27 +253,39 @@ export const findingTypeSchema = z.enum([
 ]);
 export type FindingType = z.infer<typeof findingTypeSchema>;
 
-export const findingSchema = z.object({
-  id: z.string().min(1),
-  type: findingTypeSchema,
-  system: systemKeySchema,
-  title: z.string().min(1),
-  detail: z.string().min(1),
-  severity: severitySchema,
-  confidence: confidenceSchema,
-  /** Why this confidence. LAW 1 - a bare number is not enough. */
-  confidenceBasis: z.string().min(1),
-  /** LAW 1 - a finding with no evidence is not a finding. */
-  evidence: z.array(evidenceSchema).min(1),
-  /** Repair cost band, only when we can source it. Never invented. */
-  estimatedCostUsd: z
-    .object({ low: z.number().nonnegative(), high: z.number().nonnegative() })
-    .nullable(),
-  sellerQuestion: z.string().nullable(),
-  mechanicCheck: z.string().nullable(),
-  /** Which engine produced it. */
-  engine: z.enum(["vision", "audio", "data", "pricing"]),
-});
+/** Repair cost band. Ordered, because a buyer says it out loud - see D-060. */
+export const costBandSchema = orderedBandSchema("cost band");
+
+/** LAW 2 on one finding. Mirrors Finding._law_2_no_locked_systems. */
+function lockedFindingProblems(finding: {
+  id: string;
+  system: SystemKey;
+}): string[] {
+  if (!isLockedSystem(finding.system)) return [];
+  return [`LAW 2: finding ${finding.id} attaches to locked system ${finding.system}`];
+}
+
+export const findingSchema = z
+  .object({
+    id: z.string().min(1),
+    type: findingTypeSchema,
+    system: systemKeySchema,
+    title: z.string().min(1),
+    detail: z.string().min(1),
+    severity: severitySchema,
+    confidence: confidenceSchema,
+    /** Why this confidence. LAW 1 - a bare number is not enough. */
+    confidenceBasis: z.string().min(1),
+    /** LAW 1 - a finding with no evidence is not a finding. */
+    evidence: z.array(evidenceSchema).min(1),
+    /** Repair cost band, only when we can source it. Never invented. */
+    estimatedCostUsd: costBandSchema.nullable(),
+    sellerQuestion: z.string().nullable(),
+    mechanicCheck: z.string().nullable(),
+    /** Which engine produced it. */
+    engine: engineNameSchema,
+  })
+  .superRefine((finding, ctx) => addLawIssues(lockedFindingProblems(finding), ctx));
 export type Finding = z.infer<typeof findingSchema>;
 
 /* ------------------------------------------------------------------ */
@@ -201,14 +304,47 @@ export const systemStatusSchema = z.enum([
 ]);
 export type SystemStatus = z.infer<typeof systemStatusSchema>;
 
-export const systemRowSchema = z.object({
-  system: systemKeySchema,
-  status: systemStatusSchema,
-  statement: z.string().min(1),
-  findingIds: z.array(z.string()),
-  /** Null for locked systems - a locked row never carries a confidence. */
-  confidence: confidenceSchema.nullable(),
-});
+/**
+ * LAW 2 on one systems row, all four clauses. Mirrors SystemRow._law_2_locked_rows.
+ *
+ * The wording clause is not decoration: a row that says "not remotely verifiable
+ * - but nothing looks wrong" is a locked status carrying a clearance, and the
+ * status clause cannot see it.
+ */
+function lockedRowProblems(row: {
+  system: SystemKey;
+  status: SystemStatus;
+  statement: string;
+  findingIds: readonly string[];
+  confidence: number | null;
+}): string[] {
+  if (!isLockedSystem(row.system)) return [];
+  const problems: string[] = [];
+  if (row.status !== "locked_mechanic_required") {
+    problems.push(`LAW 2: system ${row.system} has status ${row.status}`);
+  }
+  if (row.confidence !== null) {
+    problems.push(`LAW 2: locked system ${row.system} carries a confidence`);
+  }
+  if (row.findingIds.length > 0) {
+    problems.push(`LAW 2: locked system ${row.system} carries findings`);
+  }
+  if (row.statement !== LOCKED_SYSTEM_STATEMENT) {
+    problems.push(`LAW 2: locked system ${row.system} paraphrases the locked statement`);
+  }
+  return problems;
+}
+
+export const systemRowSchema = z
+  .object({
+    system: systemKeySchema,
+    status: systemStatusSchema,
+    statement: z.string().min(1),
+    findingIds: z.array(z.string()),
+    /** Null for locked systems - a locked row never carries a confidence. */
+    confidence: confidenceSchema.nullable(),
+  })
+  .superRefine((row, ctx) => addLawIssues(lockedRowProblems(row), ctx));
 export type SystemRow = z.infer<typeof systemRowSchema>;
 
 /* ------------------------------------------------------------------ */
@@ -374,13 +510,28 @@ export const excludedCompSchema = z.object({
   reason: z.string().min(1),
 });
 
-export const priceDeductionSchema = z.object({
-  findingId: z.string().min(1),
-  label: z.string().min(1),
-  lowUsd: z.number().nonnegative(),
-  highUsd: z.number().nonnegative(),
-  basis: z.string().min(1),
-});
+export const priceDeductionSchema = z
+  .object({
+    findingId: z.string().min(1),
+    label: z.string().min(1),
+    lowUsd: z.number().nonnegative(),
+    highUsd: z.number().nonnegative(),
+    basis: z.string().min(1),
+  })
+  .superRefine((d, ctx) => {
+    // Same shape as an ordered band under different field names, and the same
+    // reason: this one is subtracted from an asking price in front of a seller.
+    // Mirrors PriceDeduction._ordered.
+    if (d.highUsd < d.lowUsd) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `inverted deduction: low=${d.lowUsd}, high=${d.highUsd}`,
+      });
+    }
+  });
+
+/** The fair range every verdict is computed against. Ordered - see D-060. */
+export const priceRangeSchema = orderedBandSchema("price range");
 
 export const priceCheckSchema = z.object({
   askingPriceUsd: z.number().nonnegative(),
@@ -389,10 +540,7 @@ export const priceCheckSchema = z.object({
   /** Rendered - a comp silently dropped is a comp the buyer thinks was counted. */
   excluded: z.array(excludedCompSchema),
   normalizationNotes: z.string().min(1),
-  fairRangeUsd: z.object({
-    low: z.number().nonnegative(),
-    high: z.number().nonnegative(),
-  }),
+  fairRangeUsd: priceRangeSchema,
   deductions: z.array(priceDeductionSchema),
   verdict: z.enum(["below_range", "in_range", "above_range", "cannot_determine"]),
   verdictStatement: z.string().min(1),
@@ -500,43 +648,64 @@ export const reportSchema = z.object({
 export type Report = z.infer<typeof reportSchema>;
 
 /* ------------------------------------------------------------------ */
-/* law assertions - checked on every parse, not just in tests          */
+/* introspection, for the gates that compare this file to a second copy */
 /* ------------------------------------------------------------------ */
 
-const lockedSet: ReadonlySet<string> = new Set(LOCKED_SYSTEMS);
-
-export function isLockedSystem(system: SystemKey): boolean {
-  return lockedSet.has(system);
+/**
+ * The field schemas of a contract object, reached through any refinements.
+ *
+ * A `z.object` that gains a `.superRefine` becomes a ZodEffects and no longer
+ * has `.shape`. `findingSchema`, `systemRowSchema` and `teaserSystemRowSchema`
+ * are all refined now, and the column-parity gate in packages/db reads exactly
+ * that `.shape` to ask whether every contract field has a column to live in.
+ * Its two alternatives were to unwrap zod's internals from a package that does
+ * not depend on zod, or to quietly stop comparing the tables whose schema had
+ * been refined - which is the failure that gate was written to catch.
+ *
+ * This hands back the field schemas, not a parser for the whole object: there is
+ * deliberately no way to get an unrefined `findingSchema` out of this module and
+ * parse a locked-system finding with it.
+ */
+export function contractShape(schema: z.ZodTypeAny): z.ZodRawShape {
+  let inner: z.ZodTypeAny = schema;
+  while (inner instanceof z.ZodEffects) inner = inner.innerType() as z.ZodTypeAny;
+  if (!(inner instanceof z.ZodObject)) {
+    throw new Error(
+      `contractShape: ${inner._def.typeName} is not an object schema, refined or otherwise`,
+    );
+  }
+  return inner.shape as z.ZodRawShape;
 }
+
+/* ------------------------------------------------------------------ */
+/* law assertions - checked on every parse, not just in tests          */
+/* ------------------------------------------------------------------ */
 
 /**
  * Structural checks the type system cannot express. Runs after zod parse; a report
  * that fails any of these is a law violation and must not render.
+ *
+ * This function is the zod-side twin of the model validators in `models.py`, and
+ * for nine phases it was the smaller of the two. Anything Python refuses and this
+ * accepts is a report the pipeline cannot emit but the viewer will happily render
+ * - which is the wrong way round, because the viewer is the side a buyer reads.
+ *
+ * LAW 2 is not enforced here alone. `lockedFindingProblems` and
+ * `lockedRowProblems` are refinements on `findingSchema` and `systemRowSchema`,
+ * which is where Pydantic enforces them too, so a single finding or row cannot be
+ * parsed in violation by any call site. They are re-run here because this
+ * function is exported and takes an already-typed `Report`: a caller that builds
+ * one in TypeScript and never parses it reaches these checks and nothing else.
+ * The rules themselves are written once, above; only the call sites are two.
  */
 export function assertLaws(report: Report): void {
   const problems: string[] = [];
 
   // LAW 2: no finding may attach to a locked system.
-  for (const f of report.findings) {
-    if (isLockedSystem(f.system)) {
-      problems.push(`LAW 2: finding ${f.id} attaches to locked system ${f.system}`);
-    }
-  }
+  for (const f of report.findings) problems.push(...lockedFindingProblems(f));
 
-  // LAW 2: every locked system row must be locked, with no confidence.
-  for (const row of report.systems) {
-    if (isLockedSystem(row.system)) {
-      if (row.status !== "locked_mechanic_required") {
-        problems.push(`LAW 2: system ${row.system} has status ${row.status}`);
-      }
-      if (row.confidence !== null) {
-        problems.push(`LAW 2: locked system ${row.system} carries a confidence`);
-      }
-      if (row.findingIds.length > 0) {
-        problems.push(`LAW 2: locked system ${row.system} carries findings`);
-      }
-    }
-  }
+  // LAW 2: every locked system row must be locked, silent and unscored.
+  for (const row of report.systems) problems.push(...lockedRowProblems(row));
 
   // LAW 1: evidence must reference assets that exist in the report.
   const assetIds = new Set(report.assets.map((a) => a.id));
@@ -570,6 +739,18 @@ export function assertLaws(report: Report): void {
     }
   }
 
+  // LAW 1: the synthetic-media flag must describe the assets it ships with.
+  //
+  // It is a single boolean that decides whether the "some of this media was
+  // generated" banner renders. False on a report carrying generated photographs
+  // presents fixture media as a real car's; true on a report of real photographs
+  // disclaims evidence that needed no disclaimer. Report._referential_integrity
+  // has compared the two since the laws were first written as code.
+  const anySynthetic = report.assets.some((a) => a.synthetic);
+  if (anySynthetic !== report.containsSyntheticMedia) {
+    problems.push("LAW 1: containsSyntheticMedia does not match the assets it describes");
+  }
+
   if (problems.length > 0) {
     throw new Error(`Report violates TIREKICK laws:\n  - ${problems.join("\n  - ")}`);
   }
@@ -596,11 +777,29 @@ export const severityCountSchema = z.object({
  * carries the worst finding's title; locked rows carry the LAW 2 statement,
  * which is identical in every report TIREKICK emits, paid or free.
  */
-export const teaserSystemRowSchema = z.object({
-  system: systemKeySchema,
-  status: systemStatusSchema,
-  statement: z.string().min(1),
-});
+function lockedTeaserRowProblems(row: {
+  system: SystemKey;
+  status: SystemStatus;
+  statement: string;
+}): string[] {
+  if (!isLockedSystem(row.system)) return [];
+  const problems: string[] = [];
+  if (row.status !== "locked_mechanic_required") {
+    problems.push(`LAW 2: teaser row ${row.system} is not locked, it says ${row.status}`);
+  }
+  if (row.statement !== LOCKED_SYSTEM_STATEMENT) {
+    problems.push(`LAW 2: teaser row ${row.system} paraphrases the locked statement`);
+  }
+  return problems;
+}
+
+export const teaserSystemRowSchema = z
+  .object({
+    system: systemKeySchema,
+    status: systemStatusSchema,
+    statement: z.string().min(1),
+  })
+  .superRefine((row, ctx) => addLawIssues(lockedTeaserRowProblems(row), ctx));
 
 /**
  * What a buyer sees before paying.
@@ -679,6 +878,12 @@ export type Teaser = z.infer<typeof teaserSchema>;
  * The failure this guards against is a refactor that starts passing the full
  * report through the teaser route. Zod alone would not notice - extra keys are
  * stripped silently by default - so the shape is checked explicitly.
+ *
+ * LAW 2 on the systems rows is not checked here. It is a refinement on
+ * `teaserSystemRowSchema`, which the parse below runs, so a locked row that is
+ * not locked never reaches this function's body - and, unlike `assertLaws`,
+ * there is no way into `parseTeaser` that skips the parse. It used to be checked
+ * here instead, which is why it is worth saying where it went.
  */
 export function parseTeaser(input: unknown): Teaser {
   const teaser = teaserSchema.parse(input);
@@ -695,10 +900,5 @@ export function parseTeaser(input: unknown): Teaser {
     );
   }
 
-  for (const row of teaser.systems) {
-    if (isLockedSystem(row.system) && row.statement !== LOCKED_SYSTEM_STATEMENT) {
-      throw new Error(`LAW 2: teaser row ${row.system} paraphrases the locked statement`);
-    }
-  }
   return teaser;
 }

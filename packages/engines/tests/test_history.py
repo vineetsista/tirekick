@@ -40,6 +40,10 @@ ASSERTING = [
     "Manufacturer buyback recorded under state lemon law",
     "Odometer rollback detected",
     "Vehicle declared a total loss 2020-06",
+    # The pipe table with the answer filled in. A row is one statement in both
+    # directions, so the layout that must not manufacture a denial must not
+    # swallow an assertion either.
+    "| Salvage | Reported 03/2019 |",
 ]
 
 #: Lines that rule a brand out. None of these may produce a finding, ever.
@@ -50,22 +54,122 @@ DENYING = [
     "Lemon law buyback ........... None",
     "Junk / non-repairable ....... None",
     "Total loss: not reported",
-    "Odometer: no discrepancy reported",
+    "Odometer discrepancy: none reported",
     "Frame damage: none disclosed",
     "No salvage or flood history on record",
     "No salvage title on record",
     "Never declared a total loss",
     "Salvage records: 0",
     "Salvage? No.",
+    # A dot-leader row whose answer is N/A. The leader is the whole separator -
+    # there is no colon to hang the denial off, and the scanner read these as
+    # asserted until P10: a false salvage call on a clean car, printed from the
+    # commonest table layout there is.
+    "Salvage ....................... N/A",
+    "Flood or water damage ......... n/a",
+    # "No" immediately followed by a number is an enumeration everywhere except
+    # here, where it is a date range inside a denial. We do not strip a bare
+    # "No <digits>" for exactly this reason; the period is what marks a row
+    # number, and real reports print it.
+    "No 2019-2023 salvage records found",
+    # The mirror of DENIAL_IN_ANOTHER_CLAUSE below: the denial is in the clause
+    # that carries the brand, so the other clause's verb changes nothing.
+    "Title issued 03/2015. No salvage brand reported",
+    # A pipe table, which is what a history report in Markdown is made of. The
+    # scanner read the pipe as a statement boundary for one session, and every
+    # row below came out a major at confidence 1.0 with its own denial quoted
+    # underneath as the evidence. A cell separator is not a sentence.
+    "| Salvage | None reported |",
+    "| Salvage title | None |",
+    "| Flood or water damage | No records found |",
+    "| Total loss | Not reported | 2019 |",
+    # The same label-and-answer row punctuated with the separators that ARE
+    # statement boundaries. The answer says nothing of its own - no subject, no
+    # date, nothing but the denial - so it belongs to the label in front of it
+    # however it is punctuated, and splitting there reads the label alone.
+    "Salvage. None reported",
+    "Salvage; none reported",
+    "Salvage brand; not reported",
+    "Salvage brand; none reported 03/2019",
+]
+
+#: The one line the scanner is allowed to soften, and the reason it is here
+#: rather than in ASSERTING. Nothing tells a cell separator apart from a
+#: sentence boundary except what the cells say, so a pipe is never a boundary -
+#: which means the N/A about the prior owner sits in the same statement as the
+#: brand, both signals show, and the finding ships hedged. That is a downgrade
+#: of degree on one contrived row. Reading the pipe as a boundary instead buys
+#: that row full strength and turns every row of DENYING's pipe table into a
+#: major on a clean car, which is the direction D-017 forbids.
+CELL_SEPARATOR_HEDGED = [
+    "SALVAGE TITLE ISSUED | Prior owner: N/A",
 ]
 
 #: Real reports number their rows. In each of these "No." abbreviates "number"
 #: and the line is asserting the brand at full strength.
 ENUMERATED_ASSERTING = [
     "No. 3 - SALVAGE TITLE ISSUED",
+    "No.3 SALVAGE TITLE ISSUED",
+    "NO. 12 - JUNK / NON-REPAIRABLE",
     "Record No. 4: FLOOD DAMAGE REPORTED",
     "Item No. 2 - REBUILT TITLE ISSUED",
+    # The same row number with the period dropped, which is how a report that
+    # puts the label in its own column prints it.
+    "Record No 3 - SALVAGE TITLE ISSUED",
+    "Stock No 44 - FLOOD DAMAGE REPORTED",
+    # Numbering that never touches the word "no" at all. These have always
+    # worked; they are here so that a future rewrite of the enumeration rule
+    # cannot break them quietly.
+    "#3  FLOOD DAMAGE REPORTED  TX",
+    "3. SALVAGE TITLE ISSUED 03/12/2019",
 ]
+
+#: Row labels we claim to recognise in front of an unpunctuated "No 7". Each is
+#: exercised, because a label listed in the pattern and in no test is a claim
+#: nothing checks.
+ROW_LABELS = ["Record", "Item", "Stock", "Entry", "Line", "Ref", "Seq"]
+
+#: Brands whose own name contains a negation word. "NOT ACTUAL MILEAGE" is the
+#: federal odometer brand, printed in those words on the title itself - so the
+#: "not" belongs to the brand, not to a denial of it.
+BRAND_NAMED_WITH_A_NEGATION = [
+    "Odometer brand: NOT ACTUAL MILEAGE",
+    "ODOMETER: NOT ACTUAL MILEAGE - BRAND APPLIED 2018",
+    "Title issued with odometer reading NOT ACTUAL MILEAGE",
+    # The brand followed by a denial of something else, which is where the two
+    # guards collided: masking the brand's name put whitespace in front of the
+    # full stop, the dot-leader lookbehind then refused to split there, and the
+    # odometer brand - the one that undermines every mileage-based judgment in
+    # the report - went back to being unreportable. The mask has to keep the
+    # width and it has to not be whitespace.
+    "Odometer: NOT ACTUAL MILEAGE. No accidents reported",
+    "ODOMETER BRAND: NOT ACTUAL MILEAGE; no damage found",
+]
+
+#: Lines where a real denial sits in one clause and the brand in another. The
+#: denial is true and says nothing about the brand beside it.
+DENIAL_IN_ANOTHER_CLAUSE = [
+    "No accidents reported. SALVAGE TITLE ISSUED 03/2019",
+    "No damage found; total loss recorded 2020",
+    # This one used to be the hedged half of the ranking test below. The "0"
+    # denies a discrepancy in the odometer reading and denies nothing about the
+    # salvage brand in the next sentence, so it is asserted now, and the line
+    # is kept here to record that the reading changed on purpose.
+    "Odometer reading: 0 discrepancies. SALVAGE TITLE ISSUED 2020",
+    # A numbered row whose brand is followed by a denial of something else.
+    # Both guards fire here and each has to leave the other's work intact: the
+    # row number is masked before the line is split, so the mask has to be the
+    # same width as what it replaced or every offset after it slides and the
+    # brand is read in the wrong statement.
+    "Record No. 4 - SALVAGE. No accidents reported",
+    "Record No. 4 - SALVAGE; no damage found",
+]
+
+#: The separators the scanner reads as a boundary between statements. Each is
+#: exercised in both directions below, because a separator tested only in the
+#: asserting direction is how the pipe shipped: it closed one false negative
+#: and opened a false major on every clean row of a table.
+CLAUSE_SEPARATORS = [".", ";"]
 
 
 @pytest.mark.parametrize("line", ASSERTING)
@@ -105,18 +209,156 @@ def test_an_enumerated_record_row_is_read_as_asserting(tmp_path: Path, line: str
     assert drafts[0].severity == "major"
 
 
+@pytest.mark.parametrize("label", ROW_LABELS)
+def test_every_row_label_we_claim_to_read_is_read(tmp_path: Path, label: str) -> None:
+    """One test per label word, so the list in the pattern is not decoration."""
+    assets, root = _document(tmp_path, f"{label} No 7 - SALVAGE TITLE ISSUED")
+    drafts = history.title_brand_findings(assets, root)
+    assert len(drafts) == 1, f"{label!r} row number read as a denial"
+    assert drafts[0].confidence == 1.0
+
+
+@pytest.mark.parametrize("line", BRAND_NAMED_WITH_A_NEGATION)
+def test_a_brand_whose_name_contains_not_is_still_reported(tmp_path: Path, line: str) -> None:
+    """The negation lookalike that lived inside our own keyword list.
+
+    "not actual mileage" is one of the brands this engine scans for, and it is
+    spelled with a negation word, so every line carrying it in its canonical
+    form read as a denial of itself. The odometer brand could not be reported
+    at all in the wording titles actually use - a false negative on the one
+    finding that undermines every mileage-based judgment in the report.
+    """
+    assets, root = _document(tmp_path, line)
+    drafts = history.title_brand_findings(assets, root)
+    assert len(drafts) == 1, f"expected a finding for {line!r}"
+    assert drafts[0].id.startswith("title_odometer")
+    assert drafts[0].confidence == 1.0, f"{line!r} must ship asserted, not hedged"
+    assert drafts[0].severity == "major"
+
+
+@pytest.mark.parametrize("line", DENIAL_IN_ANOTHER_CLAUSE)
+def test_a_denial_of_something_else_does_not_deny_the_brand(tmp_path: Path, line: str) -> None:
+    """A denial has a scope, and it is not the whole line.
+
+    "No accidents reported. SALVAGE TITLE ISSUED 03/2019" is two statements.
+    The first is true and about accidents; the second is the reason the buyer
+    should walk. Reading the line as one denial dropped the salvage brand and
+    printed nothing at all - the worst available outcome, because the buyer
+    then has no reason to look at the line themselves.
+    """
+    assets, root = _document(tmp_path, line)
+    drafts = history.title_brand_findings(assets, root)
+    assert len(drafts) == 1, f"expected a finding for {line!r}"
+    assert drafts[0].confidence == 1.0, f"{line!r} must ship asserted, not hedged"
+    assert drafts[0].severity == "major"
+
+
+@pytest.mark.parametrize("line", CELL_SEPARATOR_HEDGED)
+def test_a_cell_separator_leaves_the_line_hedged_rather_than_split(
+    tmp_path: Path, line: str
+) -> None:
+    """The price of refusing to read a pipe as a statement boundary.
+
+    The buyer still gets the line, quoted, at reduced severity and with the copy
+    saying we could not read it. The alternative - splitting the row into cells
+    so this one ships at full strength - prints a major on every clean row of
+    the same table, and D-017 says which of those two we take.
+    """
+    assets, root = _document(tmp_path, line)
+    drafts = history.title_brand_findings(assets, root)
+    assert len(drafts) == 1, f"expected a hedged finding for {line!r}"
+    assert drafts[0].confidence == 0.5, f"{line!r} must ship hedged, not asserted"
+    assert drafts[0].severity == "minor"
+
+
+def test_an_answer_cannot_talk_a_stated_brand_back_out(tmp_path: Path) -> None:
+    """A clause that already reports the brand does not absorb the answer after it.
+
+    Absorbing one is how "Salvage brand; none reported" reads as the label and
+    answer it is. But the same absorption applied to a clause that has already
+    said "ISSUED" lets a trailing "none reported" - two words that deny nothing
+    in particular - delete a salvage brand from the report entirely. A
+    contradictory line is a line to hand the buyer, not one to resolve in favour
+    of silence (D-017).
+
+    Written because mutation testing found the guard unpinned: deleting it left
+    all 123 tests in this file green.
+    """
+    assets, root = _document(tmp_path, "SALVAGE TITLE ISSUED; none reported")
+    drafts = history.title_brand_findings(assets, root)
+    assert len(drafts) == 1, "the trailing answer deleted a stated salvage brand"
+
+
+@pytest.mark.parametrize("separator", CLAUSE_SEPARATORS)
+def test_every_clause_separator_is_covered_in_both_directions(
+    tmp_path: Path, separator: str
+) -> None:
+    """A separator that only ever upgrades is a separator nobody weighed.
+
+    Line 1 is a label and its answer, and must stay denied. Line 2 is a denial
+    of something else in front of a brand, and must assert. One line per
+    direction, on the same separator, in one document - so a change that fixes
+    either direction by breaking the other cannot pass.
+    """
+    denying = f"Salvage brand{separator} none reported"
+    asserting = f"No accidents reported{separator} SALVAGE TITLE ISSUED 03/2019"
+    assets, root = _document(tmp_path, f"{denying}\n{asserting}\n")
+    drafts = history.title_brand_findings(assets, root)
+    assert len(drafts) == 1, f"{separator!r}: {denying!r} produced a finding"
+    assert drafts[0].confidence == 1.0, f"{separator!r}: {asserting!r} shipped hedged"
+    assert (
+        "line 2" in drafts[0].evidence[0].caption
+    ), f"{separator!r}: the finding cites {denying!r}, so the denial was read as an assertion"
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        *ASSERTING,
+        *DENYING,
+        *ENUMERATED_ASSERTING,
+        *BRAND_NAMED_WITH_A_NEGATION,
+        *DENIAL_IN_ANOTHER_CLAUSE,
+        *CELL_SEPARATOR_HEDGED,
+    ],
+)
+def test_every_line_in_the_tables_matches_a_brand_pattern(tmp_path: Path, line: str) -> None:
+    """A row that matches nothing passes for a reason that is not its name.
+
+    'Odometer: no discrepancy reported' sat in DENYING for a session claiming to
+    prove a denial was read as one. No BRAND_PATTERN matches it - the odometer
+    pattern wants the two words adjacent - so it produced no hit to classify and
+    could not have failed however wrong the classifier got.
+    """
+    assets, root = _document(tmp_path, line)
+    assert history.scan(assets, root), f"{line!r} matches no BRAND_PATTERN: it proves nothing"
+
+
+def test_one_statement_carrying_both_signals_ships_hedged(tmp_path: Path) -> None:
+    """The premise the ranking test below rests on, checked rather than assumed.
+
+    If this line were classified as denied instead of ambiguous, that test would
+    still pass - on one finding from its second line - while proving nothing
+    about ranking. It is only worth having if the hedge is real.
+    """
+    assets, root = _document(tmp_path, "Salvage record on file: clean title issued 2020")
+    drafts = history.title_brand_findings(assets, root)
+    assert len(drafts) == 1
+    assert drafts[0].confidence == 0.5
+    assert drafts[0].severity == "minor"
+
+
 def test_a_later_outright_assertion_outranks_an_earlier_hedge(tmp_path: Path) -> None:
     """One finding per brand, at the strongest reading the document supports.
 
-    A line carrying both a denial token and an assertion verb ships hedged.
-    But when a later line asserts the same brand outright, keeping the hedge
-    because it arrived first would soften a salvage warning to minor at half
-    confidence - and cite the muddier line as the evidence.
+    A line carrying both a denial token and an assertion verb in one statement
+    ships hedged - a salvage record on file and a clean title issued is exactly
+    the muddle a keyword scanner should admit to. But when a later line asserts
+    the same brand outright, keeping the hedge because it arrived first would
+    soften a salvage warning to minor at half confidence, and cite the muddier
+    line as the evidence.
     """
-    text = (
-        "Odometer reading: 0 discrepancies. SALVAGE TITLE ISSUED 2020\n"
-        "Salvage title issued 03/2019\n"
-    )
+    text = "Salvage record on file: clean title issued 2020\nSalvage title issued 03/2019\n"
     assets, root = _document(tmp_path, text)
     drafts = history.title_brand_findings(assets, root)
     assert len(drafts) == 1

@@ -21,6 +21,23 @@ import {
   statusLabel,
 } from "@/lib/report";
 
+/**
+ * One section of the dossier: where it is, what it is called, and what is in it.
+ *
+ * `nav` is separate from `label` because the two do different jobs. The heading
+ * can afford "Findings about this vehicle (8)"; the nav bar is one scrolling
+ * line holding fourteen of them.
+ */
+interface SectionSpec {
+  id: string;
+  label: string;
+  nav: string;
+  note?: string | undefined;
+  /** Shown beside the nav entry. Omitted where a count means nothing. */
+  count?: number | undefined;
+  body: React.ReactNode;
+}
+
 function Section({
   id,
   label,
@@ -29,7 +46,9 @@ function Section({
 }: {
   id: string;
   label: string;
-  note?: string;
+  // `| undefined` rather than plain optional: `exactOptionalPropertyTypes` is on,
+  // and these arrive spread out of a SectionSpec where the key may be absent.
+  note?: string | undefined;
   children: React.ReactNode;
 }) {
   return (
@@ -492,255 +511,229 @@ export function ReportView({ report }: { report: Report }) {
   );
   const frameIds = new Set(report.walkaround?.frameAssetIds ?? []);
 
-  const sections = [
-    { id: "coverage", label: "Coverage" },
-    { id: "verdict", label: "Verdict" },
-    { id: "findings", label: "Findings", count: vehicleFindings.length },
-    ...(modelFindings.length ? [{ id: "recalls", label: "Recalls", count: modelFindings.length }] : []),
-    ...(report.mechanicReferrals.length
-      ? [{ id: "mechanic", label: "For your mechanic", count: report.mechanicReferrals.length }]
-      : []),
-    { id: "gallery", label: "Media", count: photos.length },
-    { id: "systems", label: "Systems" },
-    ...(report.audio ? [{ id: "audio", label: "Audio" }] : []),
-    ...(report.vehicle ? [{ id: "record", label: "Vehicle record" }] : []),
-    ...(report.price ? [{ id: "price", label: "Price" }] : []),
-    ...(report.sellerQuestions.length
-      ? [{ id: "questions", label: "Questions", count: report.sellerQuestions.length }]
-      : []),
-    ...(report.negotiationScript.length ? [{ id: "script", label: "Script" }] : []),
-  ];
+  /**
+   * Every section of the dossier, in reading order, with its own contents entry.
+   *
+   * This was two lists: a hand-written nav array here, and a hand-written run of
+   * `<Section>` elements below it. They went out of step the way that
+   * arrangement always goes out of step - P7 added the walkaround section and
+   * nobody added the walkaround entry, so for two phases the only route to it
+   * was scrolling past the gallery, and run metadata had never been listed at
+   * all. Nothing failed, because nothing compared the two lists.
+   *
+   * One list now, and the nav is a projection of it. A section that renders
+   * without a way to reach it is no longer something a person can forget.
+   */
+  const sections: SectionSpec[] = [
+    {
+      // Coverage before conclusions. LIABILITY section 9.
+      id: "coverage",
+      nav: "Coverage",
+      label: "What was looked at",
+      body: <CoverageMap report={report} />,
+    },
+    {
+      id: "verdict",
+      nav: "Verdict",
+      label: "Verdict",
+      body: <Verdict report={report} />,
+    },
+    {
+      id: "findings",
+      nav: "Findings",
+      label: `Findings about this vehicle (${vehicleFindings.length})`,
+      note: "worst first",
+      count: vehicleFindings.length,
+      body:
+        vehicleFindings.length > 0 ? (
+          <div style={{ display: "grid", gap: "var(--s-4)" }}>
+            {bySeverity(vehicleFindings).map((f) => (
+              <FindingCard
+                key={f.id}
+                finding={f}
+                assets={assets}
+                inspectionId={report.inspectionId}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="panel prose-sm muted">
+            Nothing adverse was visible in the media provided. That is a statement
+            about the photographs and not a clearance &mdash; read the coverage map
+            above for what was never looked at.
+          </div>
+        ),
+    },
 
-  return (
-    <>
-      <ReportNav sections={sections} />
+    // ------------------------------------------------------------------------
+    // records about the MODEL, kept apart
+    // ------------------------------------------------------------------------
 
-      <div className="wrap" style={{ paddingTop: "var(--s-6)", paddingBottom: "var(--s-9)" }}>
-        <header
+    ...(modelFindings.length > 0
+      ? [
+          {
+            id: "recalls",
+            nav: "Recalls",
+            label: `On record for this model (${modelFindings.length})`,
+            note: "not about this specific car",
+            count: modelFindings.length,
+            body: (
+              <>
+                {/*
+                  These used to sit in one undifferentiated list with the findings
+                  above, five recall campaigns wearing the same MAJOR badge as the
+                  corrosion on the rocker panel. A buyer scrolling that saw seven
+                  serious problems with the car in front of them. There are two.
+
+                  The verdict paragraph already says so - "Separately, 5 recall
+                  campaign(s) are on record for this model year - free to fix" -
+                  and the scoring engine already excludes them from the red-flag
+                  score for exactly this reason (D-021). The layout was the only
+                  part of the system still conflating them.
+                */}
+                <div
+                  className="panel panel-edge prose-sm"
+                  style={{ borderLeftColor: "var(--tk-locked)", marginBottom: "var(--s-4)" }}
+                >
+                  These describe the model and year, not the car you are looking
+                  at. They are not counted in the red-flag score. Recall work is
+                  free at a dealer, and a dealer will tell you by VIN whether it
+                  was done on this specific vehicle &mdash; which is something no
+                  public database publishes and this report cannot know.
+                </div>
+                <div style={{ display: "grid", gap: "var(--s-4)" }}>
+                  {bySeverity(modelFindings).map((f) => (
+                    <FindingCard
+                      key={f.id}
+                      finding={f}
+                      assets={assets}
+                      inspectionId={report.inspectionId}
+                    />
+                  ))}
+                </div>
+              </>
+            ),
+          },
+        ]
+      : []),
+
+    ...(report.mechanicReferrals.length > 0
+      ? [
+          {
+            id: "mechanic",
+            nav: "For your mechanic",
+            label: `For your mechanic (${report.mechanicReferrals.length})`,
+            note: "locked systems - observation only, no severity, no confidence",
+            count: report.mechanicReferrals.length,
+            body: (
+              <div style={{ display: "grid", gap: "var(--s-3)" }}>
+                {report.mechanicReferrals.map((r) => (
+                  <div
+                    key={r.id}
+                    id={r.id}
+                    className="panel panel-edge"
+                    style={{ borderLeftColor: "var(--tk-locked)" }}
+                  >
+                    <div className="label" style={{ color: "var(--tk-locked)" }}>
+                      {r.system}
+                    </div>
+                    <p className="prose" style={{ margin: "var(--s-2) 0 var(--s-3)" }}>
+                      {r.observation}
+                    </p>
+                    <p className="prose-sm muted" style={{ margin: 0 }}>
+                      {r.ask}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ),
+          },
+        ]
+      : []),
+
+    ...(report.walkaround
+      ? [
+          {
+            id: "walkaround",
+            nav: "Walkaround",
+            label: "Walkaround video",
+            note: "what was kept, and what was thrown away",
+            body: <Walkaround track={report.walkaround} />,
+          },
+        ]
+      : []),
+
+    // ------------------------------------------------------------------------
+    // every frame, with anchors the findings link back to
+    // ------------------------------------------------------------------------
+
+    {
+      id: "gallery",
+      nav: "Media",
+      label: `All media (${photos.length})`,
+      note: "every image, whether anything was found on it or not",
+      count: photos.length,
+      body: (
+        <div
           style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "baseline",
-            flexWrap: "wrap",
-            gap: "var(--s-3)",
-            paddingBottom: "var(--s-4)",
-            borderBottom: "1px solid var(--tk-rule)",
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(300px, 100%), 1fr))",
+            gap: "var(--s-5)",
           }}
         >
-          <h1 style={{ fontSize: "var(--t-xl)" }}>
-            {report.vehicle
-              ? [report.vehicle.decoded.year, report.vehicle.decoded.make, report.vehicle.decoded.model]
-                  .filter(Boolean)
-                  .join(" ")
-              : "Inspection report"}
-          </h1>
-          <span className="label data">
-            {report.reportId} / {report.generatedAt} / mode: {report.mode}
-          </span>
-        </header>
-
-        <div style={{ marginTop: "var(--s-5)" }}>
-          <Banner text={report.banner} />
-        </div>
-
-        {report.containsSyntheticMedia && (
-          <div
-            className="panel prose-sm"
-            style={{
-              marginTop: "var(--s-3)",
-              borderColor: "var(--tk-locked)",
-              color: "var(--tk-locked)",
-            }}
-          >
-            This report was generated from synthetic fixture media. The images are
-            drawings, not photographs, and no statement here about condition
-            describes a real vehicle. The federal records below are real: the VIN
-            carries genuine manufacturer codes with an invented serial, so it
-            decodes to a real model and identifies nobody&rsquo;s car.
-          </div>
-        )}
-
-        {/* Coverage before conclusions. LIABILITY section 9. */}
-        <Section id="coverage" label="What was looked at">
-          <CoverageMap report={report} />
-        </Section>
-
-        <Section id="verdict" label="Verdict">
-          <Verdict report={report} />
-        </Section>
-
-        {/* ---------------------------------------------------------------- */}
-        {/* findings about THIS CAR                                          */}
-        {/* ---------------------------------------------------------------- */}
-
-        <Section
-          id="findings"
-          label={`Findings about this vehicle (${vehicleFindings.length})`}
-          note="worst first"
-        >
-          {vehicleFindings.length > 0 ? (
-            <div style={{ display: "grid", gap: "var(--s-4)" }}>
-              {bySeverity(vehicleFindings).map((f) => (
-                <FindingCard
-                  key={f.id}
-                  finding={f}
-                  assets={assets}
-                  inspectionId={report.inspectionId}
+          {photos.map((asset) => {
+            const annotations = annotationsFor(
+              asset.id,
+              report.findings,
+              report.mechanicReferrals,
+            );
+            const fromVideo = frameIds.has(asset.id);
+            return (
+              <div key={asset.id} id={`asset-${asset.id}`} className="section">
+                <Overlay
+                  src={assetUrl(report.inspectionId, asset.path)}
+                  alt={`${asset.viewClass ?? "unclassified"} - ${asset.id}`}
+                  annotations={annotations}
+                  synthetic={asset.synthetic}
                 />
-              ))}
-            </div>
-          ) : (
-            <div className="panel prose-sm muted">
-              Nothing adverse was visible in the media provided. That is a
-              statement about the photographs and not a clearance &mdash; read the
-              coverage map above for what was never looked at.
-            </div>
-          )}
-        </Section>
-
-        {/* ---------------------------------------------------------------- */}
-        {/* records about the MODEL, kept apart                              */}
-        {/* ---------------------------------------------------------------- */}
-
-        {modelFindings.length > 0 && (
-          <Section
-            id="recalls"
-            label={`On record for this model (${modelFindings.length})`}
-            note="not about this specific car"
-          >
-            {/*
-              These used to sit in one undifferentiated list with the findings
-              above, five recall campaigns wearing the same MAJOR badge as the
-              corrosion on the rocker panel. A buyer scrolling that saw seven
-              serious problems with the car in front of them. There are two.
-
-              The verdict paragraph already says so - "Separately, 5 recall
-              campaign(s) are on record for this model year - free to fix" - and
-              the scoring engine already excludes them from the red-flag score for
-              exactly this reason (D-021). The layout was the only part of the
-              system still conflating them.
-            */}
-            <div
-              className="panel panel-edge prose-sm"
-              style={{ borderLeftColor: "var(--tk-locked)", marginBottom: "var(--s-4)" }}
-            >
-              These describe the model and year, not the car you are looking at.
-              They are not counted in the red-flag score. Recall work is free at a
-              dealer, and a dealer will tell you by VIN whether it was done on this
-              specific vehicle &mdash; which is something no public database
-              publishes and this report cannot know.
-            </div>
-            <div style={{ display: "grid", gap: "var(--s-4)" }}>
-              {bySeverity(modelFindings).map((f) => (
-                <FindingCard
-                  key={f.id}
-                  finding={f}
-                  assets={assets}
-                  inspectionId={report.inspectionId}
-                />
-              ))}
-            </div>
-          </Section>
-        )}
-
-        {report.mechanicReferrals.length > 0 && (
-          <Section
-            id="mechanic"
-            label={`For your mechanic (${report.mechanicReferrals.length})`}
-            note="locked systems - observation only, no severity, no confidence"
-          >
-            <div style={{ display: "grid", gap: "var(--s-3)" }}>
-              {report.mechanicReferrals.map((r) => (
                 <div
-                  key={r.id}
-                  id={r.id}
-                  className="panel panel-edge"
-                  style={{ borderLeftColor: "var(--tk-locked)" }}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: "var(--s-3)",
+                    marginTop: "var(--s-2)",
+                    fontSize: "var(--t-xs)",
+                  }}
                 >
-                  <div className="label" style={{ color: "var(--tk-locked)" }}>
-                    {r.system}
-                  </div>
-                  <p className="prose" style={{ margin: "var(--s-2) 0 var(--s-3)" }}>
-                    {r.observation}
-                  </p>
-                  <p className="prose-sm muted" style={{ margin: 0 }}>
-                    {r.ask}
-                  </p>
+                  <span className="label">
+                    <span className="data">{asset.id}</span>
+                    {fromVideo && (
+                      <span className="dim" style={{ marginLeft: 6 }}>
+                        from video
+                      </span>
+                    )}
+                  </span>
+                  <span className="dim">
+                    {asset.viewClass === null || asset.viewClass === "unknown"
+                      ? "view not identified"
+                      : annotations.length === 0
+                        ? "nothing flagged here"
+                        : `${annotations.length} region${annotations.length > 1 ? "s" : ""} flagged`}
+                  </span>
                 </div>
-              ))}
-            </div>
-          </Section>
-        )}
+              </div>
+            );
+          })}
+        </div>
+      ),
+    },
 
-        {report.walkaround && (
-          <Section id="walkaround" label="Walkaround video" note="what was kept, and what was thrown away">
-            <Walkaround track={report.walkaround} />
-          </Section>
-        )}
-
-        {/* ---------------------------------------------------------------- */}
-        {/* every frame, with anchors the findings link back to              */}
-        {/* ---------------------------------------------------------------- */}
-
-        <Section
-          id="gallery"
-          label={`All media (${photos.length})`}
-          note="every image, whether anything was found on it or not"
-        >
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(min(300px, 100%), 1fr))",
-              gap: "var(--s-5)",
-            }}
-          >
-            {photos.map((asset) => {
-              const annotations = annotationsFor(
-                asset.id,
-                report.findings,
-                report.mechanicReferrals,
-              );
-              const fromVideo = frameIds.has(asset.id);
-              return (
-                <div key={asset.id} id={`asset-${asset.id}`} className="section">
-                  <Overlay
-                    src={assetUrl(report.inspectionId, asset.path)}
-                    alt={`${asset.viewClass ?? "unclassified"} - ${asset.id}`}
-                    annotations={annotations}
-                    synthetic={asset.synthetic}
-                  />
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      gap: "var(--s-3)",
-                      marginTop: "var(--s-2)",
-                      fontSize: "var(--t-xs)",
-                    }}
-                  >
-                    <span className="label">
-                      <span className="data">{asset.id}</span>
-                      {fromVideo && (
-                        <span className="dim" style={{ marginLeft: 6 }}>
-                          from video
-                        </span>
-                      )}
-                    </span>
-                    <span className="dim">
-                      {asset.viewClass === null || asset.viewClass === "unknown"
-                        ? "view not identified"
-                        : annotations.length === 0
-                          ? "nothing flagged here"
-                          : `${annotations.length} region${annotations.length > 1 ? "s" : ""} flagged`}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </Section>
-
-        <Section id="systems" label="Systems">
+    {
+      id: "systems",
+      nav: "Systems",
+      label: "Systems",
+      body: (
+        <>
           <div className="table-scroll">
             <table>
               <thead>
@@ -793,103 +786,199 @@ export function ReportView({ report }: { report: Report }) {
             software. TIREKICK will not report on them at any confidence, on any
             vehicle, ever.
           </p>
-        </Section>
+        </>
+      ),
+    },
 
-        {report.audio && (
-          <Section id="audio" label="Engine audio">
-            <AudioTrackView
-              track={report.audio}
-              inspectionId={report.inspectionId}
-              // The clip's real filename, from the asset row the track cites.
-              // Deriving it as `${assetId}.wav` worked for the fixture by
-              // coincidence of naming; the media route serves what the report
-              // cites, so the citation is the only safe source of the path.
-              clipPath={assetById(report, report.audio.assetId)?.path ?? null}
-            />
-          </Section>
-        )}
+    ...(report.audio
+      ? [
+          {
+            id: "audio",
+            nav: "Audio",
+            label: "Engine audio",
+            body: (
+              <AudioTrackView
+                track={report.audio}
+                inspectionId={report.inspectionId}
+                // The clip's real filename, from the asset row the track cites.
+                // Deriving it as `${assetId}.wav` worked for the fixture by
+                // coincidence of naming; the media route serves what the report
+                // cites, so the citation is the only safe source of the path.
+                clipPath={assetById(report, report.audio.assetId)?.path ?? null}
+              />
+            ),
+          },
+        ]
+      : []),
 
-        {report.vehicle && (
-          <Section id="record" label="Vehicle record">
-            <VehicleRecordSection vehicle={report.vehicle} />
-          </Section>
-        )}
+    ...(report.vehicle
+      ? [
+          {
+            id: "record",
+            nav: "Vehicle record",
+            label: "Vehicle record",
+            body: <VehicleRecordSection vehicle={report.vehicle} />,
+          },
+        ]
+      : []),
 
-        {report.price && (
-          <Section id="price" label="Price check">
-            <PriceSection price={report.price} />
-          </Section>
-        )}
+    ...(report.price
+      ? [
+          {
+            id: "price",
+            nav: "Price",
+            label: "Price check",
+            body: <PriceSection price={report.price} />,
+          },
+        ]
+      : []),
 
-        {report.sellerQuestions.length > 0 && (
-          <Section
-            id="questions"
-            label={`Questions for the seller (${report.sellerQuestions.length})`}
+    ...(report.sellerQuestions.length > 0
+      ? [
+          {
+            id: "questions",
+            nav: "Questions",
+            label: `Questions for the seller (${report.sellerQuestions.length})`,
+            count: report.sellerQuestions.length,
+            body: (
+              <ol
+                className="prose-sm"
+                style={{ paddingLeft: "var(--s-5)", display: "grid", gap: "var(--s-2)" }}
+              >
+                {report.sellerQuestions.map((q, i) => (
+                  <li key={i}>{q}</li>
+                ))}
+              </ol>
+            ),
+          },
+        ]
+      : []),
+
+    ...(report.negotiationScript.length > 0
+      ? [
+          {
+            id: "script",
+            nav: "Script",
+            label: "Negotiation script",
+            body: (
+              <div style={{ display: "grid", gap: "var(--s-3)" }}>
+                {report.negotiationScript.map((beat, i) => (
+                  <div key={i} className="panel">
+                    <div className="label">{beat.beat}</div>
+                    <p className="prose" style={{ margin: "var(--s-2) 0 0" }}>
+                      &ldquo;{beat.say}&rdquo;
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ),
+          },
+        ]
+      : []),
+
+    {
+      // LAW 5. Internal-facing in P0; see DECISIONS.md D-012. It is still a
+      // section of the document, so it is still in the contents - a section the
+      // nav omits is one a reader has no way to know exists.
+      id: "run",
+      nav: "Run",
+      label: "Run metadata",
+      body: (
+        <div className="table-scroll">
+          <table>
+            <tbody>
+              <tr>
+                <td className="label">Mode</td>
+                <td className="data">{report.cost.mode}</td>
+              </tr>
+              <tr>
+                <td className="label">Images analyzed</td>
+                <td className="data">{report.cost.imagesAnalyzed}</td>
+              </tr>
+              <tr>
+                <td className="label">Tokens</td>
+                <td className="data">
+                  {report.cost.inputTokens.toLocaleString()} in /{" "}
+                  {report.cost.outputTokens.toLocaleString()} out
+                </td>
+              </tr>
+              <tr>
+                <td className="label">Audio processed</td>
+                <td className="data">{report.cost.audioSecondsProcessed.toFixed(1)}s</td>
+              </tr>
+              <tr>
+                <td className="label">Cost to produce</td>
+                <td className="data">${report.cost.usdTotal.toFixed(4)}</td>
+              </tr>
+              <tr>
+                <td className="label">Note</td>
+                <td>
+                  <div className="prose-sm dim">{report.cost.note}</div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <>
+      <ReportNav
+        sections={sections.map((s) => ({ id: s.id, label: s.nav, count: s.count }))}
+      />
+
+      <div className="wrap" style={{ paddingTop: "var(--s-6)", paddingBottom: "var(--s-9)" }}>
+        <header
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "baseline",
+            flexWrap: "wrap",
+            gap: "var(--s-3)",
+            paddingBottom: "var(--s-4)",
+            borderBottom: "1px solid var(--tk-rule)",
+          }}
+        >
+          <h1 style={{ fontSize: "var(--t-xl)" }}>
+            {report.vehicle
+              ? [report.vehicle.decoded.year, report.vehicle.decoded.make, report.vehicle.decoded.model]
+                  .filter(Boolean)
+                  .join(" ")
+              : "Inspection report"}
+          </h1>
+          <span className="label data">
+            {report.reportId} / {report.generatedAt} / mode: {report.mode}
+          </span>
+        </header>
+
+        <div style={{ marginTop: "var(--s-5)" }}>
+          <Banner text={report.banner} />
+        </div>
+
+        {report.containsSyntheticMedia && (
+          <div
+            className="panel prose-sm"
+            style={{
+              marginTop: "var(--s-3)",
+              borderColor: "var(--tk-locked)",
+              color: "var(--tk-locked)",
+            }}
           >
-            <ol
-              className="prose-sm"
-              style={{ paddingLeft: "var(--s-5)", display: "grid", gap: "var(--s-2)" }}
-            >
-              {report.sellerQuestions.map((q, i) => (
-                <li key={i}>{q}</li>
-              ))}
-            </ol>
-          </Section>
-        )}
-
-        {report.negotiationScript.length > 0 && (
-          <Section id="script" label="Negotiation script">
-            <div style={{ display: "grid", gap: "var(--s-3)" }}>
-              {report.negotiationScript.map((beat, i) => (
-                <div key={i} className="panel">
-                  <div className="label">{beat.beat}</div>
-                  <p className="prose" style={{ margin: "var(--s-2) 0 0" }}>
-                    &ldquo;{beat.say}&rdquo;
-                  </p>
-                </div>
-              ))}
-            </div>
-          </Section>
-        )}
-
-        {/* LAW 5. Internal-facing in P0; see DECISIONS.md D-012. */}
-        <Section id="run" label="Run metadata">
-          <div className="table-scroll">
-            <table>
-              <tbody>
-                <tr>
-                  <td className="label">Mode</td>
-                  <td className="data">{report.cost.mode}</td>
-                </tr>
-                <tr>
-                  <td className="label">Images analyzed</td>
-                  <td className="data">{report.cost.imagesAnalyzed}</td>
-                </tr>
-                <tr>
-                  <td className="label">Tokens</td>
-                  <td className="data">
-                    {report.cost.inputTokens.toLocaleString()} in /{" "}
-                    {report.cost.outputTokens.toLocaleString()} out
-                  </td>
-                </tr>
-                <tr>
-                  <td className="label">Audio processed</td>
-                  <td className="data">{report.cost.audioSecondsProcessed.toFixed(1)}s</td>
-                </tr>
-                <tr>
-                  <td className="label">Cost to produce</td>
-                  <td className="data">${report.cost.usdTotal.toFixed(4)}</td>
-                </tr>
-                <tr>
-                  <td className="label">Note</td>
-                  <td>
-                    <div className="prose-sm dim">{report.cost.note}</div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            This report was generated from synthetic fixture media. The images are
+            drawings, not photographs, and no statement here about condition
+            describes a real vehicle. The federal records below are real: the VIN
+            carries genuine manufacturer codes with an invented serial, so it
+            decodes to a real model and identifies nobody&rsquo;s car.
           </div>
-        </Section>
+        )}
+
+        {sections.map((s) => (
+          <Section key={s.id} id={s.id} label={s.label} note={s.note}>
+            {s.body}
+          </Section>
+        ))}
 
         <footer
           style={{

@@ -25,6 +25,23 @@ import type {
  * src/enum-parity.test.ts.
  */
 
+/*
+ * Money is `doublePrecision`, not `integer`.
+ *
+ * Every dollar column here was an `integer` while the contract typed the same
+ * field `z.number().nonnegative()`, so an $8,499.50 asking price became $8,499
+ * on the way into the row - a different number, in the product whose one job is
+ * to argue about that number, changed with nothing recording that it was. That
+ * is not a rounding convention; it is a silent edit to the buyer's evidence.
+ *
+ * `numeric` would be the textbook choice for money and is the wrong one here: it
+ * comes back from drizzle as a string, which the contract's `number` is not, so
+ * the fix would have closed a truncation by opening a type mismatch. A double
+ * holds exactly what a JSON number holds, which is what both sides of this
+ * contract already are. src/column-parity.test.ts fails on any dollar column
+ * that cannot keep the cents.
+ */
+
 export const assetKind = pgEnum("asset_kind", [
   "photo",
   "video",
@@ -101,7 +118,7 @@ export const inspections = pgTable(
     /** Buyer email, nullable until they pay. */
     buyerEmail: text("buyer_email"),
     vin: text("vin"),
-    askingPriceUsd: integer("asking_price_usd"),
+    askingPriceUsd: doublePrecision("asking_price_usd"),
     /** Stripe payment reference; null means teaser-only. */
     paymentRef: text("payment_ref"),
     paidAt: timestamp("paid_at", { withTimezone: true }),
@@ -166,8 +183,8 @@ export const findings = pgTable(
      * jsonb column, so the guarantee lives in the contract, not here.
      */
     evidence: jsonb("evidence").$type<Evidence[]>().notNull(),
-    estimatedCostLowUsd: integer("estimated_cost_low_usd"),
-    estimatedCostHighUsd: integer("estimated_cost_high_usd"),
+    estimatedCostLowUsd: doublePrecision("estimated_cost_low_usd"),
+    estimatedCostHighUsd: doublePrecision("estimated_cost_high_usd"),
     sellerQuestion: text("seller_question"),
     mechanicCheck: text("mechanic_check"),
     engine: engineName("engine").notNull(),
@@ -197,13 +214,31 @@ export const priceChecks = pgTable("price_checks", {
   inspectionId: text("inspection_id")
     .notNull()
     .references(() => inspections.id, { onDelete: "cascade" }),
-  askingPriceUsd: integer("asking_price_usd").notNull(),
+  askingPriceUsd: doublePrecision("asking_price_usd").notNull(),
   /** LAW 3 - user-pasted comps only. */
   comps: jsonb("comps").notNull(),
-  fairRangeLowUsd: integer("fair_range_low_usd").notNull(),
-  fairRangeHighUsd: integer("fair_range_high_usd").notNull(),
+  /**
+   * Comps the buyer supplied that the range was computed without, and why.
+   *
+   * The contract renders these because a comp silently dropped is a comp the
+   * buyer thinks was counted. A row that stored the survivors and not the
+   * exclusions would turn a filtered range back into an unexplained one on its
+   * way through the database - the report would still say "four comps", and
+   * nothing would be able to say what happened to the fifth.
+   */
+  excluded: jsonb("excluded").notNull(),
+  /**
+   * How the comps were adjusted before the range was taken. Without it the two
+   * bounds below are a number pair with no arithmetic behind them, which is the
+   * one thing LAW 1 does not permit a verdict to be.
+   */
+  normalizationNotes: text("normalization_notes").notNull(),
+  fairRangeLowUsd: doublePrecision("fair_range_low_usd").notNull(),
+  fairRangeHighUsd: doublePrecision("fair_range_high_usd").notNull(),
   deductions: jsonb("deductions").notNull(),
   verdict: text("verdict").notNull(),
+  /** The sentence the buyer actually reads. The enum above is not a substitute. */
+  verdictStatement: text("verdict_statement").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

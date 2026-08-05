@@ -1010,3 +1010,214 @@ the fractions are serialised at four decimals), and `CostBand`, `PriceRange` and
 `PriceDeduction` reject inverted pairs. Cost: an engine that produces a
 slightly-out-of-frame box now fails loudly at construction instead of shipping a
 box the viewer clips - which is the trade LAW 1 already makes everywhere else.
+
+### D-061 - The accuracy gate table is written by a script, not typed
+**P10.** `docs/ACCURACY.md` has said since P0: "This page is generated from
+`bench/results/latest.json`. There is no second place to type a precision figure,
+so a number here that is not in that file cannot happen." Nothing generated the
+page. The table was typed in P0 and hand-edited afterwards, which is exactly the
+second place the sentence promises does not exist - and by P9 it had drifted in
+all three ways a hand-maintained table drifts: fifteen rows for sixteen registered
+types (so `documentation_gap` shipped with no published gate at all), Status values
+reading "awaiting P2" four phases after P2, and nothing anywhere able to tell you
+either was true.
+
+The third is the serious one. A precision figure typed into a document is a
+marketing claim wearing a measurement's clothes, and this project's whole argument
+is that those are different things. `scripts/sync_accuracy_table.py` now writes the
+table from `registry.FINDING_TYPES`, which already reads the bench results, and
+`--check` runs in the test suite so editing the table by hand fails the build with
+the diff printed. Cost: the table's wording is no longer editable in place - a
+column you want to read differently is a change to the script. That is the point.
+
+### D-062 - The accuracy page is rendered by a parser that refuses, not one that copes
+**P10.** `/accuracy` is the page LAW 6 obliges the product to link, and for nine
+phases it rendered the markdown source inside a `<pre>`. A buyer who followed the
+accuracy link - the one above the payment button - was shown `## Finding types and
+their gates`, `**bold**` with the asterisks in, and a sixteen-row gate table as
+pipe-delimited text. The most important page in the product was the least readable
+thing in it.
+
+The obvious fix is a markdown library, and the reason not to take it is the failure
+mode rather than the dependency. A general renderer's contract is "render what you
+understand, pass through what you do not" - which, on this document, means a
+mistyped pipe shows fifteen rows and a stray line of text, and the missing gate is
+invisible. So `apps/web/src/lib/markdown.ts` inverts the contract: it understands
+the constructs this one document uses, throws on everything else including
+malformed versions of what it supports, and parses at module scope so a document it
+cannot read fails `next build` instead of reaching a buyer half-rendered. It
+returns an AST that the page renders through JSX, so nothing on the path produces
+markup and there is no escaping question to get wrong. Cost: this parser is
+correct for exactly one file. Pointing it at arbitrary markdown would be a bug, and
+the docstring says so.
+
+### D-063 - The README's numbers and its quotation of the product are generated
+**P10.** The front page opened with a table of nine numbers and quoted the
+product's own output back at the reader. Every one of those was typed. The test
+count said 612 when the suites collected a different number, and the
+could-not-assess block - presented in a code fence as what the product prints - was
+a paraphrase: the report says "Airbags and restraints" and "Frame and structural
+integrity", the README said "Restraints" and "Structure", tidied into aligned
+columns that no code path produces.
+
+Nothing malicious and nothing load-bearing, which is what makes it worth writing
+down: that is what drift looks like before it matters. A repository whose argument
+is "we do not claim what we have not measured" was pretty-printing the product's
+words on its front page. `scripts/check_readme.py` now writes both blocks from the
+repository - phase reports, DECISIONS.md, docs/LAWS.md, gates.sh, the registry, the
+collected test suites, and the committed fixture report - and checks that every
+path the README names resolves. It runs as a gate. Cost: about thirty seconds per
+gate run, because counting tests honestly means collecting both suites rather than
+grepping for `def test_`, and 25 of the Python tests are parameterised so a static
+count is wrong the moment anyone looks.
+
+### D-064 - The SDK contract is checked outside pytest, by a job that installs it
+**P10.** `client._retryable_errors` reads two attributes off `anthropic` and
+returns `()` when the import fails. `()` is a legal `except` clause that catches
+nothing, so a rename on the SDK's side does not raise - it silently turns the retry
+loop into a single attempt, and the symptom is a paid run dying on the first 429 a
+retry would have absorbed. The test written to prevent this was named
+`..._the_sdk_actually_defines` and asserted against a stub built three lines above
+it; a fake `anthropic` exporting neither name left it green.
+
+The one-line fix inside pytest is `importorskip`, and that is the line that removed
+the retry tests from CI for a phase while still reporting a pass - which
+`test_no_test_in_this_package_is_conditional_on_the_live_extra` now forbids, for
+good reason: the suite must pass with no SDK installed, because running without one
+is the product's documented default (D-009). So the real-package assertion lives in
+`scripts/check_sdk_contract.py`, run by a CI job that installs the `live` extra on
+purpose, and it fails rather than skips when the SDK is absent. A test in
+`test_live_vision.py` asserts the script and the job both still exist, so deleting
+either goes red rather than leaving a docstring describing a check that is gone.
+Cost: one more CI job, and a job that can break on somebody else's release. That is
+the alarm working - the gates job stays green, the product still runs without a
+key, and the thing that is actually broken is the thing that goes red.
+
+### D-065 - A fix ships with the mutation that proves its test can fail
+**P10.** Seven crews fixed seven verified defects. All nine gates were green, 776
+tests passed, and an adversarial pass found every one of the seven defective -
+including a regression that turned a clean car's history report into five major
+findings at full confidence, each quoting its own denial as the evidence.
+
+Nine gates did not see it. What saw it was deleting each new mechanism and asking
+whether anything went red. So that is now the bar: a change that adds a mechanism
+also reports the mutation that breaks it and the test that caught the break. This
+is not a new law, it is how the existing rule about watching a test go red gets
+applied to work that is already written - and it catches the case the original rule
+misses, which is a mechanism whose test passes for a reason unrelated to it.
+
+It has already earned itself twice inside this phase. The replacement history
+classifier survived its first mutation run with one guard unpinned, and the fixture
+provenance test's format-refusal branch passed for a reason unrelated to the code
+it was presented as guarding. Cost: roughly a third again as much work per fix,
+paid in the phase where seven of seven fixes needed it.
+
+### D-066 - A cell separator is not a statement boundary
+**P10.** A denial has a scope and it is not the whole line, so `_CLAUSE_BREAK`
+splits a document line into statements before deciding whether a brand is being
+reported or denied. A pipe was added to that pattern on the reasoning that a table
+row holds two statements. It does - and nothing distinguishes a cell separator from
+a sentence boundary except what the cells say. Every clean row of every markdown
+history report - `| Salvage | None reported |` - split into a bare label and an
+answer about nothing, and shipped as a major at confidence 1.0 with its own denial
+quoted underneath as the evidence.
+
+It bought one contrived row full strength and cost a whole layout a false alarm.
+D-017 says which direction to be wrong in and it is not that one. The pipe is out,
+and the row that motivated it (`SALVAGE TITLE ISSUED | Prior owner: N/A`) now ships
+hedged rather than at full strength - a downgrade of degree on one line, in
+exchange for not printing a salvage warning on every clean car whose report is a
+table.
+
+What replaces it is narrower and says what it means: `.` and `;` remain boundaries,
+but a following clause that contains nothing except answer words - "none reported",
+"not reported" - belongs to the label in front of it, while one with a subject of
+its own - "no accidents reported" - is a statement about accidents and denies the
+brand beside it nothing. Cost: an answer vocabulary that has to be maintained, and
+one guard (a clause that has already asserted the brand does not absorb the answer
+after it) that exists to stop the absorption deleting a finding. Every separator is
+now exercised in both directions, because a separator tested only where it upgrades
+is a separator nobody weighed.
+
+### D-067 - The redaction check reads the bytes, and our own media is subject to it
+**P10.** `redact check` read the sign-off sheet: it asked whether every image had a
+review record and never opened a file. Stripping metadata happened only inside
+`apply`, a separate, destructive, skippable step - so a reviewer could honestly
+sign every interior and odometer shot "nothing to redact", run check, get exit 0,
+and commit photographs still carrying the seller's GPS.
+
+check now asks both questions, and asserts the absence of metadata CONTAINERS -
+EXIF, XMP, IPTC, JPEG COM, PNG text chunks, and trailing data after the JPEG EOI
+marker, which is where a Samsung Motion Photo hides an entire MP4 - rather than
+hunting for coordinates. Pillow parses some container formats and silently returns
+nothing for others, so a coordinate-hunting check reads an empty dict off a
+geotagged file and passes it. "No containers" is what the re-encode actually
+establishes, so that is what the check asserts. A format the tool cannot strip
+(`.heic`, `.webp`, raw) is refused rather than skipped, because a file the walk
+never listed is a file the gate reported clean.
+
+Then the repository submitted to its own rule, which it had never done: the gate
+runs over `fixtures/demo-01/media` in `scripts/gates.sh`, and it immediately found
+that five committed video frames carried ffmpeg's encoder banner in a COM segment
+while README.md told the world the committed images carry no metadata. Harmless
+content; a free-form text container all the same. `refresh_video_cache.py` now
+strips on the way out and raises if anything survives. Cost: the frames are
+re-encoded after selection, so they are not byte-identical to what ffmpeg wrote -
+and the golden report's asset hashes changed with them. What the check still does
+not cover, and says so in its own output rather than reporting a clean directory:
+`.mp4` and `.wav`, and an `.mp4` can carry GPS in its `(c)xyz` atom.
+
+### D-068 - One price, one source, and the charged price is named as being elsewhere
+**P10.** The price existed three times: `checkout.ts` for the landing page,
+`cli.py` for the teaser, and a comment claiming the first of those "is what
+actually charges it". It charges nothing - `paymentLink()` appends a
+`client_reference_id` to a Stripe payment link and never sends an amount, so
+changing the constant to 30 turns every gate green while the buyer is billed
+whatever Stripe holds. Meanwhile the landing page printed the TypeScript constant
+and the very next page printed the Python one, from two unlinked literals with
+nothing comparing them.
+
+`PRICE_USD` now lives in `packages/shared/src/constants.ts` beside the other
+cross-language constants, the Python side is held to it by the same parity test
+that holds `REPORT_BANNER`, and a second literal fails a gate. The Stripe amount
+genuinely cannot be asserted from inside this repository, so the code says that
+instead of implying otherwise. Cost: a real gap that a test cannot close, written
+down in `checkout.ts` and in the Known Gaps section rather than papered over with a
+comment that reads like a guarantee.
+
+### D-069 - A provenance record is compared against `git ls-files`, or it is a souvenir
+**P10.** `fixtures/PROVENANCE.md` ran from P3 to P9 with no row for the rendered
+spectrogram, and from P7 to P9 with no rows for the walkaround video or its five
+extracted frames. Seven files covered by the front page's "all media is synthetic"
+claim had no provenance row at all. Each gap opened in the commit that added the
+artifact and closed in none of the phase gates after it, because no gate read the
+file - and both provenance documents said exactly that about themselves, in
+writing, for phases.
+
+`test_provenance.py` now reads both, in three directions: a committed file with no
+row, a row naming a file that is not there, and the file counts the documents state
+about whole directories. It deliberately does not check whether a row is TRUE -
+nothing opens `audio_01.wav` to confirm it was synthesised the way the row says -
+and the docstring says so, because the P10 audit found a frames row whose four
+counts were each correct and whose sentence around them did not add up. The file
+list comes from `git ls-files` rather than the working tree, so an uncommitted
+scratch file is not yet a provenance obligation. Cost: the documents now have a
+house style the parser depends on, which is written down in each of them rather
+than left to be inferred - a test that silently requires a convention is a test
+that gets edited around.
+
+### D-070 - LAW 2 is enforced on the sub-schemas, where Pydantic enforces it
+**P10.** `assertLaws` checked strictly less than `models.py` did, and the gap was
+LAW 2 itself: `findingSchema.parse` accepted a finding attached to brakes,
+`systemRowSchema.parse` accepted a locked row cleared with a confidence, and
+`teaserSystemRowSchema.parse` accepted the same on the free page - all three of
+which the Pydantic models refuse on construction. No runtime exposure, because
+`parseReport` and `parseTeaser` were the only entry points and both were correct.
+But "the only entry point today" is not a property of a schema, it is a property of
+the current call sites, and the law the whole product rests on should not depend on
+one.
+
+The invariants moved onto the sub-schemas. Cost: a zod schema carrying a refinement
+becomes a `ZodEffects` and loses `.shape`, so it cannot be a `discriminatedUnion`
+member - the schemas that need to stay unrefined for that reason are named with the
+constraint written beside them rather than silently left out.

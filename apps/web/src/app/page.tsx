@@ -2,6 +2,7 @@ import Link from "next/link";
 import { REPORT_BANNER } from "@tirekick/shared";
 import { CoverageMap } from "@/components/CoverageMap";
 import { EvidenceCrop } from "@/components/EvidenceCrop";
+import { PRICE_USD } from "@/lib/checkout";
 import {
   assetById,
   assetUrl,
@@ -21,8 +22,8 @@ import {
  * Two problems, one fix.
  *
  * The first is that this page rendered zero images. TIREKICK sells "each finding
- * boxed on the photograph it came from" and a stranger deciding whether to spend
- * $25 could not see one anywhere before paying. A visual evidence product whose
+ * boxed on the photograph it came from" and a stranger deciding whether to buy
+ * could not see one anywhere before paying. A visual evidence product whose
  * shop window is a wall of text is asking to be taken on faith, which is the
  * opposite of what it claims to offer.
  *
@@ -203,6 +204,53 @@ export default function Home() {
               {demoTeaser.accuracyStatement}
             </p>
           </div>
+        </div>
+
+        {/* ---------------------------------------------------------------- */}
+        {/* the price, in front of the buttons rather than behind them        */}
+        {/* ---------------------------------------------------------------- */}
+
+        {/*
+          Nine phases shipped a page that never named a number. A stranger read
+          all of this, opened the free teaser, ticked three acknowledgements and
+          met the price at the payment step - which is the standard shape for a
+          paid product and is not one this page can use. Everything above argues
+          that TIREKICK says the uncomfortable part before you are committed.
+          Withholding its own price while making that argument refutes it.
+
+          The number is the shared constant, and typed into copy it would be
+          another price - the one on the shop window is the one nobody remembers
+          to change. That much was right. What this comment used to say was that
+          the number "comes from checkout.ts, which is what actually charges it",
+          and that was false in the way this repository keeps catching itself:
+          confidently, in a comment, about a mechanism nothing checked.
+
+          checkout.ts charges nobody. It builds a Stripe payment link URL with a
+          reference id on it and no amount. The amount is configured at Stripe,
+          outside this repository, and nothing here can read it - change this
+          constant and every page reads the new number while the buyer is billed
+          the old one. So the constant is a display price. checkout.ts now makes
+          the deployment declare the amount it configured at Stripe and refuses
+          to show a pay button unless that declaration matches this number, and
+          the checkout page tells the buyer to read the amount on the payment
+          page before confirming. A declaration is not a charge. Nothing here
+          checks the charge, and nothing here can.
+        */}
+        <div style={{ marginTop: "var(--s-6)" }}>
+          <div className="prose" style={{ fontWeight: 600 }}>
+            ${PRICE_USD} a car, once. No subscription.
+          </div>
+          <p className="prose-sm muted" style={{ margin: "var(--s-2) 0 0", maxWidth: "62ch" }}>
+            The free result names what was found and how much of it has been
+            measured. The ${PRICE_USD} report is the evidence underneath: the
+            photograph beneath every finding with the region drawn on it, the
+            recall campaigns on record for the model year, the spectrogram, what
+            your own paperwork says, and the questions to ask the seller. If
+            nothing adverse is visible in your photographs, that is what it will
+            say, and you will have spent ${PRICE_USD} to hear it &mdash; which is
+            a real answer about a car you were about to drive across town for, and
+            better said here than after you have paid.
+          </p>
         </div>
 
         <div

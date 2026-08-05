@@ -34,6 +34,26 @@ export const MODEL_LEVEL_TYPES = ["open_recall", "complaint_pattern"] as const;
 export const LOCKED_SYSTEM_STATEMENT =
   "Not remotely verifiable - independent mechanic required.";
 
+/**
+ * What the paid report costs, in whole US dollars. The only place either
+ * language writes that number down.
+ *
+ * Mirrored in tirekick_engines/teaser.py::PRICE_USD and held to it by
+ * packages/engines/tests/test_shared_constants_parity.py, which also forbids a
+ * second literal anywhere in the Python tree. There were three: this one for
+ * the landing page, `cli.py --price` for the teaser the engine writes into the
+ * artifact, and one more in the teaser tests. The landing page printed the
+ * TypeScript number and the teaser one click later printed the Python one, and
+ * nothing in the repository compared them, because equal literals agree.
+ *
+ * This is a display price and not a charge. The amount a buyer is billed is
+ * configured on the Stripe payment link, outside this repository, and nothing
+ * here can read it - changing this constant changes every number on every page
+ * and changes nothing at Stripe. See apps/web/src/lib/checkout.ts for the
+ * declaration the deployment has to make instead.
+ */
+export const PRICE_USD = 25;
+
 /** LAW 6 + LIABILITY section 4. Shown above the verdict, never dismissible. */
 export const REPORT_BANNER =
   "Automated analysis of media you provided. This is not an inspection, a " +

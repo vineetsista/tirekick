@@ -71,6 +71,19 @@ gate "ts:typecheck" pnpm run typecheck
 gate "ts:test"      pnpm run test
 gate "ts:build"     pnpm run build
 
+# --- The committed media must carry no metadata (D-022) -----------------------
+# Until P10 this was a command a human remembered to type, which is why five
+# committed frames carried ffmpeg's encoder banner in a JPEG COM segment while
+# README.md told the world the images carry none. `check` reads the bytes now,
+# not only the sign-off sheet, so a geotagged photograph fails here rather than
+# on the day somebody downloads it.
+gate "redact:media" "$PY/python" scripts/redact_media.py check fixtures/demo-01/media
+
+# --- The README's numbers must be the repository's numbers (D-063) ------------
+# It collects both suites to count tests, so it is slower than it looks and it
+# is the last gate that can fail for a reason worth knowing about.
+gate "readme:numbers" "$PY/python" scripts/check_readme.py --check
+
 # --- The committed golden artifacts must not have drifted silently ------------
 # The inspect:fixture gate regenerates the report AND the teaser, so both are
 # diffed. Watching only the report let a teaser.py change rewrite the committed

@@ -1,0 +1,41 @@
+TIREKICK - third-party material
+===============================
+
+The MIT licence in LICENSE covers this repository's own source, documentation
+and synthetic fixture media. Three things travelling with it are somebody
+else's, and are listed here rather than appended to LICENSE, because a licence
+file with extra sections stops being recognised as MIT by the tools that read
+it.
+
+Webfonts - apps/web/public/fonts/
+---------------------------------
+
+Archivo, Newsreader and JetBrains Mono are licensed under the SIL Open Font
+Licence 1.1, not under the MIT licence above. The full OFL text and each
+family's copyright notice travel with the files:
+
+    apps/web/public/fonts/archivo-OFL.txt
+    apps/web/public/fonts/newsreader-OFL.txt
+    apps/web/public/fonts/jetbrainsmono-OFL.txt
+    apps/web/public/fonts/LICENSE.md
+
+Federal records - fixtures/federal/
+-----------------------------------
+
+Snapshots of United States government data, retrieved from the NHTSA vPIC API
+and NHTSA's recall and complaint endpoints. US government works are not subject
+to copyright. They are committed so that a fixture run needs no network, and
+every file's origin and retrieval date is recorded in fixtures/PROVENANCE.md.
+
+This is the one part of the fixture that is real. The VIN it decodes is a
+documentation VIN - real manufacturer codes with an invented serial - so it
+resolves to a real model and identifies no vehicle and no person.
+
+Anthropic API
+-------------
+
+The engines call Anthropic's API in live mode, through the `anthropic` SDK,
+which is an optional dependency (the `live` extra) and is not installed by
+default. Use of that API is governed by Anthropic's own terms, not by this
+licence. Nothing in this repository is affiliated with or endorsed by
+Anthropic.

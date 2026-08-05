@@ -408,7 +408,8 @@ never surfaced is how the defects above survived:
 
 ## Licence
 
-MIT — see [LICENSE](LICENSE). The bundled fonts (Archivo, Newsreader, JetBrains
-Mono) are SIL OFL 1.1 and carry their own licence text in
-`apps/web/public/fonts/`; the federal records under `fixtures/federal/` are US
-government data and are not subject to copyright.
+MIT — see [LICENSE](LICENSE), which covers this repository's own source, docs and
+synthetic fixture media. Three things travelling with it belong to somebody else
+and are listed in [NOTICE](NOTICE): the bundled fonts (SIL OFL 1.1), the federal
+records under `fixtures/federal/` (US government data, not subject to copyright),
+and the Anthropic API the live path calls.

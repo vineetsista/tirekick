@@ -19,14 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-The bundled webfonts in apps/web/public/fonts/ are not covered by this licence.
-Archivo, Newsreader and JetBrains Mono are licensed under the SIL Open Font
-Licence 1.1; the full licence text and each family's copyright notice travel
-with the files, in apps/web/public/fonts/.
-
-The federal records committed under fixtures/federal/ are US government data
-retrieved from NHTSA and the NHTSA vPIC API, and are not subject to copyright.
-See fixtures/PROVENANCE.md.

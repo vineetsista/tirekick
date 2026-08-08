@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Teaser } from "@tirekick/shared";
 import { PRICE_USD, checkoutState } from "@/lib/checkout";
+import { Wordmark } from "./Wordmark";
 
 /**
  * The pre-payment acknowledgement. LIABILITY section 4, row three.
@@ -57,9 +58,7 @@ export function PurchaseGate({ teaser }: { teaser: Teaser }) {
           borderBottom: "1px solid var(--tk-line)",
         }}
       >
-        <div style={{ fontSize: 22, letterSpacing: "0.22em", fontWeight: 700 }}>
-          TIREKICK
-        </div>
+        <Wordmark fontSize="22px" />
         <div className="mono-label">before you buy</div>
       </header>
 

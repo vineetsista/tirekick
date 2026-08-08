@@ -463,7 +463,7 @@ describe("the rendered page publishes every finding type", () => {
 
   it("keeps the document's own words, not a rewrite of them", () => {
     const text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
-    expect(text).toContain("there are still no accuracy numbers");
+    expect(text).toContain("no accuracy numbers here, because there have still been no measurements");
     expect(text).toContain("recall work is free");
     expect(text).toContain("No number appears on this page that is not reproducible");
   });

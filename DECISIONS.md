@@ -1221,3 +1221,333 @@ The invariants moved onto the sub-schemas. Cost: a zod schema carrying a refinem
 becomes a `ZodEffects` and loses `.shape`, so it cannot be a `discriminatedUnion`
 member - the schemas that need to stay unrefined for that reason are named with the
 constraint written beside them rather than silently left out.
+
+### D-071 - The redaction check walks the container and the coded stream, in pure Python
+**P11.** `check` read still images and said so: it listed every `.mp4` and `.wav`
+as "not examined" and returned zero. That is a declared gap rather than a hidden
+one, which is the better of two bad answers and is still an answer that lets a
+file ship unread - and what it let ship, in this repository's own fixtures, was a
+clip carrying an encoder banner in a `(c)too` atom, a second copy of it in the
+32-byte `compressorname` of the sample entry, and x264's whole command line in a
+user-data SEI down inside `mdat`, where no container reader looks at all. A real
+walkaround video carries the position it was shot in beside them.
+
+Three choices worth recording. **Pure Python, not ffprobe:** a check that can
+answer "skipped, the tool is not installed" has already passed on the one machine
+where it mattered, and ffprobe answers with a normalised tag dict, so a container
+it does not model reads as `{}` and passes - the Pillow-getxmp failure one format
+up. **A real sample-table walk, not a substring search:** `avcC` for the NAL
+length prefix, `stsz` for the sizes, `stsc`/`stco` for where samples sit, then
+length-prefixed NAL units, flagging type 6 whose first payload type is 5. Grepping
+`mdat` for a byte pair fires on compressed data by coincidence, and a check that
+cries wolf is a check people learn to skip. **Nothing is ever removed:**
+`stco`/`co64` hold absolute file offsets, so cutting a box out shifts everything
+after it and silently repoints every chunk pointer into the middle of a frame - a
+file that still opens, still reports the right duration, and decodes garbage. A
+`udta` is retyped to `free` and zeroed at its original size instead.
+
+One field is read by value rather than as a container: `creation_time` and
+`modification_time` in `mvhd`/`tkhd`/`mdhd`, which say when the car was filmed.
+The usual argument for containers (D-067) is that a reader cannot see reliably
+inside every one of them, and that does not apply to a fixed-width field at a
+known offset in a box the walker has already length-checked.
+
+Cost, and it is the honest one: this is the third phase in a row where the
+repository's own committed media failed the gate it had just been given. Also, the
+in-place timestamp scrub was decorative when written - ffmpeg's `+bitexact` had
+already zeroed those fields, so deleting the mechanism reddened nothing. It is now
+tested where it can fail, with no remux in front of it.
+
+### D-072 - Nothing in the media directory is invisible
+**P11.** Every walk in the redaction tool was an allowlist of suffixes, so the
+default for anything outside all of them was to be skipped: not listed, not
+reviewed, not stripped, and not mentioned by the success line. The directory this
+repository commits contains `history_01.txt`, a title history, and `check` printed
+"14 still image(s) ... no metadata container" over it for four phases without ever
+naming it. A real buyer's version of that file is a scan of a title certificate
+with their address on it.
+
+The default is inverted. A file no category claims is refused by name - the same
+answer `.heic` already got, except that `.heic` had to be predicted in advance and
+this does not. Documents are a category of their own: nothing strips a `.txt`,
+because the content is the whole file and there is no container to strip, so what
+they get is the other half of D-022 - a person confirming the file is safe to
+commit. `redactions.json` is exempted by exact filename rather than by suffix,
+because a buyer can upload a `.json` and an exempt suffix is a hole shaped like a
+file extension.
+
+Cost: the fixture directory needed a new signed-off record, and `init` had to
+learn to scaffold one for a document, or the tool refused a file it gave no way to
+clear.
+
+### D-073 - A rate with a zero denominator is null, and a harness with nothing to score refuses
+**P11.** `docs/EVAL.md` promised F1, precision at high confidence, a severity
+confusion matrix and a calibration plot from P0 and `bench.py` computed none of
+them. Building them introduced the opposite risk immediately, because all four are
+ratios and the eval set is empty: three of the four fail toward *flattery* if
+written the obvious way. Precision at 0.8 over an empty subset guarded as 1.0 says
+"we were right about all zero of them". A severity agreement rate as
+`exact / max(n, 1)` is perfect agreement from nothing. And an expected calibration
+error accumulated from 0.0 and never divided reports **0.0, which reads as
+perfectly calibrated** - the worst thing this change could ship and the easiest to
+write by accident.
+
+So: every rate whose denominator is zero is `null`, never `0.0` and never `1.0`,
+and every rate ships beside the integer count it came from. Above that,
+`bench/results/latest.json` carries `"scored": false` and a refusal sentence, and
+`render()` prints that refusal *instead of* the table, because a table of dashes
+is still a table and a screenshot of one is a claim.
+
+Two things deliberately did not change. The gate still reads overall precision at
+IoU 0.4 and the unfiltered `n`: precision at 0.8 is `>=` overall precision by
+construction for any model whose confidence carries signal, so gating on it would
+let a type ship on the strength of the subset the report already privileges while
+the findings below the threshold - which it also prints - went entirely ungated.
+And `docs/ACCURACY.md`'s table still publishes precision and not F1, because a
+buyer reading an F1 column beside a "Precision gate" column reads F1 as the gated
+number. Both are pinned by tests rather than by this paragraph.
+
+The severity vocabulary is `models.Severity` - info, minor, major, critical - read
+with `get_args` rather than retyped. EVAL.md promised {cosmetic, moderate,
+significant}, a third vocabulary matching nothing in the code; a translation table
+between two of them would have hidden exactly the over-call the matrix exists to
+measure. Cost: `bench/results/latest.json` is now regenerated and diffed by a
+gate, so the file the eval gate reads can no longer drift silently - which it had,
+through the entire addition of four metrics, with all eleven gates green.
+
+### D-074 - A promise this repository cannot read is refused, not skipped
+**P11.** `unkept_promises` checked that a `path::symbol` promise in `docs/LAWS.md`
+named a symbol the file defines, and its loop opened
+`if target.suffix != ".py" or not target.is_file(): continue` - two conditions
+with opposite meanings sharing one `continue`, inside the function written to
+catch a law pointing at nothing. `apps/web/src/lib/access.ts::verifyGrant` would
+have had its file checked and its symbol dropped in silence. It had never given a
+wrong answer only because both `::` promises in LAWS.md happened to be Python.
+
+The mechanism is the refusal, not the reader. A dispatch table maps extension to
+reader (`.py` by `ast`, `.ts`/`.tsx` by a declaration scan, `.sh` by the gate-name
+reader that already existed), and an extension with no reader raises. `.md` and
+`.json` are refused on purpose and the reasons are written beside the table: a
+`.md::x` could mean a heading, an anchor or a phrase, and a JSON key is a path
+that a flat set of names cannot express.
+
+Cost: the TypeScript reader is a scan rather than a parse, because a Python test
+must not acquire a TypeScript toolchain. Every failure mode of it except one is
+red-not-green - a declaration form it cannot see makes the law report unkept,
+which is a spurious failure and never a spurious pass. The exception, a re-export
+naming a symbol defined elsewhere, is handled explicitly and tested.
+
+### D-075 - The wordmark has one definition
+**P11.** `docs/BRAND.md` specified the wordmark as "800 weight, 0.22em tracking",
+recorded that two sites disagreed, and explained why it was writing the drift down
+rather than correcting it: "a wordmark defined in two places will drift again the
+moment a third appears." That was right and it undercounted. Four more appeared:
+by P11 the mark was set at six sites, in three tracking values, at two weights.
+
+D-049 says a duplicated definition ships with the test that compares the copies.
+The better answer available here was to delete the copies, so there is one
+`Wordmark` component and two tests guard it - one that nothing else may render the
+word, one that the two figures BRAND.md publishes are the two the component uses.
+Size stays a prop because the document does not specify one; weight and tracking
+are not props, because a prop is a place for them to drift from it again.
+
+The render test earned itself immediately: it found a sixth site the grep behind
+this entry had missed, because `new/page.tsx` set the two properties on a `<Link>`
+rather than on a `<span>` inside it. The count in the first draft of the component's
+own docstring was wrong in the commit that removed the duplication.
+
+### D-076 - An inspection directory is claimed, not assumed
+**P11.** The id was `insp_${randomUUID().slice(0, 8)}` - 32 bits - handed to
+`mkdir(..., { recursive: true })`, which returns quietly when the directory is
+already there. So a collision did not fail, it MERGED: the second upload's media
+landed beside the first's, the second manifest overwrote the first, and because a
+grant is an HMAC over the inspection id, whoever held either grant held both. The
+failure is not a lost upload, it is one stranger reading another stranger's
+photographs, and the birthday bound puts even odds on it at about 77,000
+inspections.
+
+The id is now a whole UUID's worth of randomness, and `recursive: false` makes the
+filesystem answer the question instead of us. The second change is the one that
+matters: "negligible" is a probability argument and `EEXIST` is a fact, and a
+probability argument is what the old code was already relying on. `ENOENT` is
+handled separately from `EEXIST`, so a missing workspace is not retried five times
+into an error that hides what actually went wrong.
+
+Cost: the test has to stub `randomUUID` to repeat itself, because a test that
+merely asserted "two ids differ" would have passed against the broken code every
+time it ran.
+
+### D-077 - The last typed number in the generated table becomes a derived one
+**P11.** `README.md` said "Every number in that table is read out of the
+repository" two paragraphs above a table whose live-model-call row was the string
+`**0**`, typed into `render_standing` directly. Nine of the ten rows were derived.
+The tenth was the one making the strongest claim.
+
+"Live model calls ever made" is not derivable - nothing in a repository can know
+what its author once ran on a laptop. What is derivable is what a live call leaves
+behind: `ModelClient.call` writes its response into `cached/`, and those files are
+committed so a fixture run needs no key. So the row counts cache entries that do
+not declare themselves something else, and it is *named for what it counts* rather
+than for what it implies. Every entry declares itself today - the hand-written
+vision responses carry `_fixture_note`, the two computed caches name the script
+that measured them - so a real response cached and committed arrives with neither
+and is counted immediately, and so is an artifact dropped in with no provenance at
+all.
+
+The gates row lost its ", green local and CI" for the same reason: this script
+counts the gates, it does not run them, and it was publishing a claim about their
+result inside the block whose whole argument is that its contents are derived.
+Whether the gates are green is what the CI badge is for, because a badge is a link
+to a run and a sentence is not.
+
+### D-078 - A denial is scoped to the brand standing next to it
+**P11.** `_classify` returned "denied" the instant `_NEGATED_ASSERTION` matched
+anywhere in the selected statement, with no check that the negation's subject was
+the brand. `_CLAUSE_BREAK` splits on `.` and `;` only - a comma, a dash and a
+table pipe are deliberately not boundaries (D-066) - so a denial about accidents,
+liens or recalls swallowed an asserted salvage, flood, rebuilt or total-loss brand
+sitting on the same line:
+
+    SALVAGE TITLE ISSUED 03/2019, no accidents reported     -> denied. No finding.
+    Flood damage reported 06/2018, none disclosed by seller  -> denied. No finding.
+    | SALVAGE TITLE ISSUED 03/2019 | no accidents reported | -> denied. No finding.
+
+A vehicle whose own paperwork declares a salvage brand produced no title-brand
+finding at all. That is the inverse of P10's regression and it is worse: a false
+major is something the buyer can check, because LAW 1 puts the quoted line beside
+the claim. A silent drop gives them nothing to check.
+
+The fix uses the shape the file already had for words that only look like denials:
+blank the negated assertion as a *unit*, the way `_ENUMERATION` and
+`_NAMED_WITH_A_NEGATION` are blanked, then read what remains. Something in the
+remainder still asserting means both signals are present and the answer is
+ambiguous; a remainder that only denies further is denying, whatever else it
+mentions - hedging that would be P10's false-major regression in a new costume.
+All three lines now ship hedged with the whole line quoted, and every clean-title
+shape stays denied.
+
+Two more defects in the same engine went with it. `scan` broke out of the pattern
+loop on the first match, and the patterns are ordered by seriousness rather than
+by position, so a correctly *denied* serious brand hid an asserted lesser one:
+`Salvage: none reported. Flood damage reported 03/2019.` produced nothing, while
+the same content on two lines produced the flood finding. The break is now
+conditional on the stance having produced something a buyer will see. And
+`_excerpt` truncated 240 characters from the start of the line while the keyword
+could sit anywhere in it, so a wide record row published a major salvage
+allegation cited to text that mentions no salvage - under copy reading "The line
+is quoted below exactly as it appears." The window is centred on the match now,
+and a shortened excerpt says it was shortened.
+
+Cost, recorded because it is a real limit: `_NEGATED_ASSERTION` blanks up to
+twenty characters past the negation, so "Salvage brand: none, title issued 2019"
+has the assertion verb swallowed inside the blanked span and comes out denied. It
+is not a regression - HEAD returned denied there too, for a cruder reason - and
+widening the pattern to chase it is how this engine broke the last two times.
+
+### D-079 - A grant expires, and can be revoked for one inspection without rotating the key
+**P11.** `issueGrant` signed `${inspectionId}.${reason}` and nothing else. The
+only time bound in the system was the *cookie's* max-age, which is client-side
+advice, so the token was a permanent bearer credential and `/access/<id>?t=<token>`
+re-minted the cookie on demand. Beside it, `GRANT_COOKIE_MAX_AGE_SECONDS`
+described ninety days as "how long a grant lives" and `LIABILITY.md` section 6
+promised a revocable grant. Both described properties the code did not have.
+
+The issued-at is now inside the signed payload - beside the signature is where the
+holder edits it - and `verifyGrant` rejects a stamp older than the retention
+window and one more than five minutes in the future, because a signed future stamp
+is our own broken clock minting an immortal token. Every unclear reading denies: a
+non-digit timestamp, an empty field, the wrong number of parts. `Number("")` is 0
+and `parseInt("12abc")` is 12, so the digit pattern is what stops us inventing a
+timestamp on the holder's behalf.
+
+Revocation is a per-inspection epoch mixed into the payload, so one inspection can
+be closed without rotating the secret and signing out everybody. An absent epoch
+file reads as zero - failing closed there would invalidate every grant already in
+a browser at deploy time - and a file that exists but does not parse denies, which
+is D-017 applied to somebody's photographs: a buyer can be re-issued a link, a
+seller cannot un-leak a driveway.
+
+The demo exemption is the intersection of `reason === "demo"` and the public demo
+id, and nothing wider. Its media is the checked-in fixture rather than retained
+bytes, so an expiring demo grant would take the public sample dark ninety days
+after a deploy with nobody noticing until a customer did. It is not exempt from
+revocation or from the future-stamp check.
+
+The clock is a parameter with a default, not a stubbed global: stubbing `Date`
+proves the module agrees with the stub, while an injected instant leaves
+production reading the real clock.
+
+Cost, and it is still open: `bumpRevocationEpoch` is exported and tested and
+nothing calls it. The property exists in code and a buyer still cannot exercise
+it, which is the same defect class in a smaller box. The epoch file also lives in
+the local workspace, so it inherits every limitation `inspections.ts` already
+declares about local disk.
+
+### D-080 - The clamp decides by provenance, not by reading prose
+**P11.** `_is_adverse` decided whether a locked-system draft warned or cleared
+from `draft.severity` alone, and its docstring said "anything reassuring is
+dropped outright - that is the entire point of the law." The only reassurance it
+could detect was `severity == "info"`. Any draft tagged minor, major or critical
+became a `MechanicReferral` whose `observation` was the model's sentence copied
+verbatim, printed under a heading that says a mechanic is required. A plausible
+`minor` draft - "the pads appear to have plenty of life left; nothing here
+suggests the braking system needs work" - was a remote all-clear on brakes, which
+is the one outcome LAW 2 exists to make impossible. The clamp enforced "we can
+raise an alarm" and not "we cannot sound an all-clear".
+
+Reading the sentence and judging whether it reassures was the tempting fix and is
+the wrong one: it bolts a second probabilistic filter onto a control that is
+deterministic on purpose (D-004), and it fails the way the model does - silently,
+on the case nobody wrote a phrase for. `copy_rules.BANNED` holds nine exact
+phrasings and knows nothing about pads, rotors or life left.
+
+So the clamp decides by *provenance*. `SELF_AUTHORED_ENGINES` is a default-deny
+allowlist of engines whose sentences a person in this repository wrote. A referral
+built from any other engine's draft carries none of that draft's text: the
+observation is composed from the locked-system label, the engine name and the
+evidence locators. Evidence captions are replaced too, because a caption renders
+under the box in the report gallery and can clear a brake system exactly as well
+as an observation can. Boxes, asset ids and document excerpts are untouched - the
+citation ships, the sentence does not, and the withheld sentence still reaches the
+operator through `clamp_log` on stdout.
+
+The allowlist is itself a claim, so a test checks it mechanically against
+`prompts/<engine>/`: an engine that loads a prompt talks to a model, and prompts
+live one directory per engine. Cost: the buyer loses a sentence and keeps
+everything the sentence was about, and the golden fixture changed in exactly two
+lines - one observation and one caption - which is the fix visible in the product.
+
+### D-081 - An extrapolated price is a refusal, not a $0 range
+**P11.** `_normalized_prices` applied the fitted mileage slope over
+`subject_mileage - comp.mileage` with no bound on how far the subject sat outside
+the comps' observed range. `fit_mileage_slope` guarded the comps' internal spread
+and nothing guarded extrapolation *distance*, so normalized prices went negative,
+`max(0.0, ...)` clamped them silently, and the engine shipped
+`fair_range_usd = $0-$0` with a confident `above_range` verdict: "The asking price
+of $6,000 is above the $0-$0 range these comparable listings support after the
+deductions above. The gap is $6,000." That sentence propagated into the
+negotiation script the buyer is told to say out loud. Comps at 50k, 100k and 150k
+miles with a subject at 260,000 - an ordinary high-mileage car - reproduce it.
+
+`MAX_EXTRAPOLATION_FRACTION = 0.25`, and the argument sits beside the number
+because this repository does not accept a magic constant without one: a
+least-squares line is evidence about the miles its listings cover, and at a
+quarter of the span at least four fifths of the mileage under the answer was
+observed. It composes with `MIN_MILEAGE_SPREAD` - a fit already needs 10,000 miles
+of spread - so the allowance is never tighter than 2,500 miles. It is symmetric,
+because extrapolating *downward* inflates the range and makes an overpriced car
+look fair. A second guard refuses outright on any normalized price at or below
+zero rather than letting it meet the clamp.
+
+Both route through one `_no_verdict` helper that also took over the pre-existing
+"too few comps" refusal, so there is a single way to decline - extending D-032's
+path rather than running a parallel one beside it.
+
+Two more of the same class were found while fixing these, and the second was
+found by the crew's own mutation rather than by a test. Deductions larger than the
+range produced the identical `$0-$0` sentence by a different route, and now refuse
+with the finding that actually matters - the repairs cost more than a comparable
+car - with the deductions still rendered. Then, with the below-zero guard
+disabled, three $0 listings reached that new deduction guard and produced "The
+repairs found on this car - $0 to $0 - come to more than these listings say the
+whole car is worth." The guard now requires a non-zero deduction.

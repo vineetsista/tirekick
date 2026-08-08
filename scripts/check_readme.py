@@ -1,6 +1,6 @@
 """Generate the README's numbers and quotes from the repository. D-063.
 
-The README opens with a table of nine numbers and quotes the product's own output
+The README opens with a table of numbers and quotes the product's own output
 back at the reader. Every one of those was typed by hand, and by P10 the drift was
 exactly what this project spends its phases finding in other people's documents:
 
@@ -125,8 +125,13 @@ def _run(cmd: list[str], cwd: Path) -> str:
 def count_python_tests() -> int:
     """What pytest would run, not what `def test_` greps to.
 
-    A static count is wrong the moment a test is parameterised, and 25 of these
-    are. Collection is the only honest number, and it takes two seconds.
+    A static count is wrong the moment a test is parameterised, and many of
+    these are. Collection is the only honest number, and it takes two seconds.
+
+    The sentence above said "25 of these are" until P11, when there were 30. A
+    hand-counted number in a comment about the danger of hand-counted numbers is
+    a small joke at this file's expense, and it drifted the same way everything
+    else here drifts.
     """
     out = _run(
         [str(REPO_ROOT / "packages" / "engines" / ".venv" / "bin" / "pytest"),
@@ -175,14 +180,21 @@ def render_standing(python_tests: int, ts_tests: int) -> str:
     rows = [
         ("Phases shipped", str(count_phases())),
         ("Tests", f"{python_tests + ts_tests} ({python_tests} Python, {ts_tests} TypeScript)"),
-        ("Gates", f"{count_gates()}, green local and CI"),
+        # No ", green local and CI" here. This script counts the gates; it does
+        # not run them, and for two phases it published a claim about their
+        # result anyway - inside the block whose whole argument is that its
+        # contents are read out of the repository rather than asserted. Whether
+        # the gates are green is what a CI badge is for, and the badge is a
+        # link to a run rather than a sentence this file could keep printing
+        # after the run went red.
+        ("Gates", str(count_gates())),
         ("Laws", str(count_laws())),
         ("Decisions logged", str(count_decisions())),
         ("Finding types the engines can produce", str(len(registry.FINDING_TYPES))),
         ("**Finding types with a measured accuracy**", f"**{measured}**"),
         ("**Finding types enabled for a paid report**", f"**{enabled}**"),
         ("**Real vehicles this has ever seen**", f"**{vehicles}**"),
-        ("**Live model calls ever made**", "**0**"),
+        ("**Live model responses in this repository**", f"**{_live_model_responses()}**"),
     ]
     lines = [STANDING_BEGIN, "", "| | |", "|---|---|"]
     lines += [f"| {label} | {value} |" for label, value in rows]
@@ -215,6 +227,40 @@ def _real_vehicles() -> int:
         if assets:
             sessions += 1
     return sessions
+
+
+def _live_model_responses() -> int:
+    """Committed cache entries that do not say where they came from.
+
+    This row used to be the string `**0**`, typed into the table directly, two
+    paragraphs under a sentence promising that every number in it is read out of
+    the repository. Nine of the ten rows were. This was the tenth, and it was the
+    one making the strongest claim.
+
+    "Live model calls ever made" is not derivable - nothing in a repository can
+    know what its author once ran on a laptop. What IS derivable is the thing a
+    live call would leave behind: `ModelClient.call` writes its response into
+    `cached/`, and those files are committed so a fixture run needs no key. So
+    the count is of cache entries that do not declare themselves something else.
+
+    Every one of them declares itself today: the hand-written vision responses
+    carry `_fixture_note` ("Not a model response"), and the two computed caches
+    carry a `_note` naming the script that measured them. A real response cached
+    and committed arrives with neither and is counted immediately, and so is an
+    artifact somebody drops in with no provenance at all - which is the same
+    failure D-069 found in the provenance records, one directory over.
+
+    The row is named for what this counts rather than for what it implies.
+    """
+    undeclared = 0
+    for path in sorted((REPO_ROOT / "fixtures").glob("*/cached/*.json")):
+        try:
+            entry = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as broken:
+            raise SystemExit(f"error: {path.relative_to(REPO_ROOT)} is not readable: {broken}")
+        if not isinstance(entry, dict) or not (entry.get("_fixture_note") or entry.get("_note")):
+            undeclared += 1
+    return undeclared
 
 
 def render_fixture() -> str:

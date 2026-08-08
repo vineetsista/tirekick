@@ -7,6 +7,7 @@ talks a buyer out of a clean car, and the phrasing that triggers it is not exoti
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -91,6 +92,54 @@ DENYING = [
     "Salvage; none reported",
     "Salvage brand; not reported",
     "Salvage brand; none reported 03/2019",
+    # A denial of the brand and a denial of something else, on one comma-joined
+    # line. Nothing here asserts anything, so blanking the negations out has to
+    # leave a line that still reads as clean rather than one that reads as
+    # unreadable. The comma fix below must not hedge this row.
+    "Salvage: none reported, no liens recorded",
+    "Flood or water damage: none reported, no claims found",
+]
+
+#: A denial of something ELSE sharing a statement with an asserted brand. A
+#: comma, a dash and a table pipe are not clause breaks - nothing in the text
+#: tells a cell apart from a sentence - so the whole line is one statement and
+#: both signals are in it. Until this list existed the denial won outright and
+#: the brand vanished: a vehicle whose own paperwork declares salvage produced
+#: no title-brand finding at all, and the buyer never saw the line, so they
+#: could not check the reading. That is the silent drop D-017 calls the worse
+#: of the two errors. Hedged is the answer; hedged is not silence.
+CROWDED_STATEMENT_HEDGED = [
+    "SALVAGE TITLE ISSUED 03/2019, no accidents reported",
+    "Flood damage reported 06/2018, none disclosed by seller",
+    "Title: SALVAGE BRANDED 2019 - no odometer rollback indicated",
+    "| SALVAGE TITLE ISSUED 03/2019 | no accidents reported |",
+]
+
+#: Filler with no brand keyword and no negation in it, wide enough that a
+#: keyword placed after it falls past MAX_EXCERPT_CHARS. Real history reports
+#: print one record per row and the rows are wide, so this is the ordinary
+#: shape of a document, not a contrived one.
+_WIDE_FILLER = "prior owner history entry " * 13
+
+#: The same filler in fixed-width columns, which is what a report built for a
+#: line printer looks like. It is here because the excerpt is quoted with its
+#: whitespace squeezed while the keyword's offset is an index into the raw line,
+#: and 35 spaces of column padding put those two numbers 300 characters apart.
+#: A window centred on the raw offset lands past the end of the keyword and
+#: quotes the padding instead - the same empty evidence as before the fix, with
+#: the fix in place.
+_PADDED_COLUMN = f"{'prior owner history entry':<60}"
+
+#: Wide single-line rows with the cited keyword at the end, at the start, in the
+#: middle, and behind column padding. The excerpt truncated from the start of
+#: the line, so on all but the third of these the published evidence did not
+#: contain the word the finding was about - underneath copy promising the line
+#: was quoted exactly as it appears.
+WIDE_LINES = [
+    f"{_WIDE_FILLER}SALVAGE TITLE ISSUED 03/2019 {_WIDE_FILLER}",
+    f"{_WIDE_FILLER}{_WIDE_FILLER}FLOOD DAMAGE REPORTED 03/2019",
+    f"JUNK TITLE ISSUED 03/2019 {_WIDE_FILLER}{_WIDE_FILLER}",
+    f"{_PADDED_COLUMN * 9}SALVAGE TITLE ISSUED 03/2019 {_PADDED_COLUMN * 9}",
 ]
 
 #: The one line the scanner is allowed to soften, and the reason it is here
@@ -311,6 +360,127 @@ def test_every_clause_separator_is_covered_in_both_directions(
     ), f"{separator!r}: the finding cites {denying!r}, so the denial was read as an assertion"
 
 
+@pytest.mark.parametrize("line", CROWDED_STATEMENT_HEDGED)
+def test_a_denial_of_something_else_cannot_delete_an_asserted_brand(
+    tmp_path: Path, line: str
+) -> None:
+    """The silent drop, which is the worst thing this file can ship.
+
+    "SALVAGE TITLE ISSUED 03/2019, no accidents reported" declares a salvage
+    brand and denies accidents. A comma is not a clause break, so both live in
+    one statement, and the scanner answered the whole line "denied" the moment
+    it saw a negated assertion anywhere in it - without ever checking that the
+    negation was about the brand. The wreck shipped as clean and the line was
+    never printed, so the buyer had nothing to check (LAW 1, D-017).
+
+    Hedged is what a line carrying both signals earns. What it must not earn is
+    nothing.
+    """
+    assets, root = _document(tmp_path, line)
+    drafts = history.title_brand_findings(assets, root)
+    assert len(drafts) == 1, f"{line!r} asserts a brand and produced no finding at all"
+    assert drafts[0].confidence == 0.5, f"{line!r} carries both signals and must ship hedged"
+    assert drafts[0].severity == "minor"
+    assert drafts[0].evidence[0].excerpt == line, "the buyer has to see the line to check us"
+
+
+def test_a_denied_serious_brand_does_not_hide_an_asserted_lesser_one(tmp_path: Path) -> None:
+    """One finding per line was one finding too few.
+
+    BRAND_PATTERNS is ordered by seriousness, not by position, and the scan
+    stopped at the first pattern that matched. So on "Salvage: none reported.
+    Flood damage reported 03/2019." the salvage pattern won the line, was
+    correctly denied, and produced nothing - and the flood brand asserted three
+    words later was never tested. The same two sentences on two lines report the
+    flood. A document warning or staying silent depending on where it wrapped is
+    not a reading, it is a coin toss.
+    """
+    assets, root = _document(tmp_path, "Salvage: none reported. Flood damage reported 03/2019.")
+    drafts = history.title_brand_findings(assets, root)
+    assert len(drafts) == 1, "the denied salvage brand swallowed the asserted flood brand"
+    assert drafts[0].id.startswith("title_flood")
+    assert drafts[0].confidence == 1.0
+    assert not any(
+        "salvage" in d.id for d in drafts
+    ), "the salvage brand is denied on this line and must stay unreported"
+
+
+def test_scanning_on_past_a_denial_cannot_double_report_a_brand(tmp_path: Path) -> None:
+    """The claim the fix above rests on, checked rather than assumed.
+
+    Continuing past a denied match is only safe because the dedupe in
+    `title_brand_findings` keys on asset and pattern, so a brand found twice is
+    reported once. Assuming that is how a fix for a missing finding turns into a
+    report that says the same thing twice and reads as though we cannot count.
+    """
+    text = (
+        "Salvage: none reported. Flood damage reported 03/2019.\n"
+        "Flood damage reported again 05/2019\n"
+    )
+    assets, root = _document(tmp_path, text)
+    drafts = history.title_brand_findings(assets, root)
+    assert [d.id for d in drafts] == ["title_flood_doc_01"]
+
+
+@pytest.mark.parametrize("line", WIDE_LINES)
+def test_the_excerpt_contains_the_keyword_the_finding_cites(tmp_path: Path, line: str) -> None:
+    """The evidence has to contain the word the finding is about.
+
+    `_excerpt` truncated at MAX_EXCERPT_CHARS counting from the START of the
+    line while the keyword can sit anywhere on it, so on a wide record row - the
+    ordinary shape of a real history report - the published excerpt was 240
+    characters of preamble that never mentioned salvage, printed under copy
+    saying the line was quoted exactly as it appears. The buyer checking our
+    reading against the quote would have found nothing to check.
+
+    Re-matching the pattern against the emitted excerpt guards both halves at
+    once: the window has to be centred on the match AND it has to keep the whole
+    keyword, not just the first characters of it.
+    """
+    assets, root = _document(tmp_path, line)
+    hits = history.scan(assets, root)
+    assert hits, f"{line!r} matches no BRAND_PATTERN: it proves nothing"
+    for hit in hits:
+        assert re.search(
+            hit.pattern.pattern, hit.excerpt, flags=re.IGNORECASE
+        ), f"{hit.pattern.key}: the excerpt does not contain the word the finding cites"
+        assert len(hit.excerpt) <= history.MAX_EXCERPT_CHARS
+
+
+@pytest.mark.parametrize("line", WIDE_LINES)
+def test_a_shortened_excerpt_does_not_claim_to_be_the_whole_line(
+    tmp_path: Path, line: str
+) -> None:
+    """A claim that nothing checks, printed under the evidence it is wrong about.
+
+    The detail copy said "The line is quoted below exactly as it appears" on
+    every finding, including the ones whose excerpt had been cut to 240
+    characters. Saying so of a shortened quote is the defect class this product
+    keeps finding in itself, and here it sits directly above the shortened quote.
+    """
+    assets, root = _document(tmp_path, line)
+    drafts = history.title_brand_findings(assets, root)
+    assert len(drafts) == 1
+    detail = drafts[0].detail
+    assert "exactly as it appears" not in detail, "a shortened quote is not the whole line"
+    assert "too long to print whole" in detail, "the copy has to say what was done to the line"
+    assert "..." in drafts[0].evidence[0].excerpt, "the cut has to be visible in the quote"
+
+
+def test_a_line_that_fits_is_still_quoted_whole_and_says_so(tmp_path: Path) -> None:
+    """The other half of the excerpt fix, which the golden report depends on.
+
+    Every line in the demo fixture fits, so the ordinary copy has to survive the
+    windowing change byte for byte - no ellipsis, no hedge about shortening, and
+    the promise of a verbatim quote kept because it is true.
+    """
+    assets, root = _document(tmp_path, "Body shop invoice notes frame damage, repaired.")
+    drafts = history.title_brand_findings(assets, root)
+    assert drafts[0].evidence[0].excerpt == "Body shop invoice notes frame damage, repaired."
+    assert "The line is quoted below exactly as it appears." in drafts[0].detail
+    assert "too long to print whole" not in drafts[0].detail
+
+
 @pytest.mark.parametrize(
     "line",
     [
@@ -320,6 +490,8 @@ def test_every_clause_separator_is_covered_in_both_directions(
         *BRAND_NAMED_WITH_A_NEGATION,
         *DENIAL_IN_ANOTHER_CLAUSE,
         *CELL_SEPARATOR_HEDGED,
+        *CROWDED_STATEMENT_HEDGED,
+        *WIDE_LINES,
     ],
 )
 def test_every_line_in_the_tables_matches_a_brand_pattern(tmp_path: Path, line: str) -> None:

@@ -302,8 +302,8 @@
       "id": "video_01",
       "kind": "video",
       "path": "video_01.mp4",
-      "sha256": "27d5f95e73437c9c6f576af995181698aab8365eaa2ab42a39079171dbc24016",
-      "bytes": 54524,
+      "sha256": "b3bc4f167f52acb6d795999a5cd1a02473c9f9062c74531fb79b701d52e214d7",
+      "bytes": 53796,
       "viewClass": null,
       "viewConfidence": null,
       "durationSec": 14.0,
@@ -930,7 +930,7 @@
     {
       "id": "ref_vf_bay_02",
       "system": "brakes",
-      "observation": "A wet area is visible on and around the front hub assembly.",
+      "observation": "Brakes: the vision engine flagged something in a boxed region of photo_08. What it said about it is not printed here. A sentence generated about a locked system can read as a warning or as an all-clear, TIREKICK cannot reliably tell the two apart, and publishing the reassuring kind is the outcome this product refuses to risk - so neither kind is published. What it flagged is not withheld: it is cited above and shipped with this report. Look at it, and show it to the mechanic.",
       "ask": "Ask an independent mechanic to inspect this on a lift before you buy. TIREKICK cannot assess it from photos, video, or audio.",
       "evidence": [
         {
@@ -942,7 +942,7 @@
             "w": 0.24,
             "h": 0.2
           },
-          "caption": "Wet area on and around the front hub"
+          "caption": "Flagged here for your mechanic. The wording that came with it is not published."
         }
       ]
     },
@@ -1109,7 +1109,7 @@
     "outputTokens": 0,
     "imagesAnalyzed": 29,
     "audioSecondsProcessed": 22.0,
-    "storageBytes": 3063185,
+    "storageBytes": 3062457,
     "federalLookups": 4,
     "videoSecondsProcessed": 14.0,
     "usdTotal": 0.0,

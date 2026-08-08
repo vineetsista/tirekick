@@ -2,6 +2,7 @@ import Link from "next/link";
 import { REPORT_BANNER } from "@tirekick/shared";
 import { CoverageMap } from "@/components/CoverageMap";
 import { EvidenceCrop } from "@/components/EvidenceCrop";
+import { Wordmark } from "@/components/Wordmark";
 import { PRICE_USD } from "@/lib/checkout";
 import {
   assetById,
@@ -66,15 +67,7 @@ export default function Home() {
             gap: "var(--s-4)",
           }}
         >
-          <span
-            style={{
-              fontWeight: 800,
-              letterSpacing: "0.26em",
-              fontSize: "var(--t-sm)",
-            }}
-          >
-            TIREKICK
-          </span>
+          <Wordmark />
           <span style={{ display: "flex", gap: "var(--s-5)", fontSize: "var(--t-sm)" }}>
             <Link href="/accuracy">Accuracy</Link>
             <Link href="/teaser/demo-01">Sample</Link>

@@ -161,6 +161,14 @@ line that removed the retry tests from CI for a phase.
 
 ### Still open
 
+> **Corrected in P11.** Three of the four bullets below were accurate when this
+> was written. The third was not: the money columns had been changed to
+> `doublePrecision` in commit `f17e3f8` - the same commit that carries this
+> report - and `column-parity.test.ts` already refused any dollar column that
+> could not keep the cents. So a phase report describing what nothing checked
+> ended with a paragraph nothing checked, naming a defect that phase had fixed.
+> The remaining three were closed in P11; see `phase_reports/PHASE_11.md`.
+
 - `redact check` reads still images only. An `.mp4` can carry GPS in a `(c)xyz`
   atom and `fixtures/demo-01/media/video_01.mp4` is committed. The tool says so in
   its own output rather than reporting a clean directory.

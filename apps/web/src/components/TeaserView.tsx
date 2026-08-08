@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { LOCKED_SYSTEM_STATEMENT, type SystemStatus, type Teaser } from "@tirekick/shared";
 import { EvidenceCrop } from "./EvidenceCrop";
+import { Wordmark } from "./Wordmark";
 import { assetUrl, severityColor, statusColor, statusLabel, titleCase } from "@/lib/report";
 
 /**
@@ -47,9 +48,7 @@ export function TeaserView({ teaser }: { teaser: Teaser }) {
         }}
       >
         <Link href="/" style={{ textDecoration: "none" }}>
-          <span style={{ fontWeight: 800, letterSpacing: "0.24em", fontSize: "var(--t-md)" }}>
-            TIREKICK
-          </span>
+          <Wordmark fontSize="var(--t-md)" />
         </Link>
         <span className="label data">free result / {teaser.inspectionId}</span>
       </header>

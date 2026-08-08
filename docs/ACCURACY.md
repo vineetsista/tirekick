@@ -1,7 +1,7 @@
 # TIREKICK ACCURACY
 
-**After nine phases: there are still no accuracy numbers, because there have still
-been no measurements. Every finding type is disabled for paid reports.**
+**There are still no accuracy numbers here, because there have still been no
+measurements. Every finding type is disabled for paid reports.**
 
 The machinery to produce them has been finished since P2 - the vision engine, the
 prompts, and the eval harness that scores model output against human labels. What
@@ -97,11 +97,17 @@ by every single person as "TIREKICK is 100% accurate about recalls" - which woul
 imply we know those recalls are outstanding on your car. We do not, and we cannot.
 See the recall note below.
 
-The title-brand scanner is tested against fifteen hand-written document lines, nine
-of which deny a brand. It gets all fifteen right. That number is also not on the
-table, for a blunter reason: we wrote those lines ourselves, and a scanner scored
-against its author's own examples is measuring nothing. A labeled set of real
-history documents is what would count, and we do not have one yet.
+The title-brand scanner is tested against hand-written document lines, and it gets
+them right. No number for that appears on the table, for a blunter reason than the
+recall one: we wrote those lines ourselves, and a scanner scored against its
+author's own examples is measuring nothing. A labeled set of real history documents
+is what would count, and we do not have one yet.
+
+This paragraph said "fifteen hand-written document lines, nine of which deny a
+brand" from P1 until P11. P10 rebuilt the scanner and its suite wholesale and the
+sentence stayed, so a figure describing a version of the code that no longer existed
+sat on the page that exists to stop exactly that. It is written without a count now,
+because a count here is one nothing generates - the suite is the record.
 
 The same objection applies with more force to the vision engine, so P2 did not
 score it at all. Running the model against our own synthetic fixture drawings would

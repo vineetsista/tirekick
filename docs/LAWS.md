@@ -43,8 +43,15 @@ remotely. Ever. Not at high confidence, not on a clean car, not for a friend.
 - We are decision support for a conversation with a mechanic. We are not an
   inspection, a certification, a warranty, or a substitute for either.
 
-**Enforced in code:** `packages/engines/src/tirekick_engines/safety.py` -
-`LOCKED_SYSTEMS` and `apply_safety_law()`.
+**Enforced in code:** `packages/engines/src/tirekick_engines/safety.py::apply_safety_law`,
+the single pass every draft finding goes through, over the set defined at
+`packages/engines/src/tirekick_engines/models.py::LOCKED_SYSTEMS`.
+
+Both are written as `::` promises so the checker verifies the symbol and not just
+the file. Until P11 this line put `LOCKED_SYSTEMS` in the safety module; it is
+defined in the models module and only imported there. Nothing caught it, because
+the promise was prose, and the existence of the file is all `missing_paths` can
+check when no symbol is named.
 **Tested in:** `packages/engines/tests/test_laws.py::test_safety_law_*` - including an
 adversarial test that feeds a fabricated high-confidence "brakes are good" finding
 through the pipeline and asserts it never reaches the report.
@@ -69,17 +76,26 @@ APIs above. Adding a host is an edit to that file with a DECISIONS entry.
 marketplace domains and asserts each is refused, and one that fails if the allowlist
 grows past a handful of hosts.
 
-**Recorded by hand, and checked by nothing:** `fixtures/PROVENANCE.md` and
-`bench/PROVENANCE.md` are supposed to carry a row per media file. No test walks
-either directory and compares it against the document, so the two can disagree
-silently - and did. The fixture record omitted the spectrogram from P3 and the
-walkaround video and its five extracted frames from P7, and was still omitting all
-seven at P10, while the front page claimed every committed file was synthetic. Each
-gap opened in the commit that added the artifact and closed in none of the phase
-gates after it. This half of LAW 3 is a promise about our
-own diligence, which is exactly the kind of claim the rest of this file exists to
-stop us from making. It is written down as unenforced rather than dressed up as
-enforced.
+**Also tested in:** `packages/engines/tests/test_provenance.py` - `fixtures/PROVENANCE.md`
+and `bench/PROVENANCE.md` carry a row per media file, and the test reads both in
+three directions: a committed file with no row, a row naming a file that is not
+there, and the file counts the documents state about whole directories. The file
+list comes from `git ls-files` rather than the working tree, so an uncommitted
+scratch file is not yet a provenance obligation (D-069).
+
+This paragraph read **"Recorded by hand, and checked by nothing"** until P11, and
+it was accurate when written and for one phase after it stopped being. P10 built
+the check - after the fixture record had omitted the spectrogram since P3 and the
+walkaround video and its five frames since P7, seven files covered by the front
+page's claim that every committed file is synthetic - and left this paragraph
+describing the absence. So the document that exists to stop us claiming an
+unenforced promise is enforced spent a phase claiming the opposite about itself,
+which is the same defect wearing the other face.
+
+What the test still does **not** check is whether a row is TRUE: nothing opens
+`audio_01.wav` to confirm it was synthesised the way its row says. That half is
+still a promise about our own diligence, and it is written down as unenforced
+rather than dressed up as enforced.
 
 ## LAW 4 - EVAL GATE
 

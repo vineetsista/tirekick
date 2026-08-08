@@ -38,6 +38,15 @@ alongside the older and weaker version that passed it; and
 `test_every_predicate_here_is_fed_the_input_its_hole_passed` walks this file's own
 AST and fails if a predicate has no such case. Adding a predicate without a case
 is now red.
+
+And then a fourth time, in the loop of `unkept_promises` - the function written
+to catch a law that points at nothing. It opened `if target.suffix != ".py":
+continue`, so a promise about a TypeScript symbol had its file checked and its
+symbol dropped without a word. It had never given a wrong answer, because the two
+`::` promises in LAWS.md today are both about Python; it was green because nothing
+had asked it anything yet. Symbol readers are now a table keyed by extension and a
+promise in a file type with no reader raises `UncheckablePromise`. Refusing is the
+mechanism. Reading TypeScript is only the part that lets it say yes.
 """
 
 from __future__ import annotations
@@ -46,6 +55,7 @@ import ast
 import fnmatch
 import json
 import re
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -103,6 +113,130 @@ def defined_symbols(source: str) -> set[str]:
     return names
 
 
+#: The declaring keywords the TypeScript reader can see. `_TS_DECLARATION` is
+#: built out of this tuple, so a keyword listed here without a case below the
+#: divider fails `test_every_form_the_typescript_reader_claims_has_a_case`. P10
+#: shipped `phrase_has_teeth` accepting one of the four phrases it was written
+#: for, because its self-test parametrised the other four and nobody counted.
+_TS_DECLARATION_KEYWORDS = (
+    "function",
+    "class",
+    "const",
+    "let",
+    "var",
+    "type",
+    "interface",
+    "enum",
+)
+
+#: Words that may stand between the start of a line and the declaring keyword.
+#: `default` only follows `export`, and `async`/`abstract` only precede the
+#: keyword, so the shape below is written out rather than generated - and the
+#: same test reads the words back out of it and compares them with this tuple.
+_TS_MODIFIERS = ("export", "default", "async", "abstract")
+_TS_MODIFIER_PREFIX = r"^(?:export\s+(?:default\s+)?)?(?:async\s+)?(?:abstract\s+)?"
+
+#: A top-level TypeScript declaration. Anchored to column zero: a regex cannot
+#: tell a module's own `const` from one inside a class body, and indentation is
+#: the crude thing that can.
+_TS_DECLARATION = re.compile(
+    _TS_MODIFIER_PREFIX
+    + r"(?:"
+    + "|".join(_TS_DECLARATION_KEYWORDS)
+    + r")\*?\s+(?P<name>[A-Za-z_$][A-Za-z0-9_$]*)",
+    re.MULTILINE,
+)
+
+#: `export { a, b as c }`. The `from` clause is captured so it can be refused:
+#: see `typescript_symbols` for why a re-export keeps no law.
+_TS_EXPORT_LIST = re.compile(
+    r"^export\s*(?:type\s+)?\{(?P<names>[^}]*)\}(?P<reexport>\s*from\b)?",
+    re.MULTILINE,
+)
+
+#: Stripped before anything is read. A block comment is prose, and prose keeping
+#: a law is the exact failure `defined_symbols` was rewritten to stop in Python.
+_TS_BLOCK_COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
+
+
+def typescript_symbols(source: str) -> set[str]:
+    """Names a TypeScript or TSX module makes available at its top level.
+
+    Scanned, not parsed. There is no TypeScript parser here, and acquiring one
+    would mean a Python test suite growing a dependency to read a language it
+    does not run, so this reads declarations off raw text: `export function`,
+    `export default class`, a bare `const`, `type`, `interface`, `enum`, and
+    `export { a, b as c }` lists.
+
+    Nearly every way that scan can be wrong is wrong in the same direction. A
+    declaration form it cannot see is a name it does not report, so a law naming
+    that name comes out UNKEPT: a red run about a promise that is in fact kept.
+    That is the direction to be wrong in (D-017). It costs a developer an
+    argument with this file; the other direction costs a law that nobody keeps
+    and nothing says so. Two gaps are left open on those terms - a declaration
+    indented under a namespace or a class is not seen, and
+    `export const { a } = ...` destructuring reports nothing.
+
+    One gap would have run the other way, and does not. `export { verifyGrant }
+    from "./access"` makes the name importable from here while defining it
+    somewhere else entirely, so crediting it would let a barrel file keep a law
+    about a symbol that has been deleted from the file that actually declared it
+    - green, and wrong, which is the whole defect class. A re-export with a
+    `from` clause is therefore not credited: a law about `verifyGrant` names the
+    file that declares `verifyGrant`. `export { a, b as c }` with no `from` is
+    credited, because those names are bound in this file and the declarations
+    they name are in it too.
+    """
+    code = _TS_BLOCK_COMMENT.sub("", source)
+    names = {match.group("name") for match in _TS_DECLARATION.finditer(code)}
+    for listed in _TS_EXPORT_LIST.finditer(code):
+        if listed.group("reexport"):
+            continue
+        for item in listed.group("names").split(","):
+            parts = item.replace(" as ", " ").split()
+            if parts and parts[0] == "type":
+                parts = parts[1:]
+            if parts:
+                names.add(parts[-1])
+    return names
+
+
+def invoked_gates(script: str) -> set[str]:
+    """Gate names `scripts/gates.sh` actually invokes.
+
+    Anchored to a live invocation at the start of a line rather than searched for
+    as a substring: the fast way to disable a flaky gate is to comment its line
+    out, and the name is still in the file afterwards.
+    """
+    return set(re.findall(r'^[ \t]*gate[ \t]+"([^"]+)"', script, flags=re.MULTILINE))
+
+
+class UncheckablePromise(Exception):
+    """A `path::symbol` promise in a file type nothing here can read."""
+
+
+#: What a symbol can be read out of, by extension. Four entries; `_PATH_PATTERN`
+#: recognises two more file types, and their absence here is the decision, not an
+#: oversight:
+#:
+#: - `.md::something` has three plausible meanings - a heading, an anchor, a
+#:   phrase - and this file already has `law_section` and `laws_matching` for the
+#:   question "does this document still say that". A reader would be inventing a
+#:   meaning no law has asked for.
+#: - `.json::something` would mean a key, and a key in JSON is a path
+#:   (`scripts.test`) rather than a name, which a flat set cannot express.
+#:
+#: Both raise. The point of a table is that "we cannot read that" becomes a red
+#: run and a decision, instead of the `continue` that hid every non-Python
+#: promise here until P10.
+_SYMBOL_READERS: dict[str, Callable[[str], set[str]]] = {
+    ".py": defined_symbols,
+    ".ts": typescript_symbols,
+    ".tsx": typescript_symbols,
+    ".sh": invoked_gates,
+}
+
+
 def named_paths(text: str) -> set[str]:
     """Every repository path the given prose names."""
     return {m.group("path") for m in _PATH_PATTERN.finditer(text)}
@@ -129,14 +263,11 @@ def missing_paths(text: str, root: Path) -> list[str]:
     return sorted(name for name in named_paths(text) if not (root / name).exists())
 
 
-def unkept_promises(text: str, root: Path) -> list[str]:
-    """`file.py::symbol` promises whose file exists but defines no such symbol.
+def _unkept_promises_before_p10(text: str, root: Path) -> list[str]:
+    """What this did until P10. It is not used to check anything.
 
-    Existence of the file is the check that was missing for six phases. Existence
-    of the thing inside it is the same check one level down: `test_laws.py`
-    surviving while `test_safety_law_*` is deleted from it leaves LAW 2 pointing
-    at a file that no longer keeps it. Only Python is inspected, because Python is
-    the only language the laws qualify with `::`.
+    Kept so the harness can show a real `.ts` promise falling out of the loop
+    rather than being described as having fallen out of it.
     """
     unkept: list[str] = []
     for path, symbol in sorted(named_symbols(text)):
@@ -145,6 +276,50 @@ def unkept_promises(text: str, root: Path) -> list[str]:
             continue
         defined = defined_symbols(target.read_text(encoding="utf-8"))
         if not any(fnmatch.fnmatch(name, symbol) for name in defined):
+            unkept.append(f"{path}::{symbol}")
+    return unkept
+
+
+def unkept_promises(text: str, root: Path) -> list[str]:
+    """`path::symbol` promises whose file exists but declares no such symbol.
+
+    Existence of the file is the check that was missing for six phases. Existence
+    of the thing inside it is the same check one level down: `test_laws.py`
+    surviving while `test_safety_law_*` is deleted from it leaves LAW 2 pointing
+    at a file that no longer keeps it.
+
+    Until P10 this loop began `if target.suffix != ".py" or not target.is_file():
+    continue`, which is this file's own defect class written into the function
+    built to catch it. `apps/web/src/lib/access.ts::verifyGrant` would have had
+    its file checked by `missing_paths` and its symbol ignored here, in silence,
+    and the suite would have been green because nothing looked. Two conditions
+    with opposite meanings shared one `continue`, and only one of them was ever
+    true, so the wrong half was never noticed.
+
+    They are now different outcomes. A file that is not there is `missing_paths`'
+    business and is passed over here. A file whose type has no reader is a
+    promise nobody can check, which is not the same fact as a promise nobody
+    keeps, so it is raised rather than returned - a list of unkept promises that
+    quietly omits the ones nothing examined is the lie this whole file is about.
+    """
+    unkept: list[str] = []
+    for path, symbol in sorted(named_symbols(text)):
+        target = root / path
+        reader = _SYMBOL_READERS.get(target.suffix)
+        if reader is None:
+            raise UncheckablePromise(
+                f"`{path}::{symbol}` names a symbol in a "
+                f"{target.suffix or 'suffixless'} file, and the symbol readers "
+                f"here cover {', '.join(sorted(_SYMBOL_READERS))}. Either the law "
+                f"names the wrong thing or this file needs a reader; skipping it "
+                f"is what hid every non-Python promise until P10."
+            )
+        # Not a skip of the same kind: the law names a path that is not there, and
+        # `missing_paths` reports exactly that, with the path the law wrote.
+        if not target.is_file():
+            continue
+        declared = reader(target.read_text(encoding="utf-8"))
+        if not any(fnmatch.fnmatch(name, symbol) for name in declared):
             unkept.append(f"{path}::{symbol}")
     return unkept
 
@@ -186,16 +361,6 @@ def laws_matching(text: str, phrase: str) -> list[int]:
     return [law for law in numbers if wanted in law_section(text, law)]
 
 
-def invoked_gates(script: str) -> set[str]:
-    """Gate names `scripts/gates.sh` actually invokes.
-
-    Anchored to a live invocation at the start of a line rather than searched for
-    as a substring: the fast way to disable a flaky gate is to comment its line
-    out, and the name is still in the file afterwards.
-    """
-    return set(re.findall(r'^[ \t]*gate[ \t]+"([^"]+)"', script, flags=re.MULTILINE))
-
-
 #: The line the harness starts after. Tests above it check the repository; tests
 #: below it check the predicates in this file, which is a different job.
 _HARNESS_DIVIDER = "# --- The holes this file had, closed and kept closed"
@@ -234,6 +399,37 @@ def harness_coverage(source: str) -> dict[str, set[str]]:
             coverage[name].add(node.name)
     return coverage
 
+
+#: One case per declaration form `typescript_symbols` claims to see: the keyword
+#: it is a case for, the source, and the name that must come out. Taken from real
+#: files in `apps/web/src` rather than invented, so the forms exercised here are
+#: the forms a law would actually be naming.
+#:
+#: The keyword column is not decoration. It is what
+#: `test_every_form_the_typescript_reader_claims_has_a_case` compares against
+#: `_TS_DECLARATION_KEYWORDS`, so a keyword can no longer be added to the reader
+#: and left untested - the way "user-provided" was left out of P9's parametrised
+#: list of the words that fooled `phrase_has_teeth`.
+_TS_DECLARATION_FORMS = [
+    (
+        "function",
+        "export function issueGrant(id: string): string {\n  return id;\n}\n",
+        "issueGrant",
+    ),
+    ("function", "export async function analyse(id: string): Promise<void> {}\n", "analyse"),
+    ("function", "export default function Home() {\n  return null;\n}\n", "Home"),
+    ("function", "export default async function ReportPage() {}\n", "ReportPage"),
+    ("function", 'function signingKey(): string {\n  return "dev";\n}\n', "signingKey"),
+    ("class", "export class MarkdownError extends Error {}\n", "MarkdownError"),
+    ("class", "export abstract class Engine {}\n", "Engine"),
+    ("const", 'export const PUBLIC_DEMO_ID = "demo-01";\n', "PUBLIC_DEMO_ID"),
+    ("const", 'const SEPARATOR = ".";\n', "SEPARATOR"),
+    ("let", "let cachedSigningKey: string | null = null;\n", "cachedSigningKey"),
+    ("var", "var legacyGrantFormat = false;\n", "legacyGrantFormat"),
+    ("type", 'export type GrantReason = "paid" | "owner" | "demo";\n', "GrantReason"),
+    ("interface", "export interface NewInspection {\n  vin: string;\n}\n", "NewInspection"),
+    ("enum", "export enum AccessTier {\n  Teaser,\n  Report,\n}\n", "AccessTier"),
+]
 
 #: Each phrase has to be one the law cannot lose without losing its meaning.
 _LAW_PHRASES = [
@@ -312,7 +508,18 @@ def test_every_test_the_laws_name_by_symbol_exists() -> None:
     promises = named_symbols(text)
     assert promises, "no `path::symbol` promises found - LAW 1 and LAW 2 both make one"
 
-    unkept = unkept_promises(text, REPO_ROOT)
+    try:
+        unkept = unkept_promises(text, REPO_ROOT)
+    except UncheckablePromise as uncheckable:
+        # Not a failing law. A law this file cannot read, which it must say out
+        # loud: a promise nothing examines is the state every hole here has been
+        # in, and the six phases were quiet ones.
+        pytest.fail(
+            f"docs/LAWS.md makes a promise nothing here can check: {uncheckable} "
+            f"Add a reader to `_SYMBOL_READERS` or drop the `::` qualifier - do "
+            f"not leave the law pointing at a symbol nobody looks for."
+        )
+
     assert not unkept, "docs/LAWS.md names tests that do not exist:\n  - " + "\n  - ".join(
         unkept
     )
@@ -615,6 +822,220 @@ def test_a_module_level_assignment_still_keeps_a_law(tmp_path: Path) -> None:
     assert unkept_promises(
         "`packages/engines/src/tirekick_engines/safety.py::clear_the_brakes`", tmp_path
     ) == ["packages/engines/src/tirekick_engines/safety.py::clear_the_brakes"]
+
+
+def test_a_typescript_promise_is_checked_rather_than_skipped(tmp_path: Path) -> None:
+    """The P10 hole: a `.ts` promise had its file checked and its symbol ignored.
+
+    `apps/web/src/lib/access.ts::verifyGrant` is the promise LAW 7's neighbours
+    were always going to make eventually. The file is there, so `missing_paths`
+    says nothing; the old loop skipped every suffix but `.py`, so the symbol was
+    never looked for and the run was green whether or not `verifyGrant` had been
+    deleted that morning.
+    """
+    lib = tmp_path / "apps" / "web" / "src" / "lib"
+    lib.mkdir(parents=True)
+    (lib / "access.ts").write_text(
+        'export type GrantReason = "paid" | "owner" | "demo";\n\n'
+        "export function issueGrant(id: string, reason: GrantReason): string {\n"
+        "  return `${id}.${reason}`;\n"
+        "}\n",
+        encoding="utf-8",
+    )
+
+    kept = "`apps/web/src/lib/access.ts::issueGrant`"
+    gone = "`apps/web/src/lib/access.ts::verifyGrant`"
+    assert missing_paths(gone, tmp_path) == [], "the file is there; the promise is not"
+    assert _unkept_promises_before_p10(gone, tmp_path) == [], (
+        "this input is only interesting if the old loop waved it through - "
+        "otherwise it is not the hole, it is a different string"
+    )
+    assert unkept_promises(kept, tmp_path) == []
+    assert unkept_promises(gone, tmp_path) == ["apps/web/src/lib/access.ts::verifyGrant"]
+
+
+@pytest.mark.parametrize(("keyword", "source", "expected"), _TS_DECLARATION_FORMS)
+def test_every_typescript_declaration_form_is_actually_seen(
+    keyword: str, source: str, expected: str
+) -> None:
+    """A form the reader cannot see is a kept law reported unkept.
+
+    That is the safe direction, and it is still a false report, so each form the
+    docstring claims is fed here rather than asserted in prose.
+    """
+    assert expected in typescript_symbols(source), (
+        f"a {keyword!r} declaration is a form this reader claims to see, and it "
+        f"did not see {expected!r}"
+    )
+
+
+def test_every_form_the_typescript_reader_claims_has_a_case() -> None:
+    """The count nobody did in P10, done by something other than a reviewer.
+
+    `phrase_has_teeth` was written for five phrases and its self-test listed
+    four; the missing one was the one it got wrong. So the reader is built from
+    `_TS_DECLARATION_KEYWORDS` and this compares that tuple against the cases,
+    both ways. Adding a keyword to the reader without a case is now red, and so
+    is a case for a keyword the reader no longer has.
+    """
+    covered = {keyword for keyword, _, _ in _TS_DECLARATION_FORMS}
+    assert covered == set(_TS_DECLARATION_KEYWORDS), (
+        "the parametrised list and the reader disagree about which declaration "
+        "keywords exist"
+    )
+
+    # The modifiers are written out in the pattern rather than generated from the
+    # tuple, because `default` may only follow `export`. Read back out of it, so
+    # the tuple cannot drift from the regex in either direction.
+    in_pattern = set(re.findall(r"(?<!\\)[a-z]{2,}", _TS_MODIFIER_PREFIX))
+    assert in_pattern == set(_TS_MODIFIERS)
+    for modifier in _TS_MODIFIERS:
+        assert any(
+            re.search(rf"\b{modifier}\b", source) for _, source, _ in _TS_DECLARATION_FORMS
+        ), f"no case exercises the {modifier!r} modifier the reader accepts"
+
+
+def test_a_re_export_from_another_file_does_not_keep_a_law(tmp_path: Path) -> None:
+    """The one place this reader could have been generous, and is not.
+
+    A barrel file that says `export { verifyGrant } from "./access"` makes the
+    name importable from itself while defining nothing. Credit it and a law is
+    kept by a line of routing, after the function it names has been deleted from
+    the file that declared it - green, and wrong, which is the direction that
+    costs something. A law about `verifyGrant` names the file that declares it.
+
+    A list with no `from` is a different statement: those names are bound here.
+    `apps/web/src/lib/checkout.ts` really does end `export { PRICE_USD };`.
+    """
+    # No numeric literal on the right-hand side, on purpose: the price scan in
+    # test_shared_constants_parity.py reads every test file for `price = <digit>`
+    # and this line used to be a second price literal in a repository whose rule
+    # is that exactly one file writes the number down. The symbol name is the
+    # part that matters here, and the scan was right to fire on the rest.
+    assert typescript_symbols("const PRICE_USD = fromStripe();\nexport { PRICE_USD };\n") == {
+        "PRICE_USD"
+    }
+    assert typescript_symbols("const a = 1;\nexport { a as issueGrant };\n") == {
+        "a",
+        "issueGrant",
+    }
+    assert typescript_symbols("export type { GrantReason };\n") == {"GrantReason"}
+
+    barrel = tmp_path / "apps" / "web" / "src" / "lib"
+    barrel.mkdir(parents=True)
+    (barrel / "index.ts").write_text(
+        'export { verifyGrant, canRead } from "./access";\nexport * from "./report";\n',
+        encoding="utf-8",
+    )
+    assert typescript_symbols((barrel / "index.ts").read_text(encoding="utf-8")) == set()
+    assert unkept_promises("`apps/web/src/lib/index.ts::verifyGrant`", tmp_path) == [
+        "apps/web/src/lib/index.ts::verifyGrant"
+    ]
+
+
+def test_a_typescript_symbol_named_only_in_a_comment_does_not_keep_a_law() -> None:
+    """The prose hole again, in the other language.
+
+    `defined_symbols` was rewritten in P10 because a docstring sentence read as a
+    definition and reported LAW 2 kept. A JSDoc block explaining where a function
+    went is the same sentence with different punctuation, and this reader is a
+    scan over raw text, so it would have been the same bug.
+    """
+    source = (
+        "/**\n"
+        " * Grants.\n"
+        " *\n"
+        "export function verifyGrant(): void - deleted in P11, see DECISIONS.md\n"
+        " */\n"
+        "export function issueGrant(): void {}\n"
+    )
+    assert "export function verifyGrant" in source, "the raw text is the hole"
+    assert typescript_symbols(source) == {"issueGrant"}
+
+
+def test_the_typescript_reader_finds_what_a_real_module_really_exports() -> None:
+    """Judged against a file nobody wrote for this test.
+
+    Every case above is a string this file chose, which is how P10's decoy
+    paragraph came to contain exactly the words its author remembered. So: the
+    LAW 7 e2e test imports a list of names from `access.ts`, and both files exist
+    for their own reasons. Every name it imports must be a name this reader finds.
+    """
+    access = REPO_ROOT / "apps" / "web" / "src" / "lib" / "access.ts"
+    consumer = REPO_ROOT / "apps" / "web" / "src" / "lib" / "flow.test.ts"
+    imported = re.search(
+        r'import\s+\{(?P<names>[^}]*)\}\s+from\s+"\./access"',
+        consumer.read_text(encoding="utf-8"),
+    )
+    assert imported, "the e2e test no longer imports from ./access, so this proves nothing"
+
+    wanted = {item.split()[-1] for item in imported.group("names").split(",") if item.strip()}
+    assert len(wanted) >= 3, "too few names imported for this to be evidence of anything"
+    assert wanted <= typescript_symbols(access.read_text(encoding="utf-8")), (
+        "the e2e test imports names from access.ts that this reader cannot see, "
+        "so a law naming one of them would be reported unkept"
+    )
+
+
+@pytest.mark.parametrize(
+    ("promise", "filename"),
+    [
+        ("`docs/ACCURACY.md::Gate table`", "ACCURACY.md"),
+        ("`package.json::scripts.test`", "package.json"),
+    ],
+)
+def test_a_promise_in_a_file_type_with_no_reader_is_refused(
+    promise: str, filename: str, tmp_path: Path
+) -> None:
+    """Refusing is the mechanism. Reading TypeScript is only what lets it say yes.
+
+    A `.md` heading and a JSON key are both things a law could plausibly write
+    after a `::`, and neither has a reader here on purpose - the reasons are
+    beside `_SYMBOL_READERS`. What matters is that the answer is a red run rather
+    than the silence a `continue` gives, because silence is how the `.ts` case
+    stayed green for four phases without ever being right.
+
+    The message is asserted, not just the type. `test_every_test_the_laws_name_by_symbol_exists`
+    catches this and reprints it, and today LAWS.md makes no such promise, so the
+    day that except branch first runs is the day somebody reads this sentence in a
+    CI log. It has to name which promise and what the readers cover, or it sends
+    them to the wrong file.
+    """
+    target = tmp_path / Path(promise.strip("`").split("::")[0])
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text("# a document\n", encoding="utf-8")
+    assert target.name == filename
+
+    assert _unkept_promises_before_p10(promise, tmp_path) == [], "the old loop said nothing"
+    with pytest.raises(UncheckablePromise) as refusal:
+        unkept_promises(promise, tmp_path)
+
+    said = str(refusal.value)
+    assert promise.strip("`") in said, "the refusal has to name the promise it refused"
+    assert target.suffix in said
+    for extension in _SYMBOL_READERS:
+        assert extension in said, "and what it can read, or the reader is a guess"
+
+
+def test_a_gate_name_promise_is_read_out_of_the_gate_script(tmp_path: Path) -> None:
+    """`scripts/gates.sh::fixture:clean` is the promise LAW 7 is one edit away from.
+
+    LAW 7 already names `scripts/gates.sh` and already says in prose which gate
+    makes "byte-comparable" true. Qualifying that with a `::` is the obvious next
+    edit to the document, so the reader exists before the promise does - and it
+    is `invoked_gates`, which already refuses a commented-out line.
+    """
+    scripts = tmp_path / "scripts"
+    scripts.mkdir()
+    (scripts / "gates.sh").write_text(
+        'gate "py:test"    "$PY/pytest" packages/engines -q\n'
+        '# gate "fixture:clean"  pnpm run fixture:clean\n',
+        encoding="utf-8",
+    )
+    assert unkept_promises("`scripts/gates.sh::py:test`", tmp_path) == []
+    assert unkept_promises("`scripts/gates.sh::fixture:clean`", tmp_path) == [
+        "scripts/gates.sh::fixture:clean"
+    ], "a commented-out gate keeps no law, which is what `invoked_gates` is for"
 
 
 @pytest.mark.parametrize(

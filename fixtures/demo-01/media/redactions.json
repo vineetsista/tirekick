@@ -7,6 +7,12 @@
       "reviewed_at": "2026-08-05T00:00:00Z",
       "reviewed_by": "Vineet Sista"
     },
+    "history_01.txt": {
+      "nothing_to_redact": true,
+      "regions": [],
+      "reviewed_at": "2026-08-08T17:07:19Z",
+      "reviewed_by": "vineet"
+    },
     "photo_01.jpg": {
       "nothing_to_redact": true,
       "regions": [],

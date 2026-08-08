@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Wordmark } from "./Wordmark";
 
 /**
  * Persistent navigation for a document that is 14,000 pixels tall.
@@ -43,9 +44,7 @@ export function ReportNav({
         }}
       >
         <Link href="/" style={{ textDecoration: "none", flex: "0 0 auto" }}>
-          <span style={{ fontWeight: 800, letterSpacing: "0.22em", fontSize: "var(--t-sm)" }}>
-            TIREKICK
-          </span>
+          <Wordmark />
         </Link>
 
         {/*

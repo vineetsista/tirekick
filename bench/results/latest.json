@@ -1,15 +1,193 @@
 {
   "_note": "Written by tirekick bench. docs/ACCURACY.md and the eval gate read this file; do not hand-edit it. Regenerate it instead.",
+  "calibration": {
+    "_gap_sign": "gap = mean_confidence - observed_precision. Positive means OVERCONFIDENT: we said more than we delivered. Negative means we were right more often than we claimed.",
+    "_population": "Judged predictions at IoU 0.4, all finding types pooled. A prediction on an asset nobody labelled is in no bin. Per-type calibration is not computed - on the sample sizes this project has it would be noise.",
+    "bins": [
+      {
+        "closed": false,
+        "gap": null,
+        "hi": 0.1,
+        "lo": 0.0,
+        "mean_confidence": null,
+        "n": 0,
+        "observed_precision": null,
+        "true_positives": 0
+      },
+      {
+        "closed": false,
+        "gap": null,
+        "hi": 0.2,
+        "lo": 0.1,
+        "mean_confidence": null,
+        "n": 0,
+        "observed_precision": null,
+        "true_positives": 0
+      },
+      {
+        "closed": false,
+        "gap": null,
+        "hi": 0.3,
+        "lo": 0.2,
+        "mean_confidence": null,
+        "n": 0,
+        "observed_precision": null,
+        "true_positives": 0
+      },
+      {
+        "closed": false,
+        "gap": null,
+        "hi": 0.4,
+        "lo": 0.3,
+        "mean_confidence": null,
+        "n": 0,
+        "observed_precision": null,
+        "true_positives": 0
+      },
+      {
+        "closed": false,
+        "gap": null,
+        "hi": 0.5,
+        "lo": 0.4,
+        "mean_confidence": null,
+        "n": 0,
+        "observed_precision": null,
+        "true_positives": 0
+      },
+      {
+        "closed": false,
+        "gap": null,
+        "hi": 0.6,
+        "lo": 0.5,
+        "mean_confidence": null,
+        "n": 0,
+        "observed_precision": null,
+        "true_positives": 0
+      },
+      {
+        "closed": false,
+        "gap": null,
+        "hi": 0.7,
+        "lo": 0.6,
+        "mean_confidence": null,
+        "n": 0,
+        "observed_precision": null,
+        "true_positives": 0
+      },
+      {
+        "closed": false,
+        "gap": null,
+        "hi": 0.8,
+        "lo": 0.7,
+        "mean_confidence": null,
+        "n": 0,
+        "observed_precision": null,
+        "true_positives": 0
+      },
+      {
+        "closed": false,
+        "gap": null,
+        "hi": 0.9,
+        "lo": 0.8,
+        "mean_confidence": null,
+        "n": 0,
+        "observed_precision": null,
+        "true_positives": 0
+      },
+      {
+        "closed": true,
+        "gap": null,
+        "hi": 1.0,
+        "lo": 0.9,
+        "mean_confidence": null,
+        "n": 0,
+        "observed_precision": null,
+        "true_positives": 0
+      }
+    ],
+    "bins_populated": 0,
+    "expected_calibration_error": null,
+    "n": 0
+  },
   "headline": {
     "assets_evaluated": 0,
     "by_type": {},
+    "f1_macro": null,
+    "f1_macro_n_types": 0,
+    "f1_macro_types": [],
     "iou": 0.4,
     "reports_evaluated": 0,
     "unscored_referrals": 0
   },
+  "high_confidence": {
+    "_f1_note": "Not published: F1 needs a recall, and this block has none.",
+    "_note": "Precision over judged predictions with confidence >= 0.8. Published, never gated: the eval gate reads headline.by_type precision, which includes every finding the report prints.",
+    "_recall_note": "Not published, and null rather than absent so its absence is visible. A label found only by a low-confidence prediction becomes a false negative under this filter, so recall over a confidence-filtered set is not the system's recall.",
+    "by_type": {},
+    "f1": null,
+    "false_positives": 0,
+    "iou": 0.4,
+    "n_predictions": 0,
+    "precision": null,
+    "recall": null,
+    "threshold": 0.8,
+    "true_positives": 0
+  },
+  "refusal": "Not a measurement. 0 labeled assets, 0 labels, 0 judged predictions on the eval set. No figure in this file is a result.",
+  "scored": false,
+  "severity_confusion": {
+    "_domain": "Matched findings at IoU 0.4 only. False positives have no labelled severity and false negatives have no predicted one; neither is a grading error and neither is counted here. Severity is not a match criterion - a correctly located finding graded wrongly is a true positive with a severity error.",
+    "_orientation": "matrix[labelled][predicted]. The outer key is the severity a human wrote down; the inner key is the severity we called it. Transposed, over-calling reads as under-calling, which is the opposite claim about who this product hurts.",
+    "exact": 0,
+    "exact_rate": null,
+    "matrix": {
+      "critical": {
+        "critical": 0,
+        "info": 0,
+        "major": 0,
+        "minor": 0
+      },
+      "info": {
+        "critical": 0,
+        "info": 0,
+        "major": 0,
+        "minor": 0
+      },
+      "major": {
+        "critical": 0,
+        "info": 0,
+        "major": 0,
+        "minor": 0
+      },
+      "minor": {
+        "critical": 0,
+        "info": 0,
+        "major": 0,
+        "minor": 0
+      }
+    },
+    "n_matched": 0,
+    "n_matched_missing_label_severity": 0,
+    "n_matched_missing_predicted_severity": 0,
+    "n_matched_with_label_severity": 0,
+    "n_scored": 0,
+    "over_called": 0,
+    "over_called_rate": null,
+    "under_called": 0,
+    "under_called_rate": null,
+    "vocabulary": [
+      "info",
+      "minor",
+      "major",
+      "critical"
+    ]
+  },
   "strict": {
     "assets_evaluated": 0,
     "by_type": {},
+    "f1_macro": null,
+    "f1_macro_n_types": 0,
+    "f1_macro_types": [],
     "iou": 0.5,
     "reports_evaluated": 0,
     "unscored_referrals": 0

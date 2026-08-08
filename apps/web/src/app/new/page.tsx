@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Wordmark } from "@/components/Wordmark";
 import { UploadForm } from "./UploadForm";
 
 /**
@@ -34,17 +35,8 @@ export default function NewInspectionPage() {
           borderBottom: "1px solid var(--tk-line)",
         }}
       >
-        <Link
-          href="/"
-          style={{
-            fontSize: 22,
-            letterSpacing: "0.22em",
-            fontWeight: 700,
-            color: "inherit",
-            textDecoration: "none",
-          }}
-        >
-          TIREKICK
+        <Link href="/" style={{ color: "inherit", textDecoration: "none" }}>
+          <Wordmark fontSize="22px" />
         </Link>
         <div className="mono-label">new analysis</div>
       </header>

@@ -9,8 +9,22 @@ label set. Everything marked *not built* is method we committed to at P0 and hav
 not implemented, and saying so here is cheaper than letting a reader assume the
 harness computes a number it has never computed. The split was invisible until P10:
 this page described calibration plots and severity matrices in the present tense
-next to precision and recall, which are the only two things the harness has ever
+next to precision and recall, which are the only two things the harness had ever
 produced.
+
+P11 built the four. That closes the gap in the direction the gap should close, and
+it introduced the opposite risk immediately, because all four are ratios and the
+eval set is empty: an F1 over nothing, a precision over nothing, a severity
+agreement rate over nothing and — the dangerous one — an expected calibration error
+over nothing, which written the obvious way comes out as **0.0 and reads as
+perfectly calibrated**. So the governing rule of the harness is now one line:
+
+> A rate whose denominator is zero is `null`. Never `0.0`, never `1.0`, and always
+> published beside the integer count it came from.
+
+and above it, `bench/results/latest.json` carries `"scored": false` and a refusal
+sentence, which `render()` prints **instead of** a table. A table of dashes is
+still a table, and a screenshot of one is a claim.
 
 ## Principles
 
@@ -58,13 +72,28 @@ nothing to report, and it is the only way a false positive can be counted; an ab
 asset means nobody looked, and predictions on it are ignored rather than counted
 wrong. `bench/labels/TEMPLATE.json` is the shape.
 
-*Not built:* a severity in {cosmetic, moderate, significant}, a
-**labeler-confidence** flag, and an `ambiguous` class scored separately. This page
-has described all three since P0 and `bench.py` reads none of them - `Label` carries
-`asset_id`, `type`, `box` and `note`, and nothing else. The `ambiguous` idea is the
-one worth keeping: a model that is uncertain exactly where a human is uncertain is a
-good model, and a harness with nowhere to put those cases either drops them silently
-or scores them as failures. Neither is what this section promised.
+*Built:* an optional `severity` per label, which is what the confusion matrix below
+scores against. The vocabulary is `models.Severity` — **info, minor, major,
+critical** — read out of the type with `get_args` rather than retyped, so a fifth
+value cannot exist in one place and not the other.
+
+This page promised {cosmetic, moderate, significant} from P0 until P11: a third
+severity vocabulary, matching neither the models, nor the report, nor the finding
+cards a buyer reads. Nothing translated between them because nothing implemented
+either. Adopting the code's four was the only choice that does not create a second
+place where a severity is typed — and a translation table between two vocabularies
+would have hidden exactly the over-call the matrix exists to measure. It cost
+nothing to change now and would have cost a relabelling later, which is the whole
+argument for closing this gap before the first session lands rather than after.
+
+A label with no severity is counted as *missing*, never imputed from the prediction,
+and an unrecognised severity string is a hard error at load rather than a silent
+`None` — a typo that reads as "unlabelled" quietly shrinks the matrix.
+
+*Not built:* a **labeler-confidence** flag, and an `ambiguous` class scored
+separately. The `ambiguous` idea is the one worth keeping: a model that is uncertain
+exactly where a human is uncertain is a good model, and a harness with nowhere to
+put those cases either drops them silently or scores them as failures.
 
 Boxes count as a hit at IoU >= 0.4 (`HEADLINE_IOU`). The threshold is deliberately
 loose: for a buyer, "there is rust on this rocker panel" is the useful claim, and
@@ -83,23 +112,62 @@ assess brakes, restraints, structure or steering from a photograph, and scoring 
 would mean asserting ground truth we have disclaimed (LAW 2). Their volume is
 reported so it stays visible.
 
-*Not built*, and each one is a number this page has implied we have:
+*Built in P11*, and each one was a number this page implied we had for ten phases:
 
-- **F1.** Both inputs exist; nothing combines them.
-- **Precision-at-high-confidence (>= 0.8)** - described here as "the number that
-  matters most, because the report visually privileges high-confidence findings",
-  and never computed. The harness reads `confidence` only to order greedy matching.
-- **Severity confusion matrix.** Over-calling severity is its own failure and should
-  be measured separately from detection. It cannot be: labels carry no severity.
-- **Calibration.** Bucket findings by stated confidence and compare to observed
-  correctness. A model that says 0.9 and is right 60% of the time is lying to the
-  buyer even when the finding is real. There is no reliability plot in `bench/` and
-  no code that would produce one.
+- **F1**, per type, at both thresholds, plus a macro. `None` when precision or
+  recall is undefined; **`0.0` when the type predicted and matched nothing**. Those
+  two cases must stay distinguishable: a type that predicted nothing is unmeasured,
+  a type that predicted and missed is bad, and collapsing them into one number is
+  how a zero gets read as an absence. The macro ships with `f1_macro_types` and
+  `f1_macro_n_types` beside it, because a macro over 2 of 16 registered types is the
+  classic flattering number and naming its denominator is what stops it reading as a
+  score for the system.
 
-The gap has cost nothing so far because there is nothing to score. It becomes real
-the day the first labeled session lands, and the honest order is to close it before
-then rather than discover mid-measurement that the metric we called most important
-was never implemented.
+- **Precision at high confidence**, `HIGH_CONFIDENCE = 0.80`, inclusive. That figure
+  is not chosen now — this page has said ">= 0.8" since P0, and adopting the number
+  written down before there were results, rather than one picked after seeing them,
+  is the anti-gaming rule at the bottom of this page doing its job.
+  **No recall is published in that block.** A label found only by a 0.5-confidence
+  prediction becomes a false negative once the filter is applied, so a recall over a
+  confidence-filtered set is not the system's recall; the key is emitted as `null`
+  with the reason beside it, because publishing it would understate the product and
+  that is still publishing something untrue.
+
+- **Severity confusion matrix**, over matched pairs only — never false positives
+  (no labelled severity exists) and never false negatives (no predicted severity
+  exists). Severity is **not** a match criterion: a correctly located rust patch
+  called `critical` where a human said `minor` is a true positive with a severity
+  error, and folding the two axes together would let a severity mistake destroy a
+  detection number. The payload carries `matrix[labelled][predicted]` and an
+  `_orientation` key naming that direction, because a transposed confusion matrix
+  reads as the precise opposite failure — over-calling instead of under-calling —
+  and this is the one number where getting the direction backwards inverts the
+  ethical claim.
+
+- **Calibration**, as data plus a printed reliability table. No image and no
+  plotting dependency. Ten bins, half-open, with the last one **closed** so a
+  confidence of exactly 1.0 lands in a bin instead of off the end. `gap =
+  mean_confidence - observed_precision`, and a positive gap means overconfident —
+  stated in a `_gap_sign` key for the same reason as the matrix orientation. The
+  expected calibration error is population-weighted across populated bins and ships
+  beside `n` and `bins_populated`, so an ECE derived from one bin is visibly an ECE
+  derived from one bin. It is `null` on an empty run, and that is the single most
+  important null in this file: an accumulator initialised to `0.0` reports **perfect
+  calibration** for a harness that has never seen a photograph.
+
+Calibration is pooled across types. Per-type calibration on the sub-fifty samples a
+first capture session produces is noise, and it is named as deferred here rather
+than left for a reader to assume — which is the exact failure this whole section
+was.
+
+None of this changes what ships. `registry.py` reads overall precision at IoU 0.4
+and the unfiltered `n`, and it still does; every key above is additive. Swapping the
+gate to precision-at-0.8 would silently loosen LAW 4, because that figure is >= overall
+precision by construction for any model whose confidence carries signal — a type
+would ship on the strength of the subset the report already privileges while the
+findings below the threshold, which it also prints, went entirely ungated. Swapping
+it to F1 would let recall buy off precision, which is the direction ACCURACY.md says
+costs a buyer a good car. Both are pinned by tests rather than by this paragraph.
 
 ## Audio (P3)
 
@@ -131,11 +199,18 @@ Defaults: `--labels bench/labels`, `--reports bench/reports`,
 under that directory into `--reports` before scoring, so a capture session goes from
 media to a number in one command.
 
-It writes `bench/results/latest.json` and prints a fixed-width summary table. It does
-**not** emit markdown. What makes the published page generated rather than typed is
-the direction of the data: `registry.py` reads `latest.json`, computes
+It writes `bench/results/latest.json` and prints a fixed-width summary table — or,
+on a run with nothing to score, the refusal instead of the table. It does **not**
+emit markdown. What makes the published page generated rather than typed is the
+direction of the data: `registry.py` reads `latest.json`, computes
 `enabled_for_paid` from it, and `docs/ACCURACY.md` publishes what the registry
 computes. There is no second place a precision figure can originate.
+
+`latest.json` is committed, and a gate regenerates it and diffs the result, so a
+figure edited into it by hand fails the build. While `bench/labels/` is empty that
+gate pins only the shape of the refusal — which is precisely the thing that must
+not quietly become `0.0` — and it starts pinning real numbers the day the first
+labelled session lands.
 
 ## Anti-gaming rules
 

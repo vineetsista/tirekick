@@ -1,6 +1,6 @@
 # UNIT ECONOMICS
 
-**Nine phases in: still no real API calls, so there is still no measured $/report.**
+**Still no real API calls, so there is still no measured $/report.**
 P2 added a *calculated* projection, which is a different and weaker thing than a
 measurement, and is labeled as such everywhere it appears below. Nothing on this
 page has been replaced by a measurement since, because nothing has been measured.

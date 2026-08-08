@@ -182,12 +182,21 @@ the precise failure it exists to prevent.
 whole mark - the interface face rather than a drawn logo, because a wordmark in
 the product's own type is honest about what we are.
 
-It is typed as two inline styles rather than a class, and the two disagree: the
-report nav is 0.22em and the landing page is 0.26em. Nothing holds them in step,
-because `tokens.test.ts` checks that a token *exists*, not that two hand-written
-values match. 0.22em is the intended figure; the landing page is the one that is
-wrong, and it is recorded here rather than silently corrected because a wordmark
-defined in two places will drift again the moment a third appears.
+It is one component, `apps/web/src/components/Wordmark.tsx`, and the two figures
+above are exported constants that `Wordmark.test.tsx` compares against this
+sentence.
+
+This paragraph used to record a drift instead of removing it: the report nav was
+0.22em, the landing page was 0.26em, and the note explained that it was written
+down rather than corrected because "a wordmark defined in two places will drift
+again the moment a third appears." That was right, and it undercounted. By P11
+the mark was being set at six sites, in three tracking values, at two weights -
+`PurchaseGate` and the upload page both had it at 700 - while this paragraph
+still described two sites disagreeing about one number.
+
+Size is still per-site, because this document does not specify one and the mark
+is genuinely smaller in the report nav than on the purchase gate. Weight and
+tracking are not adjustable, because those are the two things specified here.
 
 Report watermark and share footer: `ANALYZED BY TIREKICK AI` in mono uppercase, muted,
 plus the "not an inspection" line from LIABILITY section 4. It read `INSPECTED BY`

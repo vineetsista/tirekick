@@ -82,6 +82,23 @@ const unservedMedia = new Set<string>();
  * can resolve against, which about:blank does not provide.
  */
 const ORIGIN = "http://tirekick.gate";
+
+/**
+ * Every test below drives a real browser, and vitest's default is five seconds.
+ *
+ * That default was met on a quiet machine and missed on a busy one, so the
+ * suite went from 80 green to 18 red and back with nothing about the layout
+ * changing - and every one of those failures was a stopwatch, not an
+ * assertion. A gate that reddens because the machine was loaded teaches people
+ * to re-run it until it passes, which is the same disease as a gate that goes
+ * green because nothing ran (D-050, D-055): in both cases the colour stops
+ * carrying information.
+ *
+ * So the budget is explicit and generous. It is not there to let a slow page
+ * through - nothing here asserts a duration - it is there so that red means the
+ * layout is wrong.
+ */
+const BROWSER_TIMEOUT_MS = 60_000;
 const PAGE_PATH = "/__page__";
 let currentDocument = "";
 
@@ -259,7 +276,7 @@ describe("laid out in a real browser", () => {
         `${name} overflows by ${overflow.over}px at ${width}px:\n  ` +
           overflow.culprits.join("\n  "),
       ).toBe(0);
-    });
+    }, BROWSER_TIMEOUT_MS);
 
     it("keeps prose to a readable measure at 1440px", async () => {
       await load(html, 1440);
@@ -285,7 +302,7 @@ describe("laid out in a real browser", () => {
       }, MAX_CHARS_PER_LINE);
 
       expect(wide, `${name} sets prose past ${MAX_CHARS_PER_LINE} characters a line`).toEqual([]);
-    });
+    }, BROWSER_TIMEOUT_MS);
 
     it("renders every piece of text at AA contrast", async () => {
       await load(html, 1440);
@@ -359,7 +376,7 @@ describe("laid out in a real browser", () => {
       );
 
       expect(failures, `${name} has text below WCAG AA`).toEqual([]);
-    });
+    }, BROWSER_TIMEOUT_MS);
   });
 
   /**
@@ -399,7 +416,7 @@ describe("laid out in a real browser", () => {
     expect(broken, "gate-table cells wrapped, so an identifier is broken on screen").toEqual(
       [],
     );
-  });
+  }, BROWSER_TIMEOUT_MS);
 
   it("gives the primary action a real hit target", async () => {
     // 44x44 is the WCAG 2.5.5 target size. A button that takes money should not
@@ -413,5 +430,5 @@ describe("laid out in a real browser", () => {
     expect(box).not.toBeNull();
     expect(box!.height).toBeGreaterThanOrEqual(44);
     expect(box!.width).toBeGreaterThanOrEqual(44);
-  });
+  }, BROWSER_TIMEOUT_MS);
 });

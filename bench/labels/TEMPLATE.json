@@ -12,6 +12,8 @@
     "labels_empty_list": "A human looked and there is nothing to report. Findings here are false positives. Most assets should look like this.",
     "asset_absent": "Nobody looked. Predictions are ignored rather than counted wrong.",
     "box": "Normalized. x,y is the top-left corner. All values 0..1. Need not be tight - matching is at IoU 0.4 (D-008).",
+    "severity": "Optional, one of info / minor / major / critical - the vocabulary in models.Severity, not the one docs/EVAL.md describes. Leave it out if you are not sure; a missing severity is counted as missing and the pair is left out of the confusion matrix, which is the honest outcome. A misspelled one stops the harness rather than being read as missing.",
+    "severity_is_not_detection": "Grading is scored separately from finding. A box we located correctly and graded wrongly is a true positive with a severity error, so do not withhold a label because our severity disagrees with yours.",
     "do_not_label": "brakes, restraints, structure, steering - LAW 2, we have disclaimed assessing these from a photograph"
   },
   "assets": {}

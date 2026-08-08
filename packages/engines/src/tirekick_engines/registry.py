@@ -259,7 +259,7 @@ def withheld_types() -> dict[str, str]:
     button. Filtering on unmeasured would empty every report the product can
     currently produce while telling the buyer less than that sentence does.
     A measured failure has no such defence - the number exists and it is bad.
-    See D-05x in DECISIONS.md.
+    See D-056 in DECISIONS.md.
     """
     out: dict[str, str] = {}
     for key, spec in FINDING_TYPES.items():

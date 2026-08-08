@@ -479,24 +479,30 @@ def test_apply_refuses_before_it_re_encodes_anything(tmp_path: Path) -> None:
     assert dirty.read_bytes() == before, "refused, and re-encoded anyway"
 
 
-def test_check_says_what_it_did_not_look_at(
+def test_a_clip_that_cannot_be_walked_to_the_end_is_refused_not_announced(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Green means the still images are clean. It does not mean the directory
-    is, and the success line used to read as though it did.
+    """What this test used to assert is now the defect.
 
-    An .mp4 carries a position in its (c)xyz atom and this tool reads still
-    images only. That gap is declared out loud rather than left for the reader
-    to infer from the word "image".
+    Until P11 `check` printed an apology - "not examined: walkaround.mp4. This
+    tool reads still images only" - and returned 0. That was an honest declared
+    gap and it is not a check, and the clip in this repository's own fixtures
+    carried a position atom, an encoder banner and x264's entire command line
+    for four phases underneath it.
+
+    The bytes below are the same truncated header the old test used: an `ftyp`
+    box claiming 24 bytes with 12 on disk. It used to be waved through with a
+    printed note. It is now refused, because a container that cannot be walked
+    to the end is not a container anybody can call clean.
     """
     _clean(tmp_path / "front.jpg")
     (tmp_path / "walkaround.mp4").write_bytes(b"\x00\x00\x00\x18ftypmp42")
     redact.save(tmp_path, _signed("front.jpg"))
 
-    assert redact_media.cmd_check(tmp_path) == 0
-    out = capsys.readouterr().out
-    assert "walkaround.mp4" in out
-    assert "not examined" in out
+    assert redact_media.cmd_check(tmp_path) == 1
+    err = capsys.readouterr().err
+    assert "walkaround.mp4" in err
+    assert "Unreadable is not clean" in err
 
 
 def test_a_photograph_is_not_hidden_by_the_word_spectrogram_in_its_name(
@@ -586,3 +592,80 @@ def _transposed(image: Image.Image) -> Any:
     from PIL import ImageOps
 
     return ImageOps.exif_transpose(image)
+
+
+# --------------------------------------------------------------------------- #
+# nothing in the directory is invisible                                        #
+# --------------------------------------------------------------------------- #
+
+
+def test_check_refuses_a_document_nobody_signed_off(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A title history is where the seller's name and address actually are.
+
+    Every walk in this tool is an allowlist of suffixes, and `.txt` was in none
+    of them - so `history_01.txt` sat in this repository's own committed media
+    directory while `check` printed "14 still image(s) ... no metadata
+    container" over it and never named it. Nothing strips a plain-text file,
+    because there is no container to strip; what it needs is the other half of
+    D-022, a person saying it is safe to commit.
+    """
+    _clean(tmp_path / "front.jpg")
+    (tmp_path / "history_01.txt").write_text("Seller: A Person, 12 Example St\n")
+    redact.save(tmp_path, _signed("front.jpg"))
+
+    assert redact_media.cmd_check(tmp_path) == 1
+    assert "history_01.txt" in capsys.readouterr().err
+
+
+def test_check_passes_a_document_that_was_read_and_signed_off(tmp_path: Path) -> None:
+    _clean(tmp_path / "front.jpg")
+    (tmp_path / "history_01.txt").write_text("SYNTHETIC - describes no owner\n")
+    redact.save(tmp_path, _signed("front.jpg", "history_01.txt"))
+
+    assert redact_media.cmd_check(tmp_path) == 0
+
+
+def test_check_refuses_a_file_no_category_here_claims(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The default was to be invisible, and now it is to be refused.
+
+    `.heic` had to be predicted in advance to be refused. This does not: a
+    suffix nothing in redact.py has a category for is named and refused, so the
+    next unanticipated file type fails the gate on the day it arrives rather
+    than on the day somebody reads the directory listing.
+    """
+    _clean(tmp_path / "front.jpg")
+    (tmp_path / "title_scan.pdf").write_bytes(b"%PDF-1.4\n")
+    (tmp_path / "notes.sqlite").write_bytes(b"SQLite format 3\x00")
+    redact.save(tmp_path, _signed("front.jpg"))
+
+    assert redact_media.cmd_check(tmp_path) == 1
+    err = capsys.readouterr().err
+    assert "notes.sqlite" in err
+
+
+def test_the_redaction_record_itself_is_not_treated_as_media(tmp_path: Path) -> None:
+    """`redactions.json` is the paperwork, not the thing being vouched for.
+
+    Exempted by exact filename rather than by suffix: a buyer can upload a
+    .json, and an exempt suffix is a hole shaped like a file extension.
+    """
+    _clean(tmp_path / "front.jpg")
+    redact.save(tmp_path, _signed("front.jpg"))
+    assert redact_media.cmd_check(tmp_path) == 0
+
+    (tmp_path / "listing_export.json").write_text("{}\n")
+    assert redact_media.cmd_check(tmp_path) == 1
+
+
+def test_init_scaffolds_a_record_for_a_document_too(tmp_path: Path) -> None:
+    """`init` walked images only, so the document it now refuses to pass had no
+    way to acquire the record it is refused for lacking."""
+    _clean(tmp_path / "front.jpg")
+    (tmp_path / "history_01.txt").write_text("x\n")
+
+    assert redact_media.cmd_init(tmp_path) == 0
+    assert set(redact.load(tmp_path)) == {"front.jpg", "history_01.txt"}

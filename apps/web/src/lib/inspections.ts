@@ -65,10 +65,58 @@ export function sanitizeUploadName(name: string): string {
   return cleaned;
 }
 
+/**
+ * Claim a directory nobody else has, and return its id.
+ *
+ * The id used to be `insp_${randomUUID().slice(0, 8)}` - 32 bits - written
+ * straight into `mkdir(..., { recursive: true })`, which succeeds silently on a
+ * directory that already exists. Two inspections drawing the same eight hex
+ * characters therefore did not collide loudly; they MERGED. The second upload's
+ * media landed beside the first's, the second manifest overwrote the first, and
+ * because a grant is an HMAC over the inspection id, whoever held either grant
+ * held both - so the failure is not a lost upload, it is one stranger reading
+ * another stranger's photographs.
+ *
+ * Thirty-two bits sounds like a lot and is not: the birthday bound puts an
+ * even-odds collision at about 77,000 inspections, and the whole point of the
+ * product is to be used more than 77,000 times.
+ *
+ * Two changes, and the second is the one that matters. The id is now a whole
+ * UUID's worth of randomness, which makes a collision negligible - and
+ * `recursive: false` makes the filesystem answer the question instead of us,
+ * because "negligible" is a probability argument and EEXIST is a fact. A
+ * probability argument is what the old code was already relying on.
+ */
+async function claimInspectionDir(): Promise<{ id: string; dir: string }> {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const id = `insp_${randomUUID().replaceAll("-", "")}`;
+    const dir = inspectionDir(id);
+    try {
+      await mkdir(dir, { recursive: false });
+      return { id, dir };
+    } catch (err) {
+      // EEXIST is the collision this exists to catch: try again with new
+      // randomness. Anything else - a missing workspace, a read-only disk - is
+      // not a collision and must not be retried into a confusing five-attempt
+      // failure that hides what actually went wrong.
+      if ((err as NodeJS.ErrnoException).code === "EEXIST") continue;
+      if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+        await mkdir(WORKSPACE, { recursive: true });
+        attempt--;
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error(
+    "Could not claim an unused inspection directory in five attempts. That is not " +
+      "a collision - at this id width it is a workspace that cannot be written to.",
+  );
+}
+
 /** Write an inspection to disk in the layout the engines already expect. */
 export async function createInspection(input: NewInspection): Promise<string> {
-  const id = `insp_${randomUUID().slice(0, 8)}`;
-  const dir = inspectionDir(id);
+  const { id, dir } = await claimInspectionDir();
   await mkdir(join(dir, "media"), { recursive: true });
   await mkdir(join(dir, "cached"), { recursive: true });
 

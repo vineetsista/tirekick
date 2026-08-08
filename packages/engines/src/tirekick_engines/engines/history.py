@@ -12,7 +12,10 @@ matter - the job of a careful friend, not of a database.
 That framing decides the whole design. Because we are quoting the buyer's
 document back at them, the excerpt is the finding: every hit renders the line it
 came from, verbatim, so the buyer checks our reading against the source in one
-glance (LAW 1).
+glance (LAW 1). A line too wide to print whole is quoted as a window around the
+keyword instead, and then the copy says so - for a while it did not, and a
+finding about salvage shipped over 240 characters of preamble that never used
+the word, under a sentence promising the line exactly as it appears.
 
 The failure that would actually hurt someone is the negation case. A history
 report that says "Salvage: None" contains the word "salvage", and a scanner that
@@ -62,7 +65,10 @@ class BrandPattern:
 
 
 #: Ordered most-serious first; the first pattern to match a line wins it, so a
-#: line reading "salvage - flood" is reported once, as salvage.
+#: line reading "salvage - flood" is reported once, as salvage. Winning it only
+#: ends the line when the winner has something to say: this order is by
+#: seriousness and not by position, so a denied salvage brand used to take a
+#: flood brand asserted later on the same line down with it.
 BRAND_PATTERNS: tuple[BrandPattern, ...] = (
     BrandPattern(
         "junk",
@@ -279,6 +285,10 @@ class BrandHit:
     excerpt: str
     #: "asserted", "denied", or "ambiguous".
     stance: str
+    #: Whether `excerpt` is the whole line or a window cut out of it. The copy
+    #: downstream promises a verbatim quote, and that promise has to be checked
+    #: against what we actually printed rather than assumed.
+    truncated: bool
 
 
 def _blank(match: re.Match[str]) -> str:
@@ -349,18 +359,38 @@ def _classify(line: str, brand_at: int) -> str:
     written down to count, because denial is what the clean-title case actually
     looks like - 'Salvage: None' - and that shape is unmistakable.
 
-    Two things happen before any of that, and both exist because a word that
-    looks like a denial is not always denying anything. Enumeration labels and
-    brand names spelled with a negation are blanked out; then only the
-    statement carrying the brand keyword is read, because a denial in the
-    clause next door is about whatever that clause is about. Each of the three
-    steps was added after a line a real report would print classified as the
-    opposite of what it says.
+    Three things happen before any of that, and all of them exist because a
+    word that looks like a denial is not always denying anything. Enumeration
+    labels and brand names spelled with a negation are blanked out; then only
+    the statement carrying the brand keyword is read, because a denial in the
+    clause next door is about whatever that clause is about; then the denial
+    inside that statement is blanked in its turn, because a denial about
+    accidents shares a statement with a salvage brand every time the line is
+    joined by a comma. Each of the four steps was added after a line a real
+    report would print classified as the opposite of what it says.
     """
     neutral = _NAMED_WITH_A_NEGATION.sub(_blank, _ENUMERATION.sub(_blank, line))
     statement = _statement_around(neutral, brand_at)
-    if _NEGATED_ASSERTION.search(statement):
-        return "denied"
+
+    # A negated assertion is read as a unit and then taken OUT of the statement,
+    # the way the two lookalike guards above are, because "denies something"
+    # and "denies the brand" are not the same claim and this function used to
+    # confuse them. It returned "denied" the moment _NEGATED_ASSERTION matched
+    # anywhere in the statement, with no check on what was being denied - and a
+    # comma, a dash and a table pipe are not clause breaks, so the denial had
+    # the whole line to work with. "SALVAGE TITLE ISSUED 03/2019, no accidents
+    # reported" came out denied: a car whose own paperwork declares salvage
+    # produced no finding, and the line was never printed, so the buyer had
+    # nothing to check. That is the silent drop, and D-017 says it is worse than
+    # the false alarm P10 spent itself fixing.
+    #
+    # So: blank the denial and read what is left standing. Something still
+    # asserting there means both signals are on the line and we say so; nothing
+    # left means the denial was the whole of it, whatever else it mentioned.
+    remainder, negations = _NEGATED_ASSERTION.subn(_blank, statement)
+    if negations:
+        return "ambiguous" if _ASSERTION.search(remainder) else "denied"
+
     denied = bool(_DENIAL.search(statement))
     if not denied:
         return "asserted"
@@ -371,11 +401,65 @@ def _classify(line: str, brand_at: int) -> str:
     return "denied"
 
 
-def _excerpt(line: str) -> str:
-    cleaned = " ".join(line.split())
+#: Room kept for the two ellipses, so a windowed quote still fits the budget.
+_ELLIPSIS = "..."
+
+
+def _collapse(line: str) -> tuple[str, list[int]]:
+    """The line with its runs of whitespace squeezed to one space, plus a map.
+
+    The map answers "where did the character at index i end up", and it exists
+    because the brand keyword's offset is an index into the RAW line while the
+    window below is cut out of the squeezed one. A dot-leader row - "Salvage
+    ........ N/A" is the tame version, a real report indents and pads far worse
+    - moves the keyword by however many spaces were collapsed in front of it,
+    and a window centred on the raw offset would drift off the word it is
+    supposed to be showing.
+    """
+    out: list[str] = []
+    where: list[int] = []
+    for char in line:
+        if char.isspace():
+            where.append(max(len(out) - 1, 0))
+            if out and out[-1] != " ":
+                out.append(" ")
+        else:
+            where.append(len(out))
+            out.append(char)
+    while out and out[-1] == " ":
+        out.pop()
+    return "".join(out), where
+
+
+def _excerpt(line: str, brand_at: int) -> tuple[str, bool]:
+    """The line as the buyer will see it, and whether we had to cut it.
+
+    The window is centred on the keyword the finding cites. It used to be cut
+    from the start of the line instead, which is fine for a sentence and wrong
+    for a record row: real history reports print one wide single-line row per
+    event, and past character 240 the published evidence did not contain the
+    word the finding was about. The buyer who did the one thing LAW 1 asks of
+    them - read the quote and check our reading - found 240 characters of
+    preamble and no salvage in it, underneath copy promising the line exactly as
+    it appears. A quote that omits the point is not evidence, it is furniture.
+
+    The caller is told when a cut happened, because that promise then has to be
+    withdrawn rather than left standing over a shortened quote.
+    """
+    cleaned, where = _collapse(line)
     if len(cleaned) <= MAX_EXCERPT_CHARS:
-        return cleaned
-    return cleaned[: MAX_EXCERPT_CHARS - 3] + "..."
+        return cleaned, False
+
+    budget = MAX_EXCERPT_CHARS - 2 * len(_ELLIPSIS)
+    at = where[brand_at] if 0 <= brand_at < len(where) else 0
+    stop = min(len(cleaned), max(at + budget // 2, budget))
+    start = max(0, stop - budget)
+    window = cleaned[start:stop]
+    if start > 0:
+        window = _ELLIPSIS + window
+    if stop < len(cleaned):
+        window = window + _ELLIPSIS
+    return window, True
 
 
 def readable_documents(assets: list[Asset], media_root: Path) -> list[tuple[Asset, str]]:
@@ -400,20 +484,34 @@ def scan(assets: list[Asset], media_root: Path) -> list[BrandHit]:
                 continue
             for pattern in BRAND_PATTERNS:
                 match = re.search(pattern.pattern, line, flags=re.IGNORECASE)
-                if match:
-                    hits.append(
-                        BrandHit(
-                            asset_id=asset.id,
-                            pattern=pattern,
-                            line_number=lineno,
-                            excerpt=_excerpt(line),
-                            # Where the keyword sits decides which statement on
-                            # the line is read. The excerpt stays the whole line
-                            # either way - LAW 1, the buyer checks our reading.
-                            stance=_classify(line, match.start()),
-                        )
+                if not match:
+                    continue
+                excerpt, truncated = _excerpt(line, match.start())
+                stance = _classify(line, match.start())
+                hits.append(
+                    BrandHit(
+                        asset_id=asset.id,
+                        pattern=pattern,
+                        line_number=lineno,
+                        excerpt=excerpt,
+                        # Where the keyword sits decides which statement on the
+                        # line is read, and now also which part of the line is
+                        # quoted back - LAW 1, the buyer checks our reading, so
+                        # the quote has to contain what we read.
+                        stance=stance,
+                        truncated=truncated,
                     )
-                    # One finding per line: the first, most serious, match wins.
+                )
+                if stance != "denied":
+                    # The most serious match on the line wins it, but only if it
+                    # produced something the buyer will see. BRAND_PATTERNS is
+                    # ordered by seriousness and not by position, so stopping at
+                    # the first match full stop meant a correctly DENIED salvage
+                    # brand took the line with it: "Salvage: none reported.
+                    # Flood damage reported 03/2019." reported nothing, while
+                    # the same two sentences on two lines reported the flood. A
+                    # document that warns or stays silent depending on where it
+                    # wrapped is not reading the document at all.
                     break
     return hits
 
@@ -441,14 +539,24 @@ def title_brand_findings(assets: list[Asset], media_root: Path) -> list[DraftFin
     drafts: list[DraftFinding] = []
     for dedupe_key in order:
         hit = strongest[dedupe_key]
+        # What we can honestly say about the quote underneath. "Exactly as it
+        # appears" was printed over every finding including the ones whose
+        # excerpt had been cut, which is this product's own recurring defect -
+        # a claim that nothing checks - sitting directly above the evidence it
+        # was wrong about.
+        quoting = (
+            "The line is too long to print whole, so the quote below is a window "
+            "around the words that matched and the ... marks where it was cut"
+            if hit.truncated
+            else "The line is quoted below exactly as it appears"
+        )
         ambiguous = hit.stance == "ambiguous"
         if ambiguous:
             detail = (
                 f"A document you uploaded contains a line mentioning "
                 f"{hit.pattern.label.lower()}, and TIREKICK could not tell whether "
                 f"that line is reporting it or ruling it out - the wording carries "
-                f"both. The line is quoted below exactly as it appears; read it "
-                f"yourself. {hit.pattern.meaning}"
+                f"both. {quoting}; read it yourself. {hit.pattern.meaning}"
             )
             severity: Severity = "minor"
             basis = (
@@ -458,8 +566,8 @@ def title_brand_findings(assets: list[Asset], media_root: Path) -> list[DraftFin
             )
         else:
             detail = (
-                f"A document you uploaded reports {hit.pattern.label.lower()}. The "
-                f"line is quoted below exactly as it appears. {hit.pattern.meaning} "
+                f"A document you uploaded reports {hit.pattern.label.lower()}. "
+                f"{quoting}. {hit.pattern.meaning} "
                 f"TIREKICK did not query any title registry - this is a reading of "
                 f"your own paperwork, and paperwork can be incomplete or forged. "
                 f"Confirm the brand with your state's motor vehicle agency before "

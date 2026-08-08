@@ -60,8 +60,14 @@ jobs:
       # shared libraries headless chromium needs on a bare ubuntu runner.
       #
       # This step is not optional and the test does not skip when the browser is
-      # missing: a gate that quietly passes because it never ran is the exact
-      # failure this project has now found six times.
+      # missing: a gate that quietly passes because it never ran is the failure
+      # this project keeps finding in itself.
+      #
+      # There was a tally here - "found six times" - and README.md carried the
+      # same sentence saying seven. Neither was generated and nothing compared
+      # them, so the two copies of one claim drifted apart exactly the way the
+      # numbers D-063 moved into generated blocks had. A count worth publishing
+      # is a count something derives; this one is prose, so it no longer counts.
       - name: Install chromium for the layout gate
         run: pnpm --filter web exec playwright install --with-deps chromium
 

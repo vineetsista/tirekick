@@ -79,6 +79,21 @@ gate "ts:build"     pnpm run build
 # on the day somebody downloads it.
 gate "redact:media" "$PY/python" scripts/redact_media.py check fixtures/demo-01/media
 
+# --- The eval harness must run, and its committed result must not drift -------
+# bench/results/latest.json is what registry.py reads to decide whether a finding
+# type may be sold, and until P11 it was a committed artifact that no gate
+# regenerated - so P11 added four metrics to bench.py and every gate stayed green
+# with the old shape still on disk. The pair below is the same arrangement
+# inspect:fixture and fixture:clean already use for the report.
+#
+# While bench/labels/ is empty this pins the REFUSAL rather than any measurement:
+# `scored: false` and a sentence saying so. That is exactly the thing that must
+# not quietly become 0.0 - an expected calibration error of zero reads as
+# perfectly calibrated - and it starts pinning real numbers the day the first
+# labelled session lands.
+gate "bench:run"   "$PY/python" -m tirekick_engines.cli bench
+gate "bench:clean" git diff --exit-code -- bench/results/latest.json
+
 # --- The README's numbers must be the repository's numbers (D-063) ------------
 # It collects both suites to count tests, so it is slower than it looks and it
 # is the last gate that can fail for a reason worth knowing about.

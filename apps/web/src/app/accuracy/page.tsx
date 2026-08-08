@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ACCURACY_MD } from "@/generated/accuracy";
 import { parseMarkdown, type Block, type Inline } from "@/lib/markdown";
+import { Wordmark } from "@/components/Wordmark";
 
 export const metadata: Metadata = {
   title: "TIREKICK accuracy - including the misses",
@@ -56,9 +57,7 @@ export default function AccuracyPage() {
         }}
       >
         <Link href="/" style={{ textDecoration: "none" }}>
-          <span style={{ fontWeight: 800, letterSpacing: "0.24em", fontSize: "var(--t-md)" }}>
-            TIREKICK
-          </span>
+          <Wordmark fontSize="var(--t-md)" />
         </Link>
         <span className="label">docs/ACCURACY.md &middot; typeset, not rewritten</span>
       </header>

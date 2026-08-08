@@ -223,9 +223,9 @@ enumerated above.
 
 ## Real media
 
-There is none yet, in this directory or in `bench/`. It was expected in P2 and nine
-phases have now passed without it, which is the single fact that keeps every finding
-type disabled - `docs/ACCURACY.md` says so at the top. When it arrives this file
+There is none yet, in this directory or in `bench/`. It was expected in P2 and every
+phase since has shipped without it, which is the single fact that keeps every
+finding type disabled - `docs/ACCURACY.md` says so at the top. When it arrives this file
 gains a row per file: what it is, who photographed it, when, and with what consent.
 Media saved manually from public listings gets the same treatment, one file at a
 time, per LAW 3. The eval set's own record lives in `bench/PROVENANCE.md`.

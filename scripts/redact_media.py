@@ -81,6 +81,36 @@ def images(directory: Path) -> list[Path]:
     return _walk(directory, redact.STRIPPABLE_SUFFIXES)
 
 
+def everything(directory: Path) -> list[Path]:
+    """Every file in the directory, with no suffix filter at all.
+
+    The one walk here that is not an allowlist, and the only one that can see a
+    file nobody predicted. `unaccounted_files` is what reads it.
+    """
+    return sorted(p for p in directory.rglob("*") if p.is_file())
+
+
+def documents(directory: Path) -> list[Path]:
+    """Buyer paperwork this tool can account for.
+
+    Not stripped and not blurred - a .txt has no metadata container and no
+    pixels. It is walked so it can be *reviewed*, because a title history is
+    where the seller's name and address actually are, and D-022 is a claim about
+    what is safe to commit rather than a claim about EXIF.
+    """
+    return _walk(directory, redact.DOCUMENT_SUFFIXES)
+
+
+def reviewable(directory: Path) -> list[Path]:
+    """Everything a person has to sign off before it can be committed.
+
+    Images and documents both. `assert_reviewed` used to be handed images only,
+    so a document in the directory needed no reviewer, no record and no
+    `nothing_to_redact` - it needed nothing, and got nothing.
+    """
+    return sorted(images(directory) + documents(directory))
+
+
 def photographs(directory: Path) -> list[Path]:
     """Everything that looks like a camera file, including the formats this tool
     cannot process.
@@ -93,10 +123,24 @@ def photographs(directory: Path) -> list[Path]:
     return _walk(directory, redact.STRIPPABLE_SUFFIXES | redact.UNSTRIPPABLE_SUFFIXES)
 
 
+def time_based_media(directory: Path) -> list[Path]:
+    """Every video and audio file, including the containers no walker here
+    understands.
+
+    The wider set on purpose, for the reason `photographs` walks a wider set: a
+    .webm carries its tags in an EBML element whether or not anything here can
+    read one, and a scan that listed only the readable formats would report a
+    directory clean with an untouched recording sitting in it.
+    """
+    return _walk(
+        directory, redact.READABLE_MEDIA_SUFFIXES | redact.UNREADABLE_MEDIA_SUFFIXES
+    )
+
+
 def cmd_init(directory: Path) -> int:
     records = redact.load(directory)
     added = 0
-    for path in images(directory):
+    for path in reviewable(directory):
         key = redact.asset_key(directory, path)
         if key not in records:
             records[key] = redact.AssetRedaction(asset=key)
@@ -163,14 +207,35 @@ def cmd_propose(directory: Path) -> int:
 def cmd_apply(directory: Path) -> int:
     records = redact.load(directory)
     paths = images(directory)
+    # Documents are not blurred and not re-encoded, but they are signed off, so
+    # `apply` refuses over an unreviewed one rather than rewriting fourteen
+    # photographs beside a title history nobody read.
+    unaccounted = redact.unaccounted_files(directory, everything(directory))
+    if unaccounted:
+        print(
+            "error: Media directory holds files this tool has no category for "
+            "(D-022):\n  - " + "\n  - ".join(unaccounted),
+            file=sys.stderr,
+        )
+        return 2
     try:
-        redact.assert_reviewed(directory, paths, records)
+        redact.assert_reviewed(directory, reviewable(directory), records)
         # Both refusals happen before the first re-encode. The format check
         # used to run after the loop, so a directory holding one .heic had
         # every other file irreversibly rewritten and *then* got its error -
         # "refuses rather than reporting success" was really "mutates
         # everything it can, then reports failure".
         redact.assert_formats_strippable(directory, photographs(directory))
+    except redact.RedactionError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+    clips = time_based_media(directory)
+    try:
+        # Before the first re-encode as well, for the reason above. A directory
+        # holding one .webm used to have every photograph in it irreversibly
+        # rewritten before anything noticed the file nothing can read.
+        redact.assert_media_formats_readable(directory, clips)
     except redact.RedactionError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
@@ -190,18 +255,34 @@ def cmd_apply(directory: Path) -> int:
         else:
             print(f"  {path.name}: nothing to blur, EXIF dropped")
 
-    # Those per-file lines each claim "EXIF dropped". Check the claim instead of
-    # printing it: a re-encode that quietly carried metadata through, or a file
-    # this tool never had a way to touch, would otherwise be reported as done.
+    for clip in clips:
+        # No blurring here, and the tool says so rather than implying it. Nobody
+        # has reviewed 210 frames of walkaround footage for plates, and this
+        # pass does not pretend to have: it removes the container metadata and
+        # the encoder's signature from the coded stream, which is the half that
+        # can be done without a person.
+        try:
+            redact.strip_time_based_media(clip, clip)
+        except redact.RedactionError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        print(f"  {clip.name}: remuxed, container metadata and encoder SEI dropped")
+
+    # Those per-file lines each claim something was dropped. Check the claim
+    # instead of printing it: a re-encode that quietly carried metadata through,
+    # a remux that left the compressorname ffmpeg writes into its own output, or
+    # a file this tool never had a way to touch, would otherwise be reported as
+    # done.
     try:
         redact.assert_metadata_stripped(directory, photographs(directory))
+        redact.assert_time_based_metadata_stripped(directory, clips)
     except redact.RedactionError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
     print(
         f"\n  {len(paths)} image(s) re-encoded in place, {blurred} with regions "
-        f"blurred. This is not reversible."
+        f"blurred, {len(clips)} clip(s) remuxed. This is not reversible."
     )
     return 0
 
@@ -209,9 +290,20 @@ def cmd_apply(directory: Path) -> int:
 def cmd_check(directory: Path) -> int:
     problems: list[str] = []
     try:
-        redact.assert_reviewed(directory, images(directory), redact.load(directory))
+        redact.assert_reviewed(directory, reviewable(directory), redact.load(directory))
     except redact.RedactionError as exc:
         problems.append(str(exc))
+
+    # Every walk in this tool is an allowlist of suffixes, so anything outside
+    # all of them used to be invisible - and `history_01.txt`, a title history,
+    # sat in this repository's own committed media directory being reported as
+    # part of a green run that had never opened it.
+    unaccounted = redact.unaccounted_files(directory, everything(directory))
+    if unaccounted:
+        problems.append(
+            "Media directory holds files this tool has no category for (D-022):\n  - "
+            + "\n  - ".join(unaccounted)
+        )
 
     # A signature says a person looked at the pixels. It says nothing about the
     # bytes around them, and that is where the GPS position lives - so a
@@ -222,10 +314,21 @@ def cmd_check(directory: Path) -> int:
     except redact.RedactionError as exc:
         problems.append(str(exc))
 
+    # This used to be a printed apology. `check` walked past every .mp4 and
+    # .wav and named them as unexamined, which was honest and left the clip in
+    # this repository's own fixtures carrying a position atom, an encoder
+    # banner and x264's entire command line for nine phases. A declared gap is
+    # better than a hidden one and it is not a check.
+    clips = time_based_media(directory)
+    try:
+        redact.assert_time_based_metadata_stripped(directory, clips)
+    except redact.RedactionError as exc:
+        problems.append(str(exc))
+
     if problems:
-        # Both questions, every run. Stopping at the first failure hides the
-        # second until the first is fixed, and the reviewer who has just been
-        # told about an unsigned file re-runs expecting green.
+        # Every question, every run. Stopping at the first failure hides the
+        # rest until it is fixed, and the reviewer who has just been told about
+        # an unsigned file re-runs expecting green.
         for problem in problems:
             print(f"error: {problem}", file=sys.stderr)
         return 1
@@ -235,27 +338,19 @@ def cmd_check(directory: Path) -> int:
         f"  {len(checked)} still image(s) in {directory}: reviewed, signed off, "
         f"no metadata container"
     )
-    _report_what_was_not_examined(directory)
-    return 0
-
-
-def _report_what_was_not_examined(directory: Path) -> None:
-    """Say which files green does not cover.
-
-    `check` reads still images. An .mp4 carries a position in its (c)xyz atom
-    and a .wav can carry a LIST/INFO block, and nothing here opens either - so
-    a success line that said "every image ... has been reviewed, signed off and
-    stripped" left the reader to infer the limit from the word "image". Naming
-    the unread files is the difference between a declared gap and a hidden one.
-    """
-    unexamined = _walk(directory, redact.UNEXAMINED_MEDIA_SUFFIXES)
-    if not unexamined:
-        return
-    names = ", ".join(redact.asset_key(directory, p) for p in unexamined)
     print(
-        f"  not examined: {names}. This tool reads still images only, and an "
-        f".mp4 can carry GPS in its (c)xyz atom. Nothing here has checked them."
+        f"  {len(clips)} clip(s): every box and chunk walked, no tag atom, no "
+        f"encoder banner, no user-data SEI"
     )
+    # Counted and named separately from the images, because "reviewed" means
+    # something different for a document: nobody blurred anything, a person read
+    # it and said it carries no name, address or full VIN. Folding it into the
+    # image count would let the stronger claim cover the weaker one.
+    print(
+        f"  {len(documents(directory))} document(s): signed off by a reader. "
+        f"Nothing here strips a document - plain text has no container to strip."
+    )
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:

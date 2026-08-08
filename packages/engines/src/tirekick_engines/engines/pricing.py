@@ -38,6 +38,27 @@ MIN_COMPS_FOR_FIT = 3
 #: Minimum spread in miles across comps for a fit to mean anything.
 MIN_MILEAGE_SPREAD = 10_000
 
+#: How far past the ends of the comps' own mileage range the fitted line may be
+#: carried, as a fraction of the range it was fitted over.
+#:
+#: WHY A QUARTER, AND NOT SOME OTHER NUMBER
+#:
+#: A least-squares line through three to six listings is evidence about the
+#: stretch of road those listings cover and nothing else. Past the last one it is
+#: an assumption wearing the same units. At a quarter of the span, four fifths of
+#: the mileage under the answer was actually observed - 100,000 miles of listings
+#: carry the line to 125,000 miles of reasoning - so at most one mile in five is
+#: invented. That is the most invented distance worth putting behind a dollar
+#: figure someone repeats to a seller.
+#:
+#: It composes with MIN_MILEAGE_SPREAD rather than fighting it: a fit needs
+#: 10,000 miles of spread before it exists at all, so the allowance is never
+#: tighter than 2,500 miles and this never refuses a car that merely sits a
+#: little outside the pack. It is also symmetric. A low-mileage subject
+#: extrapolated upward inflates the range and makes an overpriced car look fair,
+#: which is quieter than the $0 range and no less wrong.
+MAX_EXTRAPOLATION_FRACTION = 0.25
+
 #: Fewest usable comps before a verdict is offered at all.
 #:
 #: Two listings are an anecdote. The engine will still show them - they are the
@@ -216,6 +237,148 @@ def _normalized_prices(
     ]
 
 
+def _extrapolation_distance(comps: list[Comp], subject_mileage: int) -> tuple[int, int, int]:
+    """(nearest, furthest, how far outside) for the comps' mileage range.
+
+    Zero when the subject sits between them, which is the case the fit was built
+    for and the only case it is evidence about.
+    """
+    low = min(c.mileage for c in comps)
+    high = max(c.mileage for c in comps)
+    if subject_mileage < low:
+        return low, high, low - subject_mileage
+    if subject_mileage > high:
+        return low, high, subject_mileage - high
+    return low, high, 0
+
+
+def _extrapolation_refusal(comps: list[Comp], subject_mileage: int) -> str | None:
+    """Why this car cannot be priced off these listings, when it cannot.
+
+    THE REPORT THIS PREVENTS
+    ------------------------
+    Comps at 50k/$20,000, 100k/$15,000 and 150k/$10,000 - a clean -$0.10 per mile
+    fit with nothing wrong with it - and a 260,000-mile car, which is an ordinary
+    used car and not an edge case. The slope was applied over 110,000 miles that
+    no listing covered, every normalized price came out below zero,
+    `max(0.0, ...)` turned that into $0, and the buyer was told their $6,000 car
+    was "above the $0-$0 range these comparable listings support", with a
+    negotiation line to say out loud. Nothing in the arithmetic noticed, because
+    `fit_mileage_slope` guards the spread *between* the comps and nothing guarded
+    the distance *from* them.
+
+    The refusal is worded like the fit's other refusals on purpose. This engine
+    already knows how to decline (D-032); it should not learn a second dialect
+    for it.
+    """
+    low, high, distance = _extrapolation_distance(comps, subject_mileage)
+    span = high - low
+    allowance = span * MAX_EXTRAPOLATION_FRACTION
+    if distance <= allowance:
+        return None
+
+    side = "below" if subject_mileage < low else "above"
+    return (
+        f"The listings you provided run from {low:,} to {high:,} miles, and this "
+        f"car is stated at {subject_mileage:,} - {distance:,} miles {side} any of "
+        f"them, further than the {MAX_EXTRAPOLATION_FRACTION:.0%} of their own "
+        f"{span:,}-mile span TIREKICK will carry a fitted line past the listings "
+        f"it came from. Carried that far the adjustment stops being a measurement "
+        f"of these listings and becomes an assumption about a stretch of road none "
+        f"of them covers; carried far enough it prices cars below zero. Find "
+        f"listings nearer this car's mileage and the range will mean something."
+    )
+
+
+def _below_zero_refusal(normalized: list[float]) -> str | None:
+    """The second guard, for what the first one lets through.
+
+    A steep enough slope reaches below zero inside the extrapolation allowance -
+    listings $19,000 apart over 50,000 miles do it in 25,000 more. Whatever the
+    distance, a normalized price below zero is not a cheap car, it is arithmetic
+    that has stopped describing anything, and the old code met it with
+    `max(0.0, ...)`: the number was corrected and the fact was not reported.
+
+    A ceiling of exactly zero is caught here too, and not because the fit did it.
+    Three listings pasted in at $0 - a paste error, or free-car listings - give a
+    range of $0-$0 with no adjustment involved at all, and everything downstream
+    treats that as a priced car.
+    """
+    if min(normalized) >= 0 and max(normalized) > 0:
+        return None
+    return (
+        "Priced against this car, at least one of these listings comes out at or "
+        "below zero dollars, and zero is not a price. Whatever relationship these "
+        "particular listings hold between price and mileage, it does not survive "
+        "being carried to this car, so there is no range to report - a $0 floor "
+        "here would be this engine hiding a broken calculation behind a round "
+        "number."
+    )
+
+
+def _deductions_swallow_the_range(
+    high: float, deduct_low: float, deduct_high: float
+) -> str | None:
+    """When the repairs cost more than the whole car, say that instead of $0.
+
+    Found while fixing the mileage extrapolation, by reading the other end of the
+    same function. `max(0.0, high - deduct_low)` is the identical silent clamp:
+    a $9,500 car with $12,000-$15,000 of sourced repair bands comes out as
+    "above the $0-$0 range these comparable listings support. The gap is $6,000."
+
+    There is no honest range to publish here, but there is something well worth
+    saying, and it is not a hedge - the numbers already on the page cost more
+    than a comparable car does. Zeroing it and printing a verdict said that
+    badly; saying nothing would have said it not at all (D-017).
+    """
+    # No deduction means nothing was swallowed, whatever the range looks like.
+    # Without this the guard fires on a range that is already at zero for some
+    # other reason and tells the buyer "the repairs found on this car - $0 to
+    # $0 - come to more than the car is worth", which is not a sentence anyone
+    # should read. `_below_zero_refusal` owns that case.
+    if deduct_low <= 0 or high - deduct_low > 0:
+        return None
+    return (
+        f"The repairs found on this car - ${deduct_low:,.0f} to "
+        f"${deduct_high:,.0f}, from the cost bands listed above - come to more "
+        f"than these listings say the whole car is worth. There is no range left "
+        f"to price the asking price against, so TIREKICK is not printing one: the "
+        f"arithmetic lands on nothing, and nothing is not a number to negotiate "
+        f"from. Take the repair estimates to a shop before you go any further "
+        f"with this car."
+    )
+
+
+def _no_verdict(
+    *,
+    asking_price_usd: float,
+    comps: list[Comp],
+    excluded: list[ExcludedComp],
+    notes: list[str | None],
+    statement: str,
+    deductions: list[PriceDeduction] | None = None,
+) -> PriceCheck:
+    """The engine's one way of declining to price.
+
+    Every refusal comes through here so they are indistinguishable to whatever
+    renders them: the comps are still shown, because they are the buyer's own
+    research and declining to price them is not a reason to hide them, and the
+    range is zeroed rather than guessed at. It is a single path so that a new
+    refusal cannot accidentally ship a `cannot_determine` verdict beside a
+    plausible-looking range.
+    """
+    return PriceCheck(
+        asking_price_usd=asking_price_usd,
+        comps=comps,
+        excluded=excluded,
+        normalization_notes=" ".join(filter(None, notes)),
+        fair_range_usd=PriceRange(low=0.0, high=0.0),
+        deductions=deductions or [],
+        verdict="cannot_determine",
+        verdict_statement=statement,
+    )
+
+
 def build_price_check(
     *,
     asking_price_usd: float | None,
@@ -263,26 +426,18 @@ def build_price_check(
         else:
             why = f"{len(usable)} comparable listing(s) is not enough to price against."
 
-        return PriceCheck(
+        return _no_verdict(
             asking_price_usd=asking_price_usd,
             comps=comps,
             excluded=excluded,
-            normalization_notes=" ".join(
-                filter(
-                    None,
-                    [
-                        f"A price range needs at least {MIN_COMPS_FOR_VERDICT} "
-                        f"comparable listings. Two listings are an anecdote, and a "
-                        f"range built from two numbers looks exactly like a range "
-                        f"built from twenty.",
-                        stale,
-                    ],
-                )
-            ),
-            fair_range_usd=PriceRange(low=0.0, high=0.0),
-            deductions=[],
-            verdict="cannot_determine",
-            verdict_statement=(
+            notes=[
+                f"A price range needs at least {MIN_COMPS_FOR_VERDICT} "
+                f"comparable listings. Two listings are an anecdote, and a "
+                f"range built from two numbers looks exactly like a range "
+                f"built from twenty.",
+                stale,
+            ],
+            statement=(
                 f"{why} TIREKICK is not going to price this car on that. Find two "
                 f"or three more listings for the same year, make and model, and "
                 f"the range will mean something."
@@ -290,7 +445,43 @@ def build_price_check(
         )
 
     fit = fit_mileage_slope(usable)
+
+    # Only when a slope is about to be applied. With no fit there is no line to
+    # carry anywhere - the listings go out as-listed with the fit's own reason
+    # attached, and this guard has nothing to say about them.
+    if fit.slope is not None and subject_mileage is not None:
+        too_far = _extrapolation_refusal(usable, subject_mileage)
+        if too_far is not None:
+            return _no_verdict(
+                asking_price_usd=asking_price_usd,
+                comps=comps,
+                excluded=excluded,
+                notes=[
+                    "No range was produced. The listings below are shown "
+                    "as-listed and unadjusted; adjusting them to this car's "
+                    "mileage would have meant extending a fitted line well past "
+                    "the listings that produced it.",
+                    stale,
+                ],
+                statement=too_far,
+            )
+
     normalized = _normalized_prices(usable, subject_mileage, fit)
+
+    below_zero = _below_zero_refusal(normalized)
+    if below_zero is not None:
+        return _no_verdict(
+            asking_price_usd=asking_price_usd,
+            comps=comps,
+            excluded=excluded,
+            notes=[
+                "No range was produced. The listings below are shown as-listed "
+                "and unadjusted.",
+                stale,
+            ],
+            statement=below_zero,
+        )
+
     low, high = min(normalized), max(normalized)
 
     deductions = [
@@ -311,8 +502,26 @@ def build_price_check(
     deduct_low = sum(d.low_usd for d in deductions)
     deduct_high = sum(d.high_usd for d in deductions)
 
+    swallowed = _deductions_swallow_the_range(high, deduct_low, deduct_high)
+    if swallowed is not None:
+        return _no_verdict(
+            asking_price_usd=asking_price_usd,
+            comps=comps,
+            excluded=excluded,
+            notes=[
+                "No range was produced: the deductions below run past the bottom "
+                "of what these listings support.",
+                stale,
+            ],
+            statement=swallowed,
+            deductions=deductions,
+        )
+
     # Comps describe a car without this car's findings; the deductions move the
-    # range down. High deductions pair with the low end of the range.
+    # range down. High deductions pair with the low end of the range. The floor
+    # can still land on $0 here - a car that is worth nothing once its repairs
+    # are paid for is a real outcome, and the ceiling above it is what stops
+    # that $0 from being the whole answer.
     adjusted_low = max(0.0, low - deduct_high)
     adjusted_high = max(0.0, high - deduct_low)
     if adjusted_low > adjusted_high:

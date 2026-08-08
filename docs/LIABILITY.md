@@ -147,8 +147,16 @@ and also why nothing stops this file from drifting away from `copy_rules.py` aga
 
 **Enforced in:** `packages/engines/tests/test_liability_copy.py` - the scan runs over
 prompts, engine modules and web copy, with a guard that the exemption list cannot
-quietly acquire a component or a page (D-038). **Nothing compares the table above
-against `BANNED`**, so the two can disagree exactly as they did before P10.
+quietly acquire a component or a page (D-038). The table above is held to `BANNED`
+row for row and in order by `packages/engines/tests/test_docs_numbers.py`, which is
+why the pattern column is the regex verbatim rather than a readable rendering of it.
+
+This paragraph used to end "**Nothing compares the table above against `BANNED`**,
+so the two can disagree exactly as they did before P10" - forty lines under the
+sentence at the top of this section that correctly says the comparison exists. P10
+built the check and left the sentence describing its absence in place, so one
+section of one document asserted a thing and its negation, and the negation is the
+half a reader would have believed, because it is the half written in bold.
 
 Replacement vocabulary: *visible / not visible in the provided media*, *consistent
 with*, *cannot be determined remotely*, *ask the seller*, *have a mechanic verify*.
